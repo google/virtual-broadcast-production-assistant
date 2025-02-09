@@ -22,8 +22,6 @@ terraform {
       version = "~> 5.0" # Or latest compatible version
     }
   }
-
-
 }
 
 provider "google" {
@@ -44,7 +42,8 @@ module "backend_service_account" {
 }
 
 module "build_service_accounts" {
-  source = "./modules/build-triggers/service-accounts" # Path adjusted
+  source                = "./modules/build-triggers/service-accounts" # Path adjusted
+  terraform_bucket_name = var.terraform_bucket
 }
 
 module "build_triggers" {

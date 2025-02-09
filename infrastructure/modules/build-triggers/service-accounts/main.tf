@@ -16,6 +16,11 @@
 
 data "google_project" "project" {}
 
+variable "terraform_bucket_name" {
+  type        = string
+  description = "The name of the Terraform state bucket"
+}
+
 # Trigger Service Accounts
 
 resource "google_service_account" "cloud_build_runner" {
@@ -29,6 +34,12 @@ resource "google_project_iam_member" "cloud_build_runner_permissions" {
   project = data.google_project.project.project_id # or omit
   role    = "roles/cloudbuild.builds.builder"      # Core permission
   member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
+}
+
+resource "google_storage_bucket_iam_member" "cloud_build_runner_state_bucket_access" {
+  bucket = var.terraform_bucket_name   # The name of your Terraform state bucket
+  role   = "roles/storage.objectAdmin" # Or the specific role needed
+  member = "serviceAccount:${google_service_account.cloud_build_runner.email}"
 }
 
 # Optional but often necessary permissions (adjust to your needs):

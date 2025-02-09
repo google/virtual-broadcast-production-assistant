@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 steps:
-    - name: 'hashicorp/terraform:1.8'
+    - name: 'hashicorp/terraform:1.10'
       dir: 'infrastructure/'
       entrypoint: 'sh'
       args:
@@ -20,7 +20,7 @@ steps:
       - |-
         # Init and Apply Terraform
         terraform init -backend-config=bucket=$_TF_STATE_BUCKET_NAME_
-        terraform apply -var gitlab-host-connection-name=$_GITLAB_HOST_CONNECTION_NAME_ -var repo=$_REPO_NAME_ -var project=$_PROJECT_ID_ -var region=$_REGION_ -var secondary_region=$_SECONDARY_REGION_ -auto-approve
+        terraform apply -auto-approve
 options:
   logging: CLOUD_LOGGING_ONLY
 timeout: 3600s
