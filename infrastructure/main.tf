@@ -43,6 +43,10 @@ module "backend_service_account" {
   display_name = "Backend Service Account"
 }
 
+module "build_triggers" {
+  source = "./modules/build-triggers"
+}
+
 # module "backend_secrets" {
 #   source     = "./modules/secret-manager"
 #   project_id = var.project_id

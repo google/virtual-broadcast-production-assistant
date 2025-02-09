@@ -21,11 +21,13 @@ resource "google_project_service" "enable-required-apis" {
 
   for_each = toset([
     "cloudresourcemanager.googleapis.com",
+    "cloudbuild.googleapis.com",
     "monitoring.googleapis.com",
     "run.googleapis.com",
     "aiplatform.googleapis.com",
     "artifactregistry.googleapis.com",
     "servicenetworking.googleapis.com",
+    "secretmanager.googleapis.com"
   ])
   project = var.project_id
   service = each.value
