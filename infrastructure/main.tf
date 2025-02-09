@@ -43,6 +43,10 @@ module "backend_service_account" {
   display_name = "Backend Service Account"
 }
 
+module "build_service_accounts" {
+  source = "./modules/build-triggers/service-accounts" # Path adjusted
+}
+
 module "build_triggers" {
   source = "./modules/build-triggers"
 }
