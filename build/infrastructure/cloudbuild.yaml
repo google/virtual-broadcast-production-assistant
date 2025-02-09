@@ -20,7 +20,9 @@ steps:
       - |-
         # Init and Apply Terraform
         terraform init -backend-config=bucket=$_TF_STATE_BUCKET_NAME_
-        terraform apply -var project=$_PROJECT_ID_ -var region=$_REGION_ -auto-approve
+        terraform apply -var project_id=$_PROJECT_ID_ -var region=$_REGION_ \
+        -var terraform_bucket=$_TF_STATE_BUCKET_NAME_ \
+        -auto-approve
 options:
   logging: CLOUD_LOGGING_ONLY
 timeout: 3600s
