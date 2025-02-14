@@ -23,7 +23,7 @@ variable "terraform_bucket_name" {
 }
 
 
-# Trigger Service Accounts
+# Trigger Service Account
 
 resource "google_service_account" "cloud_build_runner" {
   project      = data.google_project.default.project_id
@@ -47,7 +47,11 @@ resource "google_storage_bucket_iam_member" "cloud_build_runner_state_bucket_acc
   member = "serviceAccount:${google_service_account.cloud_build_runner.email}"
 }
 
-# Optional but often necessary permissions (adjust to your needs):
+resource "google_project_iam_member" "service_usage_viewer" {
+  project = data.google_project.default.project_id
+  role    = "roles/serviceusage.serviceUsageConsumer"
+  member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
+}
 
 resource "google_project_iam_member" "artifact_registry_writer" { # If pushing to Artifact Registry
   project = data.google_project.default.project_id                # or omit
