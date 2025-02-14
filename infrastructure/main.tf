@@ -41,13 +41,9 @@ module "backend_service_account" {
   display_name = "Backend Service Account"
 }
 
-module "build_service_accounts" {
-  source                = "./modules/build-triggers/service-accounts" # Path adjusted
-  terraform_bucket_name = var.terraform_bucket
-}
-
 module "build_triggers" {
-  source = "./modules/build-triggers"
+  source                = "./modules/build-triggers"
+  terraform_bucket_name = var.terraform_bucket
 }
 
 # module "backend_secrets" {
