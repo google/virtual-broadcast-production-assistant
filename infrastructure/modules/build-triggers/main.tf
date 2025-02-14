@@ -104,7 +104,7 @@ resource "google_project_iam_member" "logs_writer" {
 #   # included_files = [
 #   #   "infrastrucutre"
 #   # ]
-#   service_account = google_service_account.cloud_build_runner.email
+#   service_account = google_service_account.cloud_build_runner.id
 
 #   # depends_on = [
 #   #   google_project_iam_member.act_as,
