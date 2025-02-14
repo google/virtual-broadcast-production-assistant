@@ -49,7 +49,7 @@ resource "google_storage_bucket_iam_member" "cloud_build_runner_state_bucket_acc
 
 resource "google_project_iam_member" "service_usage_viewer" {
   project = data.google_project.default.project_id
-  role    = "roles/serviceusage.serviceUsageConsumer"
+  role    = "roles/serviceusage.viewer"
   member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
 }
 
