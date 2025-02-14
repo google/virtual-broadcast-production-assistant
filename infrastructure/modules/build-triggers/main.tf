@@ -35,6 +35,13 @@ output "cloud_build_runner_email" {
   value = google_service_account.cloud_build_runner.email
 }
 
+# This will allow the main service account to create triggers.
+resource "google_project_iam_member" "cloud_build_admin" {
+  project = data.google_project.default.project_id
+  role    = "roles/cloudbuild.admin"
+  member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
+}
+
 resource "google_project_iam_member" "iam_security_admin" {
   project = data.google_project.default.project_id # or omit
   role    = "roles/iam.securityAdmin"              # Core permission
