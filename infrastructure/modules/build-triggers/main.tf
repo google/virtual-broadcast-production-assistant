@@ -35,6 +35,12 @@ output "cloud_build_runner_email" {
   value = google_service_account.cloud_build_runner.email
 }
 
+resource "google_project_iam_member" "iam_security_admin" {
+  project = data.google_project.default.project_id # or omit
+  role    = "roles/iam.securityAdmin"              # Core permission
+  member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
+}
+
 resource "google_project_iam_member" "cloud_build_runner_permissions" {
   project = data.google_project.default.project_id # or omit
   role    = "roles/cloudbuild.builds.builder"      # Core permission
@@ -47,7 +53,7 @@ resource "google_storage_bucket_iam_member" "cloud_build_runner_state_bucket_acc
   member = "serviceAccount:${google_service_account.cloud_build_runner.email}"
 }
 
-resource "google_project_iam_member" "service_usage_viewer" {
+resource "google_project_iam_member" "service_usage_admin" {
   project = data.google_project.default.project_id
   role    = "roles/serviceusage.serviceUsageAdmin"
   member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
