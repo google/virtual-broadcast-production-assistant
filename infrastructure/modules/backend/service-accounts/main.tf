@@ -18,6 +18,7 @@ data "google_project" "default" {}
 
 resource "google_service_account" "websocket-service-account" {
   account_id  = "websocket-service-account"
+  name        = "websocket-service-account"
   description = "Managed by Terraform - do not edit"
   project     = data.google_project.default.project_id
 }
