@@ -18,4 +18,4 @@ COPY . .
 EXPOSE 8081
 
 # Command to run the application
-CMD ["python", "server.py"] 
+CMD ["python", "server.py"]

@@ -44,6 +44,14 @@ module "build_triggers" {
   terraform_bucket_name = var.terraform_bucket
 }
 
+module "backend_websocket_server" {
+  source          = "./modules/backend/websocket-server"
+  project_id      = var.project_id
+  region          = var.region
+  container_image = "gcr.io/${project_id}/websocket-server"
+}
+
+
 # module "backend_secrets" {
 #   source     = "./modules/secret-manager"
 #   project_id = var.project_id
