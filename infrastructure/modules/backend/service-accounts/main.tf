@@ -16,23 +16,12 @@
 
 data "google_project" "default" {}
 
-resource "google_service_account" "default" {
-  account_id   = var.name
-  display_name = var.display_name
+resource "google_service_account" "websocket-service-account" {
+  account_id   = "websocket-service-account"
+  display_name = "Managed by Terraform - do not edit"
   project      = data.google_project.default.project_id
 }
 
-output "email" {
+output "websocket-service-account-name" {
   value = google_service_account.default.email
-}
-
-
-variable "name" {
-  type        = string
-  description = "The name of the service account"
-}
-
-variable "display_name" {
-  type        = string
-  description = "The display name of the service account"
 }

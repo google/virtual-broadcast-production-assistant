@@ -36,9 +36,9 @@ output "cloud_build_runner_email" {
 }
 
 # This will allow the main service account to create triggers.
-resource "google_project_iam_member" "cloud_build_admin" {
+resource "google_project_iam_member" "cloudbuild_trigger_create" {
   project = data.google_project.default.project_id
-  role    = "roles/cloudbuild.admin"
+  role    = "roles/cloudbuild.builds.editor"
   member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
 }
 
