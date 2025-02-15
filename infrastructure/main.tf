@@ -36,9 +36,7 @@ terraform {
 }
 
 module "backend_service_account" {
-  source       = "./modules/backend/service-accounts"
-  name         = "backend-sa"
-  display_name = "Backend Service Account"
+  source = "./modules/backend/service-accounts"
 }
 
 module "build_triggers" {
