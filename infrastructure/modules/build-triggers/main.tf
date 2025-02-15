@@ -48,7 +48,7 @@ resource "google_project_iam_member" "iam_security_admin" {
   member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
 }
 
-resource "google_project_iam_member" "iam_service_account_create" {
+resource "google_project_iam_member" "cloudbuild_trigger_sa_admin" {
   project = data.google_project.default.project_id
   role    = "roles/iam.serviceAccountAdmin"
   member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
