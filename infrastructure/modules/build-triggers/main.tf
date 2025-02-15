@@ -50,7 +50,7 @@ resource "google_project_iam_member" "iam_security_admin" {
 
 resource "google_project_iam_member" "iam_service_account_create" {
   project = data.google_project.default.project_id
-  role    = "roles/iam.serviceAccountUser"
+  role    = "roles/iam.serviceAccountAdmin"
   member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
 }
 
