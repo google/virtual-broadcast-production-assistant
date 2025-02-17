@@ -28,7 +28,7 @@ resource "google_cloud_run_v2_service" "websocket-server" {
     labels = {
       managed-by = "terraform"
     }
-    service_account = google_service_account.websocket-service-account.email
+    service_account = var.service_account
     containers {
       image = var.container_image
       env {
@@ -47,6 +47,8 @@ resource "google_cloud_run_v2_service" "websocket-server" {
 
   }
 
+
+
   # Terraform, please don't worry if we deploy a new version
   lifecycle {
     ignore_changes = [
@@ -56,8 +58,11 @@ resource "google_cloud_run_v2_service" "websocket-server" {
     ]
   }
 
-  depends_on = [
-    google_project_service.enable-required-apis
-  ]
+}
 
+
+resource "google_cloud_run_v2_service_iam_member" "websocket-server" {
+  name   = google_cloud_run_v2_service.websocket-server.name
+  role   = "roles/run.invoker"
+  member = "allUsers"
 }

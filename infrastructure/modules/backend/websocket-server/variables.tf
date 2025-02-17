@@ -27,3 +27,7 @@ variable "container_image" {
   type    = string
   default = "us-docker.pkg.dev/cloudrun/container/hello"
 }
+
+variable "service_account" {
+  type = string
+}

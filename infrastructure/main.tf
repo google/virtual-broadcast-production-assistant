@@ -40,16 +40,20 @@ module "backend_service_account" {
 }
 
 module "build_triggers" {
-  source                = "./modules/build-triggers"
-  terraform_bucket_name = var.terraform_bucket
+  source                    = "./modules/build-triggers"
+  terraform_bucket_name     = var.terraform_bucket
+  websocket-service-account = module.backend_service_account.websocket-service-account-name
 }
 
 module "backend_websocket_server" {
   source          = "./modules/backend/websocket-server"
   project_id      = var.project_id
   region          = var.region
-  container_image = "gcr.io/${project_id}/websocket-server"
+  container_image = "gcr.io/${var.project_id}/websocket-server"
+  service_account = module.backend_service_account.websocket-service-account-name
 }
+
+
 
 
 # module "backend_secrets" {

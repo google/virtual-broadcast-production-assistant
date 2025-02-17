@@ -20,3 +20,7 @@ variable "cloud-source-repositories-repo-name" {
   default     = "justingrayston-virtual-production-assistant"
   description = "Github repo name"
 }
+
+variable "websocket-service-account" {
+  type = string
+}
