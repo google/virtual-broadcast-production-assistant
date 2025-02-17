@@ -13,6 +13,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
-output "websocket_server_uri" {
-  value = google_cloud_run_v2_service.websocket-server.uri
+
+output "client_frontend_uri" {
+  value = google_cloud_run_v2_service.client-frontend.uri
 }

@@ -14,13 +14,10 @@
  limitations under the License.
  */
 
+# creates orignal pastra frontend cloud run service
 
-/* This file sets up the Cloud Run instace for the initial deployment
-of the websocket server */
-
-
-resource "google_cloud_run_v2_service" "websocket-server" {
-  name     = "websocket-server"
+resource "google_cloud_run_v2_service" "client-frontend" {
+  name     = "client-frontend"
   location = var.region
   ingress  = "INGRESS_TRAFFIC_ALL"
 
@@ -28,7 +25,7 @@ resource "google_cloud_run_v2_service" "websocket-server" {
     labels = {
       managed-by = "terraform"
     }
-    service_account = var.service_account
+
     containers {
       image = var.container_image
       env {
@@ -54,15 +51,15 @@ resource "google_cloud_run_v2_service" "websocket-server" {
     ignore_changes = [
       client,
       client_version,
-      template.containers[*].image # Ignore
+      template[0].containers[0].image
     ]
   }
 
 }
 
 
-resource "google_cloud_run_v2_service_iam_member" "websocket-server" {
-  name   = google_cloud_run_v2_service.websocket-server.name
+resource "google_cloud_run_v2_service_iam_member" "client-frontend" {
+  name   = google_cloud_run_v2_service.client-frontend.name
   role   = "roles/run.invoker"
   member = "allUsers"
 }

@@ -49,8 +49,15 @@ module "backend_websocket_server" {
   source          = "./modules/backend/websocket-server"
   project_id      = var.project_id
   region          = var.region
-  container_image = "gcr.io/${var.project_id}/websocket-server"
+  container_image = "gcr.io/${var.project_id}/websocket-server:latest"
   service_account = module.backend_service_account.websocket-service-account-name
+}
+
+module "client_frontend" {
+  source          = "./modules/client"
+  project_id      = var.project_id
+  region          = var.region
+  container_image = "gcr.io/${var.project_id}/pastra-ui"
 }
 
 
