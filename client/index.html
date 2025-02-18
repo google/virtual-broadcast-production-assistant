@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>Project Pastra 2.0</title>
   <link rel="stylesheet" href="styles/style.css">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-  
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
   <!-- Favicon -->
   <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
 </head>
+
 <body>
   <div class="header-section">
     <h1>Project Pastra 2.0</h1>
@@ -57,7 +60,7 @@
     const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
     const audioStreamer = new AudioStreamer(audioContext);
     const mediaHandler = new MediaHandler();
-    const api = new GeminiAPI('ws://localhost:8081');
+    const api = new GeminiAPI('https://websocket-server-278223310049.europe-west1.run.app');
 
     let isRecording = false;
     let hasShownSpeakingMessage = false;
@@ -107,7 +110,7 @@
       api.isSpeaking = false;
       audioStreamer.stop();  // Stop current playback and clear queue
       document.getElementById('interruptButton').style.display = 'none';
-      
+
       // Show visual feedback for interruption
       const messageElement = document.createElement('p');
       messageElement.className = 'interrupted-message';
@@ -139,7 +142,7 @@
         await audioRecorder.start();
         hasShownSpeakingMessage = false;
         currentTurn++;
-        
+
         audioRecorder.on('data', (base64Data) => {
           if (!hasShownSpeakingMessage) {
             logMessage('You: Speaking...');
@@ -149,7 +152,7 @@
         });
 
         isRecording = true;
-        document.getElementById('micButton').innerHTML = 
+        document.getElementById('micButton').innerHTML =
           '<span class="material-symbols-outlined">stop</span>';
       } catch (error) {
         console.error('Error starting recording:', error);
@@ -161,24 +164,24 @@
       audioRecorder.stop();
       isRecording = false;
       hasShownSpeakingMessage = false;
-      document.getElementById('micButton').innerHTML = 
+      document.getElementById('micButton').innerHTML =
         '<span class="material-symbols-outlined">mic</span>';
       logMessage('You: Recording stopped.');
-      
+
       // Stop video streams
       mediaHandler.stopAll();
-      document.getElementById('webcamButton').innerHTML = 
+      document.getElementById('webcamButton').innerHTML =
         '<span class="material-symbols-outlined">videocam</span>';
-      document.getElementById('screenButton').innerHTML = 
+      document.getElementById('screenButton').innerHTML =
         '<span class="material-symbols-outlined">present_to_all</span>';
-      
+
       api.sendEndMessage();
       api.isSpeaking = false;
     }
 
     function logMessage(message) {
       const messageElement = document.createElement('p');
-      
+
       // Add specific styling based on message content
       if (message.startsWith('Function:')) {
         messageElement.className = 'function-name';
@@ -191,7 +194,7 @@
       } else if (message.startsWith('You:')) {
         messageElement.className = 'user-message';
       }
-      
+
       messageElement.textContent = message;
       output.appendChild(messageElement);
       output.scrollTop = output.scrollHeight;
@@ -226,7 +229,7 @@
     document.getElementById('sendButton').onclick = sendTextMessage;
 
     // Add keypress handler for text input
-    document.getElementById('textInput').addEventListener('keypress', function(e) {
+    document.getElementById('textInput').addEventListener('keypress', function (e) {
       if (e.key === 'Enter') {
         sendTextMessage();
       }
@@ -235,12 +238,12 @@
     document.getElementById('webcamButton').onclick = async () => {
       if (mediaHandler.isWebcamActive) {
         mediaHandler.stopAll();
-        document.getElementById('webcamButton').innerHTML = 
+        document.getElementById('webcamButton').innerHTML =
           '<span class="material-symbols-outlined">videocam</span>';
       } else {
         const success = await mediaHandler.startWebcam();
         if (success) {
-          document.getElementById('webcamButton').innerHTML = 
+          document.getElementById('webcamButton').innerHTML =
             '<span class="material-symbols-outlined">videocam_off</span>';
           mediaHandler.startFrameCapture((base64Image) => {
             api.sendImage(base64Image);
@@ -252,12 +255,12 @@
     document.getElementById('screenButton').onclick = async () => {
       if (mediaHandler.isScreenActive) {
         mediaHandler.stopAll();
-        document.getElementById('screenButton').innerHTML = 
+        document.getElementById('screenButton').innerHTML =
           '<span class="material-symbols-outlined">present_to_all</span>';
       } else {
         const success = await mediaHandler.startScreenShare();
         if (success) {
-          document.getElementById('screenButton').innerHTML = 
+          document.getElementById('screenButton').innerHTML =
             '<span class="material-symbols-outlined">cancel_presentation</span>';
           mediaHandler.startFrameCapture((base64Image) => {
             api.sendImage(base64Image);
@@ -281,4 +284,5 @@
     document.head.appendChild(style);
   </script>
 </body>
+
 </html>

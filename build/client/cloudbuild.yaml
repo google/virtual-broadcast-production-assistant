@@ -17,7 +17,7 @@ steps:
   - '--image'
   - 'gcr.io/$PROJECT_ID/pastra-ui'
   - '--region'
-  - 'us-central1'
+  - '$_REGION'
   - '--platform'
   - 'managed'
   - '--allow-unauthenticated'

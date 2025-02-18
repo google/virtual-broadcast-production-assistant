@@ -27,6 +27,7 @@ steps:
   - 'PROJECT_ID=${PROJECT_ID},LOG_LEVEL=INFO'
   - '--service-account'
   - 'websocket-service-account@${PROJECT_ID}.iam.gserviceaccount.com'
+  - '--session-affinity'
 
 images:
 - 'gcr.io/$PROJECT_ID/websocket-server'

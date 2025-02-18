@@ -28,8 +28,13 @@ resource "google_cloud_run_v2_service" "websocket-server" {
     labels = {
       managed-by = "terraform"
     }
-    service_account = var.service_account
+    service_account  = var.service_account
+    session_affinity = true
+
     containers {
+      ports {
+        container_port = 8081
+      }
       image = var.container_image
       env {
         name  = "PROJECT_ID"
@@ -41,6 +46,7 @@ resource "google_cloud_run_v2_service" "websocket-server" {
       }
 
     }
+
     scaling {
       max_instance_count = 1
     }
@@ -51,11 +57,7 @@ resource "google_cloud_run_v2_service" "websocket-server" {
 
   # Terraform, please don't worry if we deploy a new version
   lifecycle {
-    ignore_changes = [
-      client,
-      client_version,
-      template[0].containers[0].image # Ignore
-    ]
+    ignore_changes = all
   }
 
 }
