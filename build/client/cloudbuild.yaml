@@ -15,7 +15,7 @@ steps:
   - 'deploy'
   - 'client-frontend'
   - '--image'
-  - 'gcr.io/$PROJECT_ID/pastra-ui'
+  - 'gcr.io/$PROJECT_ID/pastra-ui:latest'
   - '--region'
   - '$_REGION'
   - '--platform'
