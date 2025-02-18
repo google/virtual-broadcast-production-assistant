@@ -20,8 +20,10 @@ resource "google_project_service" "enable-cloud-resource-manager-api" {
 resource "google_project_service" "enable-required-apis" {
 
   for_each = toset([
+    "aiplatform.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "cloudbuild.googleapis.com",
+    "logging.googleapis.com",
     "monitoring.googleapis.com",
     "run.googleapis.com",
     "aiplatform.googleapis.com",

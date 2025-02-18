@@ -51,16 +51,7 @@ class ApiConfig:
 
   async def initialize(self):
     '''Initialize API credentials.'''
-    try:
-      # Always try to get OpenWeather API key regardless of endpoint
-      self.weather_api_key = get_secret('OPENWEATHER_API_KEY')
-    except Exception as e:
-      logger.warning(
-          'Failed to get OpenWeather API key from Secret Manager: %s', e)
-      self.weather_api_key = os.getenv('OPENWEATHER_API_KEY')
-      if not self.weather_api_key:
-        raise ConfigurationError(
-            f'OpenWeather API key not available: {e}') from e
+
 
     if not self.use_vertex:
       try:

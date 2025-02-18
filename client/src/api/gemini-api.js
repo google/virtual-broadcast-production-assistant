@@ -3,9 +3,9 @@ export class GeminiAPI {
         // If no endpoint is provided, try to construct it from the current URL
         if (!endpoint) {
             // Use the backend URL directly
-            endpoint = 'wss://pastra-backend-x45vlhrf3a-uc.a.run.app';
+            endpoint = 'wss://0.0.0.0:8081';
         }
-        
+
         this.endpoint = endpoint;
         this.ws = null;
         this.isSpeaking = false;
@@ -15,15 +15,15 @@ export class GeminiAPI {
     connect() {
         console.log('Initializing GeminiAPI with endpoint:', this.endpoint);
         this.ws = new WebSocket(this.endpoint);
-        this.onReady = () => {};
-        this.onAudioData = () => {};
-        this.onTextContent = () => {};
-        this.onError = () => {};
-        this.onTurnComplete = () => {};
-        this.onFunctionCall = () => {};
-        this.onFunctionResponse = () => {};
-        this.onInterrupted = () => {};  // New callback for interruption events
-        
+        this.onReady = () => { };
+        this.onAudioData = () => { };
+        this.onTextContent = () => { };
+        this.onError = () => { };
+        this.onTurnComplete = () => { };
+        this.onFunctionCall = () => { };
+        this.onFunctionResponse = () => { };
+        this.onInterrupted = () => { };  // New callback for interruption events
+
         this.setupWebSocket();
     }
 
@@ -43,7 +43,7 @@ export class GeminiAPI {
                 } else {
                     response = JSON.parse(event.data);
                 }
-                
+
                 console.log('WebSocket Response:', response);
 
                 if (response.type === 'error') {
@@ -105,7 +105,7 @@ export class GeminiAPI {
                 reason: event.reason,
                 wasClean: event.wasClean
             });
-            
+
             // Only show error if it wasn't a clean close
             if (!event.wasClean) {
                 this.onError({

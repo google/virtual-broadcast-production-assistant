@@ -54,7 +54,7 @@ resource "google_cloud_run_v2_service" "websocket-server" {
     ignore_changes = [
       client,
       client_version,
-      template.containers[*].image # Ignore
+      template[0].containers[0].image # Ignore
     ]
   }
 

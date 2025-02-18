@@ -13,7 +13,7 @@ steps:
   args:
   - 'run'
   - 'deploy'
-  - 'pastra-ui'
+  - 'client-frontend'
   - '--image'
   - 'gcr.io/$PROJECT_ID/pastra-ui'
   - '--region'
