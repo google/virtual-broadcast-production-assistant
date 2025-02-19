@@ -3,7 +3,7 @@ export class GeminiAPI {
         // If no endpoint is provided, try to construct it from the current URL
         if (!endpoint) {
             // Use the backend URL directly
-            endpoint = 'wss://0.0.0.0:8081';
+            endpoint = 'ws://0.0.0.0:8081';
         }
 
         this.endpoint = endpoint;

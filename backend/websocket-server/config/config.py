@@ -76,6 +76,8 @@ else:
   MODEL = os.getenv('MODEL_DEV_API', 'models/gemini-2.0-flash')
   VOICE = os.getenv('VOICE_DEV_API', 'Puck')
 
+logger.info('Using model: %s and voice: %s')
+
 # Cloud Function URLs with validation
 # TODO: This should be replaced with TOOL endpoints, they may not
 # be cloud functions
