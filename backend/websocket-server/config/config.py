@@ -70,8 +70,8 @@ api_config = ApiConfig()
 
 # Model configuration
 if api_config.use_vertex:
-  MODEL = os.getenv('MODEL_VERTEX_API', 'gemini-2.0-flash')
-  VOICE = os.getenv('VOICE_VERTEX_API', 'Aoede')
+  MODEL = os.getenv('MODEL_VERTEX_API', 'gemini-2.0-flash').strip()
+  VOICE = os.getenv('VOICE_VERTEX_API', 'Aoede').strip()
 else:
   MODEL = os.getenv('MODEL_DEV_API', 'models/gemini-2.0-flash')
   VOICE = os.getenv('VOICE_DEV_API', 'Puck')
