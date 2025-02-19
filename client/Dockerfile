@@ -3,8 +3,8 @@ FROM nginx:alpine
 # Create the directory structure
 RUN mkdir -p /usr/share/nginx/html
 
-# Copy mobile.html as index.html
-COPY mobile.html /usr/share/nginx/html/index.html
+# Copy index.html as index.html
+COPY index.html /usr/share/nginx/html/index.html
 
 # Copy other required files
 COPY styles /usr/share/nginx/html/styles
@@ -21,4 +21,4 @@ RUN echo "OK" > /usr/share/nginx/html/health
 EXPOSE 8080
 
 # Start nginx in foreground
-CMD ["nginx", "-g", "daemon off;"] 
+CMD ["nginx", "-g", "daemon off;"]
