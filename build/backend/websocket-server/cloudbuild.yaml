@@ -30,7 +30,7 @@ steps:
       VERTEX_LOCATION=${_VERTEX_LOCATION},
       VERTEX_API=true,
       VOICE_VERTEX_API=Aoede,
-      MODEL_VERTEX_API=gemini-2.0-flash-exp
+      MODEL_VERTEX_API=gemini-2.0-flash-exp,
   - '--service-account'
   - 'websocket-service-account@${PROJECT_ID}.iam.gserviceaccount.com'
   - '--session-affinity'
