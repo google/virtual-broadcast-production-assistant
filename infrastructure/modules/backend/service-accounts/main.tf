@@ -23,6 +23,12 @@ resource "google_service_account" "websocket-service-account" {
   project      = data.google_project.default.project_id
 }
 
+resource "google_project_iam_member" "websocket_service_account_vertex_ai_user" {
+  project = data.google_project.default.project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${google_service_account.websocket-service-account.email}"
+}
+
 output "websocket-service-account-name" {
   value = google_service_account.websocket-service-account.email
 }

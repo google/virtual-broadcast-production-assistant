@@ -16,17 +16,17 @@ from core.gemini_client import create_gemini_session
 
 logger = logging.getLogger(__name__)
 
+
 async def send_error_message(websocket: Any, error_data: dict) -> None:
   """Send formatted error message to client."""
   try:
-    await websocket.send(json.dumps({
-        "type": "error",
-        "data": error_data
-    }))
+    await websocket.send(json.dumps({"type": "error", "data": error_data}))
   except Exception as e:
     logger.error(f"Failed to send error message: {e}")
 
-async def cleanup_session(session: Optional[SessionState], session_id: str) -> None:
+
+async def cleanup_session(session: Optional[SessionState],
+                          session_id: str) -> None:
   """Clean up session resources."""
   try:
     if session:
@@ -86,13 +86,13 @@ async def handle_messages(websocket: Any, session: SessionState) -> None:
                   "⚠️ Quota exceeded. Please wait a moment and try again in a few minutes."
               }))
           handled = True
-          break
+
         except Exception as send_err:
           logger.error(f"Failed to send quota error message: {send_err}")
       elif "connection closed" in str(exc).lower():
         logger.info("WebSocket connection closed")
         handled = True
-        break
+
 
     if not handled:
       # For other errors, log and re-raise
