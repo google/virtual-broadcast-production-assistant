@@ -3,7 +3,6 @@ WebSocket message handling for Gemini Multimodal Live Proxy Server
 """
 
 import logging
-from os import environ
 import json
 import asyncio
 import base64
@@ -314,7 +313,6 @@ async def handle_client(websocket: Any) -> None:
   """Handles a new client connection."""
   session_id = str(id(websocket))
   session = create_session(session_id)
-  logger.info('DUMPING OS ENVIRON FOR DEBUG %s', environ)
   try:
     logger.info('Starting new session: %s', session)
     # Create and initialize Gemini session
