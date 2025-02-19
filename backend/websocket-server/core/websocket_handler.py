@@ -316,6 +316,7 @@ async def handle_client(websocket: Any) -> None:
   session = create_session(session_id)
 
   try:
+    logger.info('Starting new session: %s', session)
     # Create and initialize Gemini session
     async with await create_gemini_session() as gemini_session:
       session.genai_session = gemini_session
@@ -352,8 +353,8 @@ async def handle_client(websocket: Any) -> None:
             "error_type": "timeout"
         })
   except Exception as e:
-    logger.error(f"Error in handle_client: {e}")
-    logger.error(f"Full traceback:\n{traceback.format_exc()}")
+    logger.error("Error in handle_client: %s", e)
+    logger.error("Full traceback:\n%s", traceback.format_exc())
 
     if "connection closed" in str(e).lower() or "websocket" in str(e).lower():
       logger.info(f"WebSocket connection closed for session {session_id}")

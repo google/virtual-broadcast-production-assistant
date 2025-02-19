@@ -14,7 +14,8 @@ async def create_gemini_session():
   try:
     # Initialize authentication
     await api_config.initialize()
-
+    logger.info("Authentication initialized")
+    logger.info("API CONFIG %s", api_config)
     if api_config.use_vertex:
       # Vertex AI configuration
       location = os.getenv('VERTEX_LOCATION', 'us-central1')
@@ -24,8 +25,8 @@ async def create_gemini_session():
         raise ConfigurationError("PROJECT_ID is required for Vertex AI")
 
       logger.info(
-          f"Initializing Vertex AI client with location: {location}, project: {project_id}"
-      )
+          "Initializing Vertex AI client with location: %s, project: %s",
+          location, project_id)
 
       # Initialize Vertex AI client
       client = genai.Client(
