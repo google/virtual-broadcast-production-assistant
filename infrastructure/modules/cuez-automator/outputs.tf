@@ -15,16 +15,6 @@
  */
 
 
-variable "cloud-source-repositories-repo-name" {
-  type        = string
-  default     = "justingrayston-virtual-production-assistant"
-  description = "Github repo name"
-}
-
-variable "websocket-service-account" {
-  type = string
-}
-
-variable "cuez-proxy-service-account" {
-  type = string
+output "google_compute_address_exteral_ip_address" {
+  value = google_compute_address.external_ip.address
 }

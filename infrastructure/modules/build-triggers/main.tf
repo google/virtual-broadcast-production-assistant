@@ -55,8 +55,15 @@ resource "google_project_iam_member" "cloudrun_admin" {
 }
 
 # Allow permission for the Cloud Build Runner to actAs the websocket SA
-resource "google_service_account_iam_member" "cloud_build_runner_impersonate" {
+resource "google_service_account_iam_member" "cloud_build_runner_impersonate_websocket" {
   service_account_id = "projects/${data.google_project.default.project_id}/serviceAccounts/${var.websocket-service-account}"
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.cloud_build_runner.email}"
+}
+
+# Allow permission for the Cloud Build Runner to actAs the Cuez Proxy SA
+resource "google_service_account_iam_member" "cloud_build_runner_impersonate_cuez_proxy" {
+  service_account_id = "projects/${data.google_project.default.project_id}/serviceAccounts/${var.cuez-proxy-service-account}"
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${google_service_account.cloud_build_runner.email}"
 }
