@@ -98,7 +98,32 @@ resource "google_project_iam_member" "secret_manager_accessor" { # If accessing 
   member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
 }
 
-# ... other potential permissions (Cloud Functions deployer, etc.) as needed
+# Networking permissions
+
+resource "google_project_iam_member" "network_user" {
+  project = data.google_project.default.project_id
+  role    = "roles/compute.networkUser"
+  member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
+}
+
+resource "google_project_iam_member" "vpc_access_admin" {
+  project = data.google_project.default.project_id
+  role    = "roles/vpcaccess.admin"
+  member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
+}
+
+resource "google_project_iam_member" "compute_security_admin" {
+  project = data.google_project.default.project_id
+  role    = "roles/compute.securityAdmin"
+  member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
+}
+
+
+# resource "google_project_iam_member" "compute_xpn_admin" { # Only if using XPN/Shared VPC
+#   project = data.google_project.default.project_id
+#   role    = "roles/compute.xpnAdmin"
+#   member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
+# }
 
 
 # I think these two are needed for the runner based of the Hashicorp examples

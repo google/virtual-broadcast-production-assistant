@@ -29,7 +29,8 @@ resource "google_project_service" "enable-required-apis" {
     "aiplatform.googleapis.com",
     "artifactregistry.googleapis.com",
     "servicenetworking.googleapis.com",
-    "secretmanager.googleapis.com"
+    "secretmanager.googleapis.com",
+    "vpcaccess.googleapis.com"
   ])
   project = var.project_id
   service = each.value

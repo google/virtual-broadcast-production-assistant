@@ -61,6 +61,27 @@ module "client_frontend" {
 }
 
 
+# VPC and Networking
+
+module "networking" {
+  source                          = "./modules/networking"
+  region                          = var.region
+  project                         = var.project_id
+  vpc-name                        = "cuez-services"
+  subnet-name                     = "cuez-services-subnet"
+  vpc-access-connector-name       = "cuez-services-connector"
+  vpc-access-connector-cidr-range = "10.8.0.0/28"
+}
+
+# VM for CUEZ Automator
+module "cuez-automator" {
+  source     = "./modules/cuez-automator"
+  network    = module.networking.vpc-name
+  subnetwork = module.networking.subnet-id
+}
+
+
+
 
 
 # module "backend_secrets" {
