@@ -54,6 +54,21 @@ resource "google_project_iam_member" "cloudrun_admin" {
   member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
 }
 
+# Allow Cloud Build Runner to manage DNS
+
+resource "google_project_iam_member" "cloud_build_runner_dns_zone_admin" {
+  project = data.google_project.default.project_id
+  role    = "roles/dns.zoneAdmin" # Grant zone admin permissions
+  member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
+}
+
+resource "google_project_iam_member" "cloud_build_runner_dns_record_set_admin" {
+  project = data.google_project.default.project_id
+  role    = "roles/dns.recordSetAdmin" # Grant record set admin permissions
+  member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
+}
+
+
 # Allow permission for the Cloud Build Runner to actAs the websocket SA
 resource "google_service_account_iam_member" "cloud_build_runner_impersonate_websocket" {
   service_account_id = "projects/${data.google_project.default.project_id}/serviceAccounts/${var.websocket-service-account}"
