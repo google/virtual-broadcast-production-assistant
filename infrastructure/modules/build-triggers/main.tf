@@ -139,6 +139,18 @@ resource "google_project_iam_member" "logs_writer" {
   member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
 }
 
+resource "google_project_iam_member" "compute_instance_admin" {
+  project = data.google_project.default.project_id
+  role    = "roles/compute.instanceAdmin"
+  member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
+}
+
+resource "google_project_iam_member" "compute_global_address" {
+  project = data.google_project.default.project_id
+  role    = "roles/compute.networkUser"
+  member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
+}
+
 # The below is disabled because I spent a while getting no where with it
 # It kept saying invalid argument no matter what I did. Most be something to do
 # with Gen 2 Cloud Build. We don't have an official example of a Gen 2 trigger vai
