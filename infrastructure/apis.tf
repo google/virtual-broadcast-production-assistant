@@ -21,6 +21,7 @@ resource "google_project_service" "enable-required-apis" {
 
   for_each = toset([
     "aiplatform.googleapis.com",
+    "dns.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "cloudbuild.googleapis.com",
     "logging.googleapis.com",
