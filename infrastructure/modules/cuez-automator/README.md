@@ -4,7 +4,7 @@ Currently the Automator runs on MacOS or Windows. We have to spin up
 this VM and then install the Automator via RDP, set the program and binding
 then let the Cloud Run Proxy interact with the model.
 
-# Instructions
+## Instructions
 
 When terraform has created the VM you will need to set the Windows Password
 so you can actually log in.
