@@ -81,13 +81,13 @@ logger.info('Using model: %s and voice: %s')
 # Cloud Function URLs with validation
 # TODO: This should be replaced with TOOL endpoints, they may not
 # be cloud functions
-CLOUD_FUNCTIONS = {}
+TOOLS = {'cuez_automator': 'http://10.1.2.2:7070/api/'}
 
 # Validate Cloud Function URLs
-for name, url in CLOUD_FUNCTIONS.items():
+for name, url in TOOLS.items():
   if not url:
     logger.warning('Missing URL for cloud function: %s', name)
-  elif not url.startswith('https://'):
+  elif not url.startswith('https://') or not url.startswith('http://'):
     logger.warning('Invalid URL format for %s: %s', name, url)
 
 # Load system instructions
