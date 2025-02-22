@@ -98,6 +98,17 @@ except Exception as e:
   logger.error('Failed to load system instructions: %s', e)
   SYSTEM_INSTRUCTIONS = ''
 
+# Load cuez swagger json
+try:
+  with open('config/cuez_swagger.json', 'r', encoding='utf-8') as f:
+    SWAGGER_JSON = f.read()
+except Exception as e:
+  logger.error('Failed to load cuez swagger json: %s', e)
+  SWAGGER_JSON = ''
+
+SYSTEM_INSTRUCTIONS = SYSTEM_INSTRUCTIONS.replace('$SWAGGER_JSON',
+                                                  SWAGGER_JSON)
+
 logger.info('System instructions: %s', SYSTEM_INSTRUCTIONS)
 
 # Gemini Configuration

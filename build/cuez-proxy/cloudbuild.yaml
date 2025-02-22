@@ -1,0 +1,21 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  dir: 'cuez-custom-proxy'
+  args: [ 'build', '-t', '$_REGION_-docker.pkg.dev/$_PROJECT_ID_/cuez-custom-proxy/cuez-custom-proxy:latest', '-t', '$_REGION_-docker.pkg.dev/$_PROJECT_ID_/cuez-custom-proxy/cuez-custom-proxy:$COMMIT_SHA', '.' ]
+- name: 'gcr.io/cloud-builders/docker'
+  args: [ 'push', '$_REGION_-docker.pkg.dev/$_PROJECT_ID_/cuez-custom-proxy/cuez-custom-proxy', '--all-tags']
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args:
+    - 'run'
+    - 'deploy'
+    - 'cuez-custom-proxy'
+    - '--image'
+    - '$_REGION_-docker.pkg.dev/$_PROJECT_ID_/cuez-custom-proxy/cuez-custom-proxy:$COMMIT_SHA'
+    - '--region'
+    - '$_REGION_'
+  env:
+    - "CLOUDSDK_COMPUTE_REGION=$_REGION_"
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 3600s
