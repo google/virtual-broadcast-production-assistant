@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
+CUEZ_AUTOMATOR_ENDPOINT = os.getenv('CUEZ_AUTOMATOR_ENDPOINT',
+                                    'http://localhost:7070/api')
 
 
 class ConfigurationError(Exception):
@@ -52,7 +54,6 @@ class ApiConfig:
   async def initialize(self):
     '''Initialize API credentials.'''
 
-
     if not self.use_vertex:
       try:
         self.api_key = get_secret('GOOGLE_API_KEY')
@@ -81,7 +82,7 @@ logger.info('Using model: %s and voice: %s')
 # Cloud Function URLs with validation
 # TODO: This should be replaced with TOOL endpoints, they may not
 # be cloud functions
-TOOLS = {'cuez_automator': 'http://localhost:7070/api'}
+TOOLS = {'cuez_automator': CUEZ_AUTOMATOR_ENDPOINT}
 
 # Validate Cloud Function URLs
 for name, url in TOOLS.items():
