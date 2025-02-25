@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 CUEZ_AUTOMATOR_ENDPOINT = os.getenv('CUEZ_AUTOMATOR_ENDPOINT',
-                                    'http://localhost:7070/api')
+                                    'http://localhost:7070/api/')
 
 
 class ConfigurationError(Exception):

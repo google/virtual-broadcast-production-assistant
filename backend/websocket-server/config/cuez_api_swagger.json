@@ -1,1525 +1,979 @@
 {
   "collection": {
     "info": {
-      "_postman_id": "6179791d-2b1e-4e15-a3bf-c25bc9bdffa5",
-      "name": "Cuez API",
-      "description": "Interact with Cuez API.\n\n{{base_url}} => [https://api.cuez.app/v1](https://api.cuez.app/v1)\n\n{{jwt}} => obtained by the project/authenticate request",
+      "_postman_id": "bf2d3a03-5f3f-4459-a09a-4596d5d31cd5",
+      "name": "Automator API",
       "schema": "https://schema.postman.com/json/collection/v2.1.0/collection.json",
-      "fork": {
-        "label": "Justin Grayston's fork",
-        "createdAt": "2025-02-20T19:42:05.000Z",
-        "from": "13203914-f2a5fd04-4ba4-4a72-ac81-f6718ded34ed"
-      },
-      "updatedAt": "2025-02-20T19:42:24.000Z",
-      "createdAt": "2025-02-20T19:42:23.000Z",
+      "updatedAt": "2025-02-25T15:51:00.000Z",
+      "createdAt": "2025-02-25T15:50:59.000Z",
       "lastUpdatedBy": "13203914",
-      "uid": "13203914-6179791d-2b1e-4e15-a3bf-c25bc9bdffa5"
+      "uid": "13203914-bf2d3a03-5f3f-4459-a09a-4596d5d31cd5"
     },
     "item": [
       {
-        "name": "project",
-        "item": [
-          {
-            "name": "authenticate",
-            "id": "3f09c18d-2007-4ee2-bc0e-9be621b412f1",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true,
-              "disabledSystemHeaders": {}
-            },
-            "request": {
-              "method": "POST",
-              "header": [],
-              "body": {
-                "mode": "raw",
-                "raw": "{\n    \"api_key\": \"36cfc860-ede6-59b5-ec86-6bf6b41a9a78\",\n    \"identifier_name\": \"My App Name Test Erik\",\n    \"identifier_id\": \"0ed40951-df3c-43aa-81c0-78b80edf5a9e\"\n}",
-                "options": {
-                  "raw": {
-                    "language": "json"
-                  }
-                }
-              },
-              "url": {
-                "raw": "{{base_url}}/project/authenticate",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "project",
-                  "authenticate"
-                ]
-              },
-              "description": "Request a JWT token that you need to embed in the headers of all future calls.\n\napi_key: you can find it in the automator section of your Cuez Project\n\nidentifier_name: the name of your application\n\nidentifier_id: a uid for your own reference\n\nReturns the id of your Cuez project, its name and the jwt token"
-            },
-            "response": [
-              {
-                "id": "3552e288-af14-4eb6-8c37-6eb1b3ed3993",
-                "name": "authenticate",
-                "originalRequest": {
-                  "method": "POST",
-                  "header": [],
-                  "body": {
-                    "mode": "raw",
-                    "raw": "{\n    \"api_key\": \"ccbccfd4-f797-36dc-f557-3870f39e2c0b\",\n    \"identifier_name\": \"My App Name\",\n    \"identifier_id\": \"0ed40951-df3c-43aa-81c0-78b80edf5a98\"\n}",
-                    "options": {
-                      "raw": {
-                        "language": "json"
-                      }
-                    }
-                  },
-                  "url": {
-                    "raw": "{{base_url}}/project/authenticate",
-                    "host": [
-                      "{{base_url}}"
-                    ],
-                    "path": [
-                      "project",
-                      "authenticate"
-                    ]
-                  }
-                },
-                "status": "OK",
-                "code": 200,
-                "_postman_previewlanguage": "json",
-                "header": [
-                  {
-                    "key": "Access-Control-Allow-Origin",
-                    "value": "*"
-                  },
-                  {
-                    "key": "cache-control",
-                    "value": "no-cache"
-                  },
-                  {
-                    "key": "content-type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "cross-origin-embedder-policy",
-                    "value": "same-origin"
-                  },
-                  {
-                    "key": "cross-origin-opener-policy",
-                    "value": "same-origin"
-                  },
-                  {
-                    "key": "x-content-type-options",
-                    "value": "nosniff"
-                  },
-                  {
-                    "key": "Date",
-                    "value": "Sun, 08 Dec 2024 23:42:29 GMT"
-                  },
-                  {
-                    "key": "Connection",
-                    "value": "keep-alive"
-                  },
-                  {
-                    "key": "Keep-Alive",
-                    "value": "timeout=5"
-                  },
-                  {
-                    "key": "Transfer-Encoding",
-                    "value": "chunked"
-                  }
-                ],
-                "cookie": [],
-                "responseTime": null,
-                "body": "{\n    \"result\": \"success\",\n    \"data\": {\n        \"id\": \"fd472f8e-9a32-b5fz-6344-fe969a6829fe\",\n        \"name\": \"My Cuez Project name\",\n        \"token\": \"eyJhbGcuOiJIUzI1NiIsInR5cCI6LkpXVCJ9.eyJwcm9qZWN5SWQiOiJmTDQ3MmY4ZS05YTMwLXI1ZmMtNjM3NC1mZjk2OWE2ODI4ZmUiLKJleHBpcmVzX2F2IjoiMjAyNS0xMi0wN3QxMzo0OTo1NS4wMzRaIn0.iCrsHboVzNPxNtidrzTUVfIsV8zMiJ5is1ZSpcI4cvM\",\n        \"expires_at\": \"2024-12-15T13:19:04.000Z\"\n    }\n}",
-                "uid": "13203914-3552e288-af14-4eb6-8c37-6eb1b3ed3993"
-              }
+        "name": "Next",
+        "id": "bb40cb5a-185c-4dca-8ce4-20a427c56c10",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/next",
+            "protocol": "http",
+            "host": [
+              "localhost"
             ],
-            "uid": "13203914-3f09c18d-2007-4ee2-bc0e-9be621b412f1"
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "next"
+            ]
           },
-          {
-            "name": "fetch",
-            "id": "6c6221e8-18e9-4e26-8fe5-da77a9b352d3",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true
-            },
-            "request": {
-              "method": "GET",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{jwt}}",
-                  "type": "text"
-                },
-                {
-                  "key": "Content-type",
-                  "value": "application/json",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "{{base_url}}/project",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "project"
-                ]
-              },
-              "description": "Get Project info"
-            },
-            "response": [],
-            "uid": "13203914-6c6221e8-18e9-4e26-8fe5-da77a9b352d3"
-          },
-          {
-            "name": "blueprints",
-            "id": "63e8c57e-90a9-4ae1-8f3a-239511ed4e65",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true
-            },
-            "request": {
-              "method": "GET",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{jwt}}",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "{{base_url}}/project/blueprints",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "project",
-                  "blueprints"
-                ]
-              },
-              "description": "Fetch all episode templates of a project"
-            },
-            "response": [],
-            "uid": "13203914-63e8c57e-90a9-4ae1-8f3a-239511ed4e65"
-          },
-          {
-            "name": "blocktemplate",
-            "id": "b2af582d-6132-42fa-b992-a3e8c7e025cc",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true
-            },
-            "request": {
-              "method": "GET",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{jwt}}",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "{{base_url}}/project/{{project_id}}/blocktemplate",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "project",
-                  "{{project_id}}",
-                  "blocktemplate"
-                ]
-              },
-              "description": "Fetch the block template of the project. Containing all definitions of the building stones of an Episode in this Project.  \nThe blocktemplate is unique for every project"
-            },
-            "response": [],
-            "uid": "13203914-b2af582d-6132-42fa-b992-a3e8c7e025cc"
-          },
-          {
-            "name": "series",
-            "id": "079c57d2-df63-47f2-9d5e-de3f47955ab3",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true
-            },
-            "request": {
-              "method": "GET",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{jwt}}",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "{{base_url}}/project/series?filter[status]=active",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "project",
-                  "series"
-                ],
-                "query": [
-                  {
-                    "key": "filter[status]",
-                    "value": "active"
-                  }
-                ]
-              },
-              "description": "Fetch all series of a project"
-            },
-            "response": [],
-            "uid": "13203914-079c57d2-df63-47f2-9d5e-de3f47955ab3"
-          },
-          {
-            "name": "organisation",
-            "id": "cdf82e3a-b7c4-4034-858f-c2ad2d780594",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true
-            },
-            "request": {
-              "method": "GET",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{jwt}}",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "{{base_url}}/project/organisation",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "project",
-                  "organisation"
-                ]
-              },
-              "description": "Fetch the organisation the project belongs to"
-            },
-            "response": [],
-            "uid": "13203914-cdf82e3a-b7c4-4034-858f-c2ad2d780594"
-          },
-          {
-            "name": "episodes",
-            "id": "b875c741-335a-4578-b690-8b130c68cf58",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true
-            },
-            "request": {
-              "method": "GET",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{jwt}}",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "{{base_url}}/project/episodes?filter[status]=active&filter[title]=News&sort=-created_at",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "project",
-                  "episodes"
-                ],
-                "query": [
-                  {
-                    "key": "filter[status]",
-                    "value": "active"
-                  },
-                  {
-                    "key": "filter[title]",
-                    "value": "News"
-                  },
-                  {
-                    "key": "sort",
-                    "value": "-created_at"
-                  }
-                ]
-              },
-              "description": "Query for episodes in a project"
-            },
-            "response": [],
-            "uid": "13203914-b875c741-335a-4578-b690-8b130c68cf58"
-          }
-        ],
-        "id": "f8e8765c-08b6-43aa-9605-495b006e7bbb",
-        "uid": "13203914-f8e8765c-08b6-43aa-9605-495b006e7bbb"
+          "description": "Go to the next available command, equivalent of SYSTEM>NEXT"
+        },
+        "response": [],
+        "uid": "13203914-bb40cb5a-185c-4dca-8ce4-20a427c56c10"
       },
       {
-        "name": "episode",
-        "item": [
-          {
-            "name": "part",
-            "item": [
-              {
-                "name": "item",
-                "item": [
-                  {
-                    "name": "create",
-                    "id": "918a5541-8f65-46e5-8896-8367d738d183",
-                    "protocolProfileBehavior": {
-                      "disableBodyPruning": true
-                    },
-                    "request": {
-                      "method": "POST",
-                      "header": [
-                        {
-                          "key": "Authorization",
-                          "value": "Bearer {{jwt}}",
-                          "type": "text"
-                        }
-                      ],
-                      "body": {
-                        "mode": "raw",
-                        "raw": "{\n    \"title\" : \"New Item\",\n    \"place_holder_position\" : 0,\n    \"place_after\":\"1f7a9cca-ca53-a0a8-55ed-59dc1a9e2afd\",\n    \"color\" : {\n        \"name\":\"background\",\n        \"value\": \"pink\"\n    }\n}",
-                        "options": {
-                          "raw": {
-                            "language": "json"
-                          }
-                        }
-                      },
-                      "url": {
-                        "raw": "{{base_url}}/episode/c17e748f-bcf7-7443-86d5-81edbaeae95a/part/60bcc1c0-2035-3fc4-3d74-95748eaca865/item",
-                        "host": [
-                          "{{base_url}}"
-                        ],
-                        "path": [
-                          "episode",
-                          "c17e748f-bcf7-7443-86d5-81edbaeae95a",
-                          "part",
-                          "60bcc1c0-2035-3fc4-3d74-95748eaca865",
-                          "item"
-                        ]
-                      },
-                      "description": "Create a new part\n\nplace_holder_position is the index the new part should have in the episode. 0 = first part\n\nplace_after; the uid of the part the new part needs to be placed after"
-                    },
-                    "response": [],
-                    "uid": "13203914-918a5541-8f65-46e5-8896-8367d738d183"
-                  },
-                  {
-                    "name": "update",
-                    "id": "7d7b8eab-44bb-4975-a458-5171e6db6097",
-                    "protocolProfileBehavior": {
-                      "disableBodyPruning": true
-                    },
-                    "request": {
-                      "method": "PATCH",
-                      "header": [
-                        {
-                          "key": "Authorization",
-                          "value": "Bearer {{jwt}}",
-                          "type": "text"
-                        }
-                      ],
-                      "body": {
-                        "mode": "raw",
-                        "raw": "{\n    \"title\" : \"An Item\",\n    \"is_floating\" : false,\n    \"color\": {\n        \"name\":\"background\",\n        \"value\" : \"blue\"\n    }\n}",
-                        "options": {
-                          "raw": {
-                            "language": "json"
-                          }
-                        }
-                      },
-                      "url": {
-                        "raw": "{{base_url}}/episode/c17e748f-bcf7-7443-86d5-81edbaeae95a/part/60bcc1c0-2035-3fc4-3d74-95748eaca865/item/77598471-3803-4b8a-8b79-102c1624c24e",
-                        "host": [
-                          "{{base_url}}"
-                        ],
-                        "path": [
-                          "episode",
-                          "c17e748f-bcf7-7443-86d5-81edbaeae95a",
-                          "part",
-                          "60bcc1c0-2035-3fc4-3d74-95748eaca865",
-                          "item",
-                          "77598471-3803-4b8a-8b79-102c1624c24e"
-                        ]
-                      },
-                      "description": "Update the properties of an item:\n\nis_floating: true or false\n\ntitle\n\n``` json\ncolor:{\n   name: \"background/foreground\",\n   value: \"red, pink, purple, blue, light-blue, teal, green, lime, yellow, orange, grey, black\"\n}\n ```"
-                    },
-                    "response": [],
-                    "uid": "13203914-7d7b8eab-44bb-4975-a458-5171e6db6097"
-                  },
-                  {
-                    "name": "delete",
-                    "id": "21a57f16-6f38-4dcd-a07a-094a67e84ea6",
-                    "protocolProfileBehavior": {
-                      "disableBodyPruning": true
-                    },
-                    "request": {
-                      "method": "DELETE",
-                      "header": [
-                        {
-                          "key": "Authorization",
-                          "value": "Bearer {{jwt}}",
-                          "type": "text"
-                        }
-                      ],
-                      "url": {
-                        "raw": "{{base_url}}/episode/c17e748f-bcf7-7443-86d5-81edbaeae95a/part/60bcc1c0-2035-3fc4-3d74-95748eaca865/item/77598471-3803-4b8a-8b79-102c1624c24e",
-                        "host": [
-                          "{{base_url}}"
-                        ],
-                        "path": [
-                          "episode",
-                          "c17e748f-bcf7-7443-86d5-81edbaeae95a",
-                          "part",
-                          "60bcc1c0-2035-3fc4-3d74-95748eaca865",
-                          "item",
-                          "77598471-3803-4b8a-8b79-102c1624c24e"
-                        ]
-                      },
-                      "description": "Update the properties of an item:\n\nis_floating: true or false\n\ntitle\n\ncolor:{\n\nname: \"background/foreground\",\n\nvalue: \"red, pink, purple, blue, light-blue, teal, green, lime, yellow, orange, grey, black\"\n\n}"
-                    },
-                    "response": [],
-                    "uid": "13203914-21a57f16-6f38-4dcd-a07a-094a67e84ea6"
-                  },
-                  {
-                    "name": "duplicate",
-                    "id": "32faf7e0-cfde-41d5-a1ec-31d074f4baa5",
-                    "protocolProfileBehavior": {
-                      "disableBodyPruning": true
-                    },
-                    "request": {
-                      "method": "POST",
-                      "header": [
-                        {
-                          "key": "Authorization",
-                          "value": "Bearer {{jwt}}",
-                          "type": "text"
-                        }
-                      ],
-                      "url": {
-                        "raw": "{{base_url}}/episode/c17e748f-bcf7-7443-86d5-81edbaeae95a/part/fcbe2471-8cc8-a9df-ab80-90a2b45657c0/item/bd957509-2ffa-1fc1-8792-7549e3520adc/actions/duplicate",
-                        "host": [
-                          "{{base_url}}"
-                        ],
-                        "path": [
-                          "episode",
-                          "c17e748f-bcf7-7443-86d5-81edbaeae95a",
-                          "part",
-                          "fcbe2471-8cc8-a9df-ab80-90a2b45657c0",
-                          "item",
-                          "bd957509-2ffa-1fc1-8792-7549e3520adc",
-                          "actions",
-                          "duplicate"
-                        ]
-                      },
-                      "description": "Update the properties of an item:\n\nis_floating: true or false\n\ntitle\n\ncolor:{\n\nname: \"background/foreground\",\n\nvalue: \"red, pink, purple, blue, light-blue, teal, green, lime, yellow, orange, grey, black\"\n\n}"
-                    },
-                    "response": [],
-                    "uid": "13203914-32faf7e0-cfde-41d5-a1ec-31d074f4baa5"
-                  },
-                  {
-                    "name": "sort",
-                    "id": "ed9f7d78-1b03-43ae-8e02-bc12c1a881ab",
-                    "protocolProfileBehavior": {
-                      "disableBodyPruning": true
-                    },
-                    "request": {
-                      "method": "PATCH",
-                      "header": [
-                        {
-                          "key": "Authorization",
-                          "value": "Bearer {{jwt}}",
-                          "type": "text"
-                        }
-                      ],
-                      "body": {
-                        "mode": "raw",
-                        "raw": "{\n    \"place_holder_position\":0,\n    \"place_after\": \"\"\n    \n}",
-                        "options": {
-                          "raw": {
-                            "language": "json"
-                          }
-                        }
-                      },
-                      "url": {
-                        "raw": "{{base_url}}/episode/c9512b82-0c56-2a7b-36a1-3f5e5d4b84bb/part/37fafb27-30e3-ecd6-ca70-a8d8c5a4c2d3/item/64cfd08e-7787-4308-9077-97f47a38af5c/actions/sort",
-                        "host": [
-                          "{{base_url}}"
-                        ],
-                        "path": [
-                          "episode",
-                          "c9512b82-0c56-2a7b-36a1-3f5e5d4b84bb",
-                          "part",
-                          "37fafb27-30e3-ecd6-ca70-a8d8c5a4c2d3",
-                          "item",
-                          "64cfd08e-7787-4308-9077-97f47a38af5c",
-                          "actions",
-                          "sort"
-                        ]
-                      },
-                      "description": "Update the properties of an item:\n\nis_floating: true or false\n\ntitle\n\ncolor:{\n\nname: \"background/foreground\",\n\nvalue: \"red, pink, purple, blue, light-blue, teal, green, lime, yellow, orange, grey, black\"\n\n}"
-                    },
-                    "response": [],
-                    "uid": "13203914-ed9f7d78-1b03-43ae-8e02-bc12c1a881ab"
-                  },
-                  {
-                    "name": "fetch",
-                    "id": "028233b4-62cd-4e52-b8c7-9d06372781d7",
-                    "protocolProfileBehavior": {
-                      "disableBodyPruning": true
-                    },
-                    "request": {
-                      "method": "GET",
-                      "header": [
-                        {
-                          "key": "Authorization",
-                          "value": "Bearer {{jwt}}",
-                          "type": "text"
-                        }
-                      ],
-                      "url": {
-                        "raw": "{{base_url}}/episode/c17e748f-bcf7-7443-86d5-81edbaeae95a/part/60bcc1c0-2035-3fc4-3d74-95748eaca865/item/77598471-3803-4b8a-8b79-102c1624c24e",
-                        "host": [
-                          "{{base_url}}"
-                        ],
-                        "path": [
-                          "episode",
-                          "c17e748f-bcf7-7443-86d5-81edbaeae95a",
-                          "part",
-                          "60bcc1c0-2035-3fc4-3d74-95748eaca865",
-                          "item",
-                          "77598471-3803-4b8a-8b79-102c1624c24e"
-                        ]
-                      },
-                      "description": "Fetch an episode"
-                    },
-                    "response": [],
-                    "uid": "13203914-028233b4-62cd-4e52-b8c7-9d06372781d7"
-                  }
-                ],
-                "id": "5f6f88a0-51fa-4014-80c7-9985ee2a9397",
-                "uid": "13203914-5f6f88a0-51fa-4014-80c7-9985ee2a9397"
-              },
-              {
-                "name": "fetch",
-                "id": "21597387-8bcd-4c69-81f9-4d02b7c3ef02",
-                "protocolProfileBehavior": {
-                  "disableBodyPruning": true
-                },
-                "request": {
-                  "method": "GET",
-                  "header": [
-                    {
-                      "key": "Authorization",
-                      "value": "Bearer {{jwt}}",
-                      "type": "text"
-                    }
-                  ],
-                  "url": {
-                    "raw": "{{base_url}}/episode/{{episode_id}}/part/0f014c02-3fbc-798e-73fa-38217c8c2947",
-                    "host": [
-                      "{{base_url}}"
-                    ],
-                    "path": [
-                      "episode",
-                      "{{episode_id}}",
-                      "part",
-                      "0f014c02-3fbc-798e-73fa-38217c8c2947"
-                    ]
-                  },
-                  "description": "Fetch a part"
-                },
-                "response": [],
-                "uid": "13203914-21597387-8bcd-4c69-81f9-4d02b7c3ef02"
-              },
-              {
-                "name": "update",
-                "id": "fd304033-0567-4bba-9e02-58b000411907",
-                "protocolProfileBehavior": {
-                  "disableBodyPruning": true
-                },
-                "request": {
-                  "method": "PATCH",
-                  "header": [
-                    {
-                      "key": "Authorization",
-                      "value": "Bearer {{jwt}}",
-                      "type": "text"
-                    }
-                  ],
-                  "body": {
-                    "mode": "raw",
-                    "raw": "{\n    \"is_floating\": true,\n    \"title\" : \"Part 1\"\n}",
-                    "options": {
-                      "raw": {
-                        "language": "json"
-                      }
-                    }
-                  },
-                  "url": {
-                    "raw": "{{base_url}}/episode/{{episode_id}}/part/3f522c3a-4571-53fb-6115-b1174429e7a3",
-                    "host": [
-                      "{{base_url}}"
-                    ],
-                    "path": [
-                      "episode",
-                      "{{episode_id}}",
-                      "part",
-                      "3f522c3a-4571-53fb-6115-b1174429e7a3"
-                    ]
-                  },
-                  "description": "Update the properties of a part:\n\nis_floating: true or false\n\ntitle"
-                },
-                "response": [],
-                "uid": "13203914-fd304033-0567-4bba-9e02-58b000411907"
-              },
-              {
-                "name": "delete",
-                "id": "a133335e-963f-42a5-a3b9-e74b8a5c2970",
-                "protocolProfileBehavior": {
-                  "disableBodyPruning": true
-                },
-                "request": {
-                  "method": "DELETE",
-                  "header": [
-                    {
-                      "key": "Authorization",
-                      "value": "Bearer {{jwt}}",
-                      "type": "text"
-                    }
-                  ],
-                  "url": {
-                    "raw": "{{base_url}}/episode/{{episode_id}}/part/ac4def5a-ee72-41b4-9ea6-a40b122c1d98",
-                    "host": [
-                      "{{base_url}}"
-                    ],
-                    "path": [
-                      "episode",
-                      "{{episode_id}}",
-                      "part",
-                      "ac4def5a-ee72-41b4-9ea6-a40b122c1d98"
-                    ]
-                  },
-                  "description": "Delete a Part from an episode"
-                },
-                "response": [],
-                "uid": "13203914-a133335e-963f-42a5-a3b9-e74b8a5c2970"
-              },
-              {
-                "name": "duplicate",
-                "id": "cb517dca-f8fb-4bb4-84f8-dce282226cda",
-                "protocolProfileBehavior": {
-                  "disableBodyPruning": true
-                },
-                "request": {
-                  "method": "POST",
-                  "header": [
-                    {
-                      "key": "Authorization",
-                      "value": "Bearer {{jwt}}",
-                      "type": "text"
-                    }
-                  ],
-                  "url": {
-                    "raw": "{{base_url}}/episode/{{episode_id}}/part/3f522c3a-4571-53fb-6115-b1174429e7a3/actions/duplicate",
-                    "host": [
-                      "{{base_url}}"
-                    ],
-                    "path": [
-                      "episode",
-                      "{{episode_id}}",
-                      "part",
-                      "3f522c3a-4571-53fb-6115-b1174429e7a3",
-                      "actions",
-                      "duplicate"
-                    ]
-                  },
-                  "description": "Duplicate a part in an episode, the duplicated part will appear under the given part"
-                },
-                "response": [],
-                "uid": "13203914-cb517dca-f8fb-4bb4-84f8-dce282226cda"
-              },
-              {
-                "name": "create",
-                "id": "fc49044c-b835-4f85-820b-0c8295628d51",
-                "protocolProfileBehavior": {
-                  "disableBodyPruning": true
-                },
-                "request": {
-                  "method": "POST",
-                  "header": [
-                    {
-                      "key": "Authorization",
-                      "value": "Bearer {{jwt}}",
-                      "type": "text"
-                    }
-                  ],
-                  "body": {
-                    "mode": "raw",
-                    "raw": "{\n    \"title\" : \"Hello New Part 4\",\n    \"place_holder_position\" : 1,\n    \"place_after\" : \"3f522c3a-4571-53fb-6115-b1174429e7a3\"\n}",
-                    "options": {
-                      "raw": {
-                        "language": "json"
-                      }
-                    }
-                  },
-                  "url": {
-                    "raw": "{{base_url}}/episode/{{episode_id}}/part",
-                    "host": [
-                      "{{base_url}}"
-                    ],
-                    "path": [
-                      "episode",
-                      "{{episode_id}}",
-                      "part"
-                    ]
-                  },
-                  "description": "Create a new part\n\nplace_holder_position is the index the new part should have in the episode. 0 = first part\n\nplace_after; the uid of the part the new part needs to be placed after"
-                },
-                "response": [],
-                "uid": "13203914-fc49044c-b835-4f85-820b-0c8295628d51"
-              },
-              {
-                "name": "sort",
-                "id": "85accc97-571f-4c8d-889f-8f085b98499d",
-                "protocolProfileBehavior": {
-                  "disableBodyPruning": true
-                },
-                "request": {
-                  "method": "PATCH",
-                  "header": [
-                    {
-                      "key": "Authorization",
-                      "value": "Bearer {{jwt}}",
-                      "type": "text"
-                    }
-                  ],
-                  "body": {
-                    "mode": "raw",
-                    "raw": "{\n    \"place_after\" : \"3f522c3a-4571-53fb-6115-b1174429e7a3\",\n    \"place_holder_position\" : 1\n}",
-                    "options": {
-                      "raw": {
-                        "language": "json"
-                      }
-                    }
-                  },
-                  "url": {
-                    "raw": "{{base_url}}/episode/{{episode_id}}/part/ac4def5a-ee72-41b4-9ea6-a40b122c1d98/actions/sort",
-                    "host": [
-                      "{{base_url}}"
-                    ],
-                    "path": [
-                      "episode",
-                      "{{episode_id}}",
-                      "part",
-                      "ac4def5a-ee72-41b4-9ea6-a40b122c1d98",
-                      "actions",
-                      "sort"
-                    ]
-                  },
-                  "description": "Sort a part in an episode\n\nplace_holder_position is the index the new part should have in the episode. 0 = first part\n\nplace_after; the uid of the part the new part needs to be placed after"
-                },
-                "response": [],
-                "uid": "13203914-85accc97-571f-4c8d-889f-8f085b98499d"
-              }
+        "name": "Previous",
+        "id": "c8767e66-0670-4409-92a5-fd82de962521",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/previous",
+            "protocol": "http",
+            "host": [
+              "localhost"
             ],
-            "id": "6b4ef04a-0bc8-4030-bef2-61e92000238b",
-            "uid": "13203914-6b4ef04a-0bc8-4030-bef2-61e92000238b"
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "previous"
+            ]
           },
-          {
-            "name": "item",
-            "item": [
-              {
-                "name": "block",
-                "item": [
-                  {
-                    "name": "create cue block",
-                    "id": "7e8c4df1-518c-4746-ac9b-b666bc285f27",
-                    "protocolProfileBehavior": {
-                      "disableBodyPruning": true
-                    },
-                    "request": {
-                      "method": "POST",
-                      "header": [
-                        {
-                          "key": "Authorization",
-                          "value": "Bearer {{jwt}}",
-                          "type": "text"
-                        }
-                      ],
-                      "body": {
-                        "mode": "raw",
-                        "raw": "{\n    \"block_template_identifier\" : \"default_clip\",\n    \"place_after\":\"d8374c95-7687-cce2-cc59-2e7ab333fb1b\",\n    \"place_holder_position\": 5,\n    \"fields\" : {\n        \"default_clip_title\" : { \"text\":\"Show opener\"},\n        \"default_clip_lw\" : { \"text\":\"These are the out words\"},\n        \"default_clip_sound\" : [\"309d4f11-a590-a371-3364-7ab6b1a01087\"]\n    }\n}",
-                        "options": {
-                          "raw": {
-                            "language": "json"
-                          }
-                        }
-                      },
-                      "url": {
-                        "raw": "{{base_url}}/episode/e18c88fd-90f3-2929-0ae7-183e683415a2/item/59f25e2f-bf8c-e4ae-edae-8f2998af8b41/block",
-                        "host": [
-                          "{{base_url}}"
-                        ],
-                        "path": [
-                          "episode",
-                          "e18c88fd-90f3-2929-0ae7-183e683415a2",
-                          "item",
-                          "59f25e2f-bf8c-e4ae-edae-8f2998af8b41",
-                          "block"
-                        ]
-                      },
-                      "description": "Create a block inside of an item\n\nplace_after; the uid of the block_instance where you want to insert the block after"
-                    },
-                    "response": [],
-                    "uid": "13203914-7e8c4df1-518c-4746-ac9b-b666bc285f27"
-                  },
-                  {
-                    "name": "create text block",
-                    "id": "dbf6571c-86eb-4dd9-a8e8-9148d8550b82",
-                    "protocolProfileBehavior": {
-                      "disableBodyPruning": true
-                    },
-                    "request": {
-                      "method": "POST",
-                      "header": [
-                        {
-                          "key": "Authorization",
-                          "value": "Bearer {{jwt}}",
-                          "type": "text"
-                        }
-                      ],
-                      "body": {
-                        "mode": "raw",
-                        "raw": "{\n    \"block_template_identifier\" : \"default_prompter\",\n    \"place_after\":\"d8374c95-7687-cce2-cc59-2e7ab333fb1b\",\n    \"place_holder_position\": 5,\n    \"fields\" : {\n        \"default_prompter_text\" : { \"html\":\"<p>Hello <strong>World</strong></p>\" }\n    }\n}",
-                        "options": {
-                          "raw": {
-                            "language": "json"
-                          }
-                        }
-                      },
-                      "url": {
-                        "raw": "{{base_url}}/episode/e18c88fd-90f3-2929-0ae7-183e683415a2/item/59f25e2f-bf8c-e4ae-edae-8f2998af8b41/block",
-                        "host": [
-                          "{{base_url}}"
-                        ],
-                        "path": [
-                          "episode",
-                          "e18c88fd-90f3-2929-0ae7-183e683415a2",
-                          "item",
-                          "59f25e2f-bf8c-e4ae-edae-8f2998af8b41",
-                          "block"
-                        ]
-                      },
-                      "description": "Create a block inside of an item\n\nplace_after; the uid of the block_instance where you want to insert the block after"
-                    },
-                    "response": [],
-                    "uid": "13203914-dbf6571c-86eb-4dd9-a8e8-9148d8550b82"
-                  }
-                ],
-                "id": "519ae755-18b0-408f-b0ec-f6f4de5e6868",
-                "uid": "13203914-519ae755-18b0-408f-b0ec-f6f4de5e6868"
-              },
-              {
-                "name": "update",
-                "id": "ea2b56e4-9a43-4044-8bec-2c3b2c6a83d9",
-                "protocolProfileBehavior": {
-                  "disableBodyPruning": true
-                },
-                "request": {
-                  "method": "PATCH",
-                  "header": [
-                    {
-                      "key": "Authorization",
-                      "value": "Bearer {{jwt}}",
-                      "type": "text"
-                    }
-                  ],
-                  "body": {
-                    "mode": "raw",
-                    "raw": "{\n    \"title\" : \"New Item Title\",\n    \"is_floating\" : true,\n    \"color\": {\n        \"name\":\"background\",\n        \"value\" : \"lime\"\n    }\n}",
-                    "options": {
-                      "raw": {
-                        "language": "json"
-                      }
-                    }
-                  },
-                  "url": {
-                    "raw": "{{base_url}}/episode/{{episode_id}}/item/698f2001-4ae8-afd0-fd65-11f04d407327",
-                    "host": [
-                      "{{base_url}}"
-                    ],
-                    "path": [
-                      "episode",
-                      "{{episode_id}}",
-                      "item",
-                      "698f2001-4ae8-afd0-fd65-11f04d407327"
-                    ]
-                  },
-                  "description": "Update the properties of an item:\n\nis_floating: true or false\n\ntitle\n\ncolor:{\n\nname: \"background/foreground\",\n\nvalue: \"red, pink, purple, blue, light-blue, teal, green, lime, yellow, orange, grey, black\"\n\n}"
-                },
-                "response": [],
-                "uid": "13203914-ea2b56e4-9a43-4044-8bec-2c3b2c6a83d9"
-              }
+          "description": "Go to the previous available command, equivalent of SYSTEM>PREVIOUS"
+        },
+        "response": [],
+        "uid": "13203914-c8767e66-0670-4409-92a5-fd82de962521"
+      },
+      {
+        "name": "Next Trigger",
+        "id": "d89fe9fa-70c0-4c9f-bcb7-91b62314809b",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/nextTrigger",
+            "protocol": "http",
+            "host": [
+              "localhost"
             ],
-            "id": "3f1091b5-dec4-4d27-9a7b-698c3eedf9ff",
-            "uid": "13203914-3f1091b5-dec4-4d27-9a7b-698c3eedf9ff"
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "nextTrigger"
+            ]
           },
-          {
-            "name": "block",
-            "item": [
-              {
-                "name": "update label field",
-                "id": "44abcb55-a6ca-4197-8a07-97fef01b1ab9",
-                "protocolProfileBehavior": {
-                  "disableBodyPruning": true
-                },
-                "request": {
-                  "method": "PATCH",
-                  "header": [
-                    {
-                      "key": "Authorization",
-                      "value": "Bearer {{jwt}}",
-                      "type": "text"
-                    }
-                  ],
-                  "body": {
-                    "mode": "raw",
-                    "raw": "{\n    \"block_template_field_identifier\":\"default_clip_sound\",    \n    \"value\" : [\"d8374c95-7687-cce2-cc59-2e7ab333fb1b\"]\n}",
-                    "options": {
-                      "raw": {
-                        "language": "json"
-                      }
-                    }
-                  },
-                  "url": {
-                    "raw": "{{base_url}}/episode/e18c88fd-90f3-2929-0ae7-183e683415a2/block/30a5da37-0031-491e-b81b-5d5f3d223994",
-                    "host": [
-                      "{{base_url}}"
-                    ],
-                    "path": [
-                      "episode",
-                      "e18c88fd-90f3-2929-0ae7-183e683415a2",
-                      "block",
-                      "30a5da37-0031-491e-b81b-5d5f3d223994"
-                    ]
-                  },
-                  "description": "Create a block inside of an item\n\nplace_after; the uid of the block_instance where you want to insert the block after"
-                },
-                "response": [],
-                "uid": "13203914-44abcb55-a6ca-4197-8a07-97fef01b1ab9"
-              },
-              {
-                "name": "update textarea field",
-                "id": "d94f309a-3a9a-4f6f-85f2-30f5c799454f",
-                "protocolProfileBehavior": {
-                  "disableBodyPruning": true
-                },
-                "request": {
-                  "method": "PATCH",
-                  "header": [
-                    {
-                      "key": "Authorization",
-                      "value": "Bearer {{jwt}}",
-                      "type": "text"
-                    }
-                  ],
-                  "body": {
-                    "mode": "raw",
-                    "raw": "{\n    \"block_template_field_identifier\":\"bc36d584-8e33-a0be-6c06-1e9376f93ec8\",    \n    \"html\" : \"<p>Hello <strong>World</strong></p>\"\n}",
-                    "options": {
-                      "raw": {
-                        "language": "json"
-                      }
-                    }
-                  },
-                  "url": {
-                    "raw": "{{base_url}}/episode/e18c88fd-90f3-2929-0ae7-183e683415a2/block/e808da39-237b-48cb-a26b-5659cf1f11fa",
-                    "host": [
-                      "{{base_url}}"
-                    ],
-                    "path": [
-                      "episode",
-                      "e18c88fd-90f3-2929-0ae7-183e683415a2",
-                      "block",
-                      "e808da39-237b-48cb-a26b-5659cf1f11fa"
-                    ]
-                  },
-                  "description": "Create a block inside of an item\n\nplace_after; the uid of the block_instance where you want to insert the block after"
-                },
-                "response": [],
-                "uid": "13203914-d94f309a-3a9a-4f6f-85f2-30f5c799454f"
-              },
-              {
-                "name": "update text block",
-                "id": "1079e0d0-9de4-453f-adee-5c6798c00ee4",
-                "protocolProfileBehavior": {
-                  "disableBodyPruning": true
-                },
-                "request": {
-                  "method": "PATCH",
-                  "header": [
-                    {
-                      "key": "Authorization",
-                      "value": "Bearer {{jwt}}",
-                      "type": "text"
-                    }
-                  ],
-                  "body": {
-                    "mode": "raw",
-                    "raw": "{\n    \"block_template_field_identifier\":\"default_prompter_text\",    \n    \"html\" : \"<p>Hello <strong>World</strong></p>\"\n}",
-                    "options": {
-                      "raw": {
-                        "language": "json"
-                      }
-                    }
-                  },
-                  "url": {
-                    "raw": "{{base_url}}/episode/e18c88fd-90f3-2929-0ae7-183e683415a2/block/912060bd-3110-4697-b1b5-7803bf1f2941",
-                    "host": [
-                      "{{base_url}}"
-                    ],
-                    "path": [
-                      "episode",
-                      "e18c88fd-90f3-2929-0ae7-183e683415a2",
-                      "block",
-                      "912060bd-3110-4697-b1b5-7803bf1f2941"
-                    ]
-                  },
-                  "description": "Create a block inside of an item\n\nplace_after; the uid of the block_instance where you want to insert the block after"
-                },
-                "response": [],
-                "uid": "13203914-1079e0d0-9de4-453f-adee-5c6798c00ee4"
-              },
-              {
-                "name": "update text field",
-                "id": "9fd44de2-c6a0-49f0-8f45-3a8b9740b5e1",
-                "protocolProfileBehavior": {
-                  "disableBodyPruning": true
-                },
-                "request": {
-                  "method": "PATCH",
-                  "header": [
-                    {
-                      "key": "Authorization",
-                      "value": "Bearer {{jwt}}",
-                      "type": "text"
-                    }
-                  ],
-                  "body": {
-                    "mode": "raw",
-                    "raw": "{\n    \"block_template_field_identifier\":\"default_clip_title\",    \n    \"text\" : \"Clip Title\"\n}",
-                    "options": {
-                      "raw": {
-                        "language": "json"
-                      }
-                    }
-                  },
-                  "url": {
-                    "raw": "{{base_url}}/episode/e18c88fd-90f3-2929-0ae7-183e683415a2/block/30a5da37-0031-491e-b81b-5d5f3d223994",
-                    "host": [
-                      "{{base_url}}"
-                    ],
-                    "path": [
-                      "episode",
-                      "e18c88fd-90f3-2929-0ae7-183e683415a2",
-                      "block",
-                      "30a5da37-0031-491e-b81b-5d5f3d223994"
-                    ]
-                  },
-                  "description": "Create a block inside of an item\n\nplace_after; the uid of the block_instance where you want to insert the block after"
-                },
-                "response": [],
-                "uid": "13203914-9fd44de2-c6a0-49f0-8f45-3a8b9740b5e1"
-              }
+          "description": "Go to the next available trigger, equivalent of SYSTEM>NEXT TRIGGER"
+        },
+        "response": [],
+        "uid": "13203914-d89fe9fa-70c0-4c9f-bcb7-91b62314809b"
+      },
+      {
+        "name": "Previous Trigger",
+        "id": "4fd772f8-8d1e-432e-b14b-3ef280abc7f9",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/previousTrigger",
+            "protocol": "http",
+            "host": [
+              "localhost"
             ],
-            "id": "23590561-6625-4667-b270-46547aa354c6",
-            "uid": "13203914-23590561-6625-4667-b270-46547aa354c6"
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "previousTrigger"
+            ]
           },
-          {
-            "name": "fetch",
-            "id": "16efa431-5e16-45b8-a071-a059db778166",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true
-            },
-            "request": {
-              "method": "GET",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{jwt}}",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "{{base_url}}/episode/{{episode_id}}",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "episode",
-                  "{{episode_id}}"
-                ]
-              },
-              "description": "Fetch an episode"
-            },
-            "response": [],
-            "uid": "13203914-16efa431-5e16-45b8-a071-a059db778166"
+          "description": "Go to the previous available trigger, equivalent of SYSTEM>PREVIOUS TRIGGER"
+        },
+        "response": [],
+        "uid": "13203914-4fd772f8-8d1e-432e-b14b-3ef280abc7f9"
+      },
+      {
+        "name": "First Trigger",
+        "id": "786491da-8660-4c6d-ae6c-bf8507e08c8f",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/firstTrigger",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "firstTrigger"
+            ]
           },
-          {
-            "name": "create",
-            "id": "e9f2703b-7091-4b2a-8d91-afa55ff906f1",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true
-            },
-            "request": {
-              "method": "POST",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{jwt}}",
-                  "type": "text"
-                }
-              ],
-              "body": {
-                "mode": "raw",
-                "raw": "{\n  \"title\": \"Test Episode2 [2024-12-08 13:48:26]\",\n  \"scheduled_date\": \"2025-01-10\",\n  \"episode_blueprint_id\":\"ca7623ad-e418-8f2a-2acf-8c38b84e2dab\",\n  \"series_id\": \"9ded5b5b-e7e2-4ccd-bc3f-43f0d33b9800\"\n  \n}",
-                "options": {
-                  "raw": {
-                    "language": "json"
-                  }
-                }
-              },
-              "url": {
-                "raw": "{{base_url}}/episode",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "episode"
-                ]
-              },
-              "description": "Create an episode"
-            },
-            "response": [],
-            "uid": "13203914-e9f2703b-7091-4b2a-8d91-afa55ff906f1"
+          "description": "Trigger the very first block in the rundown"
+        },
+        "response": [],
+        "uid": "13203914-786491da-8660-4c6d-ae6c-bf8507e08c8f"
+      },
+      {
+        "name": "Step by index",
+        "id": "0630b27d-1086-4fc5-9156-7291b81a8051",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/step/2",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "step",
+              "2"
+            ]
           },
-          {
-            "name": "update",
-            "id": "91711052-9c4a-426e-b1b1-e06d298ffb0b",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true
-            },
-            "request": {
-              "method": "PATCH",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{jwt}}",
-                  "type": "text"
-                }
-              ],
-              "body": {
-                "mode": "raw",
-                "raw": "{\n  \"title\": \"🚘 Title with emojis\" ,\n  \"scheduled_date\": \"2024-12-02\",\n  \"series_id\" : \"9ded98d3-9fef-46cc-908e-a3d66264824b\"\n}",
-                "options": {
-                  "raw": {
-                    "language": "json"
-                  }
-                }
-              },
-              "url": {
-                "raw": "{{base_url}}/episode/{{episode_id}}",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "episode",
-                  "{{episode_id}}"
-                ]
-              },
-              "description": "Update the properties of an episode"
-            },
-            "response": [],
-            "uid": "13203914-91711052-9c4a-426e-b1b1-e06d298ffb0b"
+          "description": "Go to a step by index of the selected trigger"
+        },
+        "response": [],
+        "uid": "13203914-0630b27d-1086-4fc5-9156-7291b81a8051"
+      },
+      {
+        "name": "Get all cuez deck buttons",
+        "id": "76c1c6c6-7e05-4986-b3ab-7b6617506083",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/button/",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "button",
+              ""
+            ]
           },
-          {
-            "name": "archive",
-            "id": "fa8c2ba6-159d-49ab-b8e4-3ce4165a46f9",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true
-            },
-            "request": {
-              "method": "PATCH",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{jwt}}",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "{{base_url}}/episode/bf34b7d4-8977-0ba5-2c16-bacf4b6fd1d8/actions/archive",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "episode",
-                  "bf34b7d4-8977-0ba5-2c16-bacf4b6fd1d8",
-                  "actions",
-                  "archive"
-                ]
-              },
-              "description": "Archive an episode"
-            },
-            "response": [],
-            "uid": "13203914-fa8c2ba6-159d-49ab-b8e4-3ce4165a46f9"
+          "description": "Get a list of all available cuez deck buttons (the buttons on top of the automator)"
+        },
+        "response": [],
+        "uid": "13203914-76c1c6c6-7e05-4986-b3ab-7b6617506083"
+      },
+      {
+        "name": "Trigger cuez deck button",
+        "id": "9dd084b4-cd6f-494d-90f8-6d71f5250f9a",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/button/1839b2bb-aac0-54c3-c844-061220dfa921",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "button",
+              "1839b2bb-aac0-54c3-c844-061220dfa921"
+            ]
           },
-          {
-            "name": "restore",
-            "id": "eb2448df-46a8-4002-9b37-c26718186aec",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true
-            },
-            "request": {
-              "method": "PATCH",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{jwt}}",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "{{base_url}}/episode/bf34b7d4-8977-0ba5-2c16-bacf4b6fd1d8/actions/restore",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "episode",
-                  "bf34b7d4-8977-0ba5-2c16-bacf4b6fd1d8",
-                  "actions",
-                  "restore"
-                ]
-              },
-              "description": "Restore an archived or deleted episode"
-            },
-            "response": [],
-            "uid": "13203914-eb2448df-46a8-4002-9b37-c26718186aec"
+          "description": "Trigger a cuez deck button by ID"
+        },
+        "response": [],
+        "uid": "13203914-9dd084b4-cd6f-494d-90f8-6d71f5250f9a"
+      },
+      {
+        "name": "Prompter goto start",
+        "id": "107df6fa-2ea4-4971-9d1f-ea6728893361",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/prompter/start",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "prompter",
+              "start"
+            ]
           },
-          {
-            "name": "delete",
-            "id": "82b6298a-b678-4a5e-85eb-7d948a969708",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true
-            },
-            "request": {
-              "method": "PATCH",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{jwt}}",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "{{base_url}}/episode/bf34b7d4-8977-0ba5-2c16-bacf4b6fd1d8/actions/delete",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "episode",
-                  "bf34b7d4-8977-0ba5-2c16-bacf4b6fd1d8",
-                  "actions",
-                  "delete"
-                ]
-              },
-              "description": "Delete an episode"
-            },
-            "response": [],
-            "uid": "13203914-82b6298a-b678-4a5e-85eb-7d948a969708"
+          "description": "Trigger a cuez deck button by ID"
+        },
+        "response": [],
+        "uid": "13203914-107df6fa-2ea4-4971-9d1f-ea6728893361"
+      },
+      {
+        "name": "Prompter goto trigger id",
+        "id": "d10396bf-7961-41bd-9d44-328d53686be6",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/prompter/goto/234b033a-93ad-4d0e-96fe-ed27561fa4a2",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "prompter",
+              "goto",
+              "234b033a-93ad-4d0e-96fe-ed27561fa4a2"
+            ]
+          },
+          "description": "Trigger a cuez deck button by ID"
+        },
+        "response": [],
+        "uid": "13203914-d10396bf-7961-41bd-9d44-328d53686be6"
+      },
+      {
+        "name": "Prompter Black ON",
+        "id": "f09cca89-2067-4e2c-b64b-13eca882afea",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/prompter/black/on",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "prompter",
+              "black",
+              "on"
+            ]
+          },
+          "description": "Trigger a cuez deck button by ID"
+        },
+        "response": [],
+        "uid": "13203914-f09cca89-2067-4e2c-b64b-13eca882afea"
+      },
+      {
+        "name": "Prompter Black OFF",
+        "id": "797b9ed9-e55a-418b-b1a6-26e5f5a56327",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/prompter/black/off",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "prompter",
+              "black",
+              "off"
+            ]
+          },
+          "description": "Trigger a cuez deck button by ID"
+        },
+        "response": [],
+        "uid": "13203914-797b9ed9-e55a-418b-b1a6-26e5f5a56327"
+      },
+      {
+        "name": "Trigger cuez deck switch button on",
+        "id": "7f19b5b5-515e-41f6-91a0-b17c3ddef108",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/button/1839b2bb-aac0-54c3-c844-061220dfa921/on",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "button",
+              "1839b2bb-aac0-54c3-c844-061220dfa921",
+              "on"
+            ]
           }
-        ],
-        "id": "3609a507-f4fe-4633-b27c-f2315d90877c",
-        "uid": "13203914-3609a507-f4fe-4633-b27c-f2315d90877c"
+        },
+        "response": [],
+        "uid": "13203914-7f19b5b5-515e-41f6-91a0-b17c3ddef108"
       },
       {
-        "name": "parts",
-        "item": [
-          {
-            "name": "fetch",
-            "id": "0b9ee48d-a43d-4ec6-b70a-f2de63366ca4",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true
-            },
-            "request": {
-              "method": "GET",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{jwt}}",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "{{base_url}}/parts/a655ffc7-9d5d-19b8-128e-d18a53909d4f",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "parts",
-                  "a655ffc7-9d5d-19b8-128e-d18a53909d4f"
-                ]
-              },
-              "description": "Fetch a part"
-            },
-            "response": [],
-            "uid": "13203914-0b9ee48d-a43d-4ec6-b70a-f2de63366ca4"
+        "name": "Trigger cuez deck switch button off",
+        "id": "c0c8caa4-cbfe-4757-8d99-c70a6bd734ce",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/button/1839b2bb-aac0-54c3-c844-061220dfa921/off",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "button",
+              "1839b2bb-aac0-54c3-c844-061220dfa921",
+              "off"
+            ]
           },
-          {
-            "name": "duplicate",
-            "id": "6af8ab05-2057-4698-946e-c11c68dd4ab2",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true
-            },
-            "request": {
-              "method": "POST",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{jwt}}",
-                  "type": "text"
-                }
-              ],
-              "body": {
-                "mode": "raw",
-                "raw": "{\n    \"ids\": [ \"0f014c02-3fbc-798e-73fa-38217c8c2947\",\n                \"74144d3d-d78c-4db4-8c63-d9409f39a9ae\",\n                \"412bb7b0-ba32-4fa8-8ac9-d59fe52b24aa\"],\n    \"parent_id\" : \"bf34b7d4-8977-0ba5-2c16-bacf4b6fd1d8\",\n    \"place_after\": \"412bb7b0-ba32-4fa8-8ac9-d59fe52b24aa\"\n}",
-                "options": {
-                  "raw": {
-                    "language": "json"
-                  }
-                }
-              },
-              "url": {
-                "raw": "{{base_url}}/parts/actions/duplicate",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "parts",
-                  "actions",
-                  "duplicate"
-                ]
-              },
-              "description": "Duplicate a part or copy in another episode\n\nids : an array if part uids you want to copy\n\nparent_id: the uid of the episode you want to copy the part(s) in\n\nplace_after: the uid of the part you want to place the parts after"
-            },
-            "response": [],
-            "uid": "13203914-6af8ab05-2057-4698-946e-c11c68dd4ab2"
-          }
-        ],
-        "id": "c4db86ce-a700-4741-b55d-f76b046e3ff1",
-        "uid": "13203914-c4db86ce-a700-4741-b55d-f76b046e3ff1"
+          "description": "Set the state of a switch cuez deck button"
+        },
+        "response": [],
+        "uid": "13203914-c0c8caa4-cbfe-4757-8d99-c70a6bd734ce"
       },
       {
-        "name": "items",
-        "item": [
-          {
-            "name": "fetch",
-            "id": "c1524ea6-c2d6-4625-a65d-6e6898f50812",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true
-            },
-            "request": {
-              "method": "GET",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{jwt}}",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "{{base_url}}/items/77598471-3803-4b8a-8b79-102c1624c24e",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "items",
-                  "77598471-3803-4b8a-8b79-102c1624c24e"
-                ]
-              },
-              "description": "Fetch an episode"
-            },
-            "response": [],
-            "uid": "13203914-c1524ea6-c2d6-4625-a65d-6e6898f50812"
+        "name": "Trigger cuez deck switch button click",
+        "id": "a81c9591-66ac-4279-9aeb-5e60334b514c",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/button/1839b2bb-aac0-54c3-c844-061220dfa921/click",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "button",
+              "1839b2bb-aac0-54c3-c844-061220dfa921",
+              "click"
+            ]
           },
-          {
-            "name": "duplicate",
-            "id": "a628d170-b8ee-48dd-a971-1d416422e594",
-            "protocolProfileBehavior": {
-              "disableBodyPruning": true
-            },
-            "request": {
-              "method": "POST",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{jwt}}",
-                  "type": "text"
-                }
-              ],
-              "body": {
-                "mode": "raw",
-                "raw": "{\n    \"ids\": [\"fd07944c-5c1c-46f2-b805-8ac3cdbd8768\"],\n    \"parent_id\" : \"0f014c02-3fbc-798e-73fa-38217c8c2947\",\n    \"place_after\": \"698f2001-4ae8-afd0-fd65-11f04d407327\"\n}",
-                "options": {
-                  "raw": {
-                    "language": "json"
-                  }
-                }
-              },
-              "url": {
-                "raw": "{{base_url}}/items/actions/duplicate",
-                "host": [
-                  "{{base_url}}"
-                ],
-                "path": [
-                  "items",
-                  "actions",
-                  "duplicate"
-                ]
-              },
-              "description": "Duplicate an item or copy in another episode\n\nids : an array if item uids you want to copy\n\nparent_id: the uid of the part (of any episode) you want to copy the item(s) in\n\nplace_after: the uid of the item you want to place the item(s) after"
-            },
-            "response": [],
-            "uid": "13203914-a628d170-b8ee-48dd-a971-1d416422e594"
-          }
-        ],
-        "id": "a5afe620-78ee-4e58-9265-47f1dc3431eb",
-        "uid": "13203914-a5afe620-78ee-4e58-9265-47f1dc3431eb"
-      }
-    ],
-    "event": [
-      {
-        "listen": "prerequest",
-        "script": {
-          "id": "571f7443-8475-4389-9918-63d23f905d6c",
-          "type": "text/javascript",
-          "packages": {},
-          "exec": [
-            ""
-          ]
-        }
+          "description": "Set the state of a switch cuez deck button"
+        },
+        "response": [],
+        "uid": "13203914-a81c9591-66ac-4279-9aeb-5e60334b514c"
       },
       {
-        "listen": "test",
-        "script": {
-          "id": "a98adc3c-79ff-41ff-a27d-4175a3193a83",
-          "type": "text/javascript",
-          "packages": {},
-          "exec": [
-            ""
-          ]
-        }
-      }
-    ],
-    "variable": [
-      {
-        "id": "aae0b13b-534b-4add-972b-398cdcba5197",
-        "key": "{{base_url}}",
-        "value": "https://api.cuez.app/v1",
-        "type": "string"
+        "name": "Get all shortcuts",
+        "id": "575cfd14-42cb-43c3-8435-0317b398c584",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/shortcut/",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "shortcut",
+              ""
+            ]
+          },
+          "description": "Get a list of all available keyboard shortcuts"
+        },
+        "response": [],
+        "uid": "13203914-575cfd14-42cb-43c3-8435-0317b398c584"
       },
       {
-        "id": "0062c7c9-140e-4484-8570-d420f79f2331",
-        "key": "{{jwt}}",
-        "value": "Token obtained from the project/authenticate request",
-        "type": "string"
+        "name": "Get all configurations",
+        "id": "c3e6b22f-daf4-4b0e-9b4c-04610ed2a51b",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/configuration",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "configuration"
+            ]
+          },
+          "description": "WORK IN PROGRESS: get a list of all stored configurations"
+        },
+        "response": [],
+        "uid": "13203914-c3e6b22f-daf4-4b0e-9b4c-04610ed2a51b"
+      },
+      {
+        "name": "Get recent episodes",
+        "id": "c0f2f0cd-a9d0-466c-b234-371f7bea3d04",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/configuration",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "configuration"
+            ]
+          },
+          "description": "Get a list of recent cuez/tinkerlist episodes"
+        },
+        "response": [],
+        "uid": "13203914-c0f2f0cd-a9d0-466c-b234-371f7bea3d04"
+      },
+      {
+        "name": "Select a configuration",
+        "id": "0e3e7816-e630-42d6-8c52-d3bb380d550d",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "PATCH",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/configuration?id=default",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "configuration"
+            ],
+            "query": [
+              {
+                "key": "id",
+                "value": "default",
+                "type": "text"
+              }
+            ]
+          },
+          "description": "WORK IN PROGRESS: select a stored automator configuration"
+        },
+        "response": [],
+        "uid": "13203914-0e3e7816-e630-42d6-8c52-d3bb380d550d"
+      },
+      {
+        "name": "Trigger a shortcut",
+        "id": "636a1b6d-2199-4a7e-8a2a-760e8896b691",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/shortcut/a1cdb62d-b2ab-da7b-712a-3b7a8bde83df",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "shortcut",
+              "a1cdb62d-b2ab-da7b-712a-3b7a8bde83df"
+            ]
+          },
+          "description": "Trigger a keyboard shortcut by ID"
+        },
+        "response": [],
+        "uid": "13203914-636a1b6d-2199-4a7e-8a2a-760e8896b691"
+      },
+      {
+        "name": "Trigger a block by ID",
+        "id": "cca107fd-bcda-463a-b8e4-643ef4077173",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/block/cd35bd00-b789-4565-98c7-b3e26a5924e9",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "block",
+              "cd35bd00-b789-4565-98c7-b3e26a5924e9"
+            ]
+          },
+          "description": "Trigger a block by id and a step by id"
+        },
+        "response": [],
+        "uid": "13203914-cca107fd-bcda-463a-b8e4-643ef4077173"
+      },
+      {
+        "name": "Trigger a block and step by ID",
+        "id": "1bc8e55b-f72a-4099-b4c5-4f3569809532",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/block/cd35bd00-b789-4565-98c7-b3e26a5924e9",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "block",
+              "cd35bd00-b789-4565-98c7-b3e26a5924e9"
+            ]
+          },
+          "description": "Trigger a block by id and a step by id"
+        },
+        "response": [],
+        "uid": "13203914-1bc8e55b-f72a-4099-b4c5-4f3569809532"
+      },
+      {
+        "name": "Get the current trigger",
+        "id": "0760bf8e-7f66-4a99-afc1-f2b937069e5c",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/current",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "current"
+            ]
+          },
+          "description": "Get what is currently triggered"
+        },
+        "response": [],
+        "uid": "13203914-0760bf8e-7f66-4a99-afc1-f2b937069e5c"
+      },
+      {
+        "name": "Get all macros",
+        "id": "28d87128-8f32-4532-8c24-d17e42222ef8",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/macro/",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "macro",
+              ""
+            ]
+          },
+          "description": "Get a list of all macros"
+        },
+        "response": [],
+        "uid": "13203914-28d87128-8f32-4532-8c24-d17e42222ef8"
+      },
+      {
+        "name": "Get all blocks content",
+        "id": "68f3f3e4-6714-4c62-8630-4844c17fb295",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/trigger/blockcontent",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "trigger",
+              "blockcontent"
+            ]
+          },
+          "description": "Get all triggers (blocks) that are in the current selected rundown"
+        },
+        "response": [],
+        "uid": "13203914-68f3f3e4-6714-4c62-8630-4844c17fb295"
+      },
+      {
+        "name": "Get all items",
+        "id": "2a9ffcda-a919-4c00-ab27-036883ba63cc",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/episode/items",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "episode",
+              "items"
+            ]
+          },
+          "description": "Get all items that are in the current selected rundown"
+        },
+        "response": [],
+        "uid": "13203914-2a9ffcda-a919-4c00-ab27-036883ba63cc"
+      },
+      {
+        "name": "Get entire script",
+        "id": "2c824a2b-5c09-4d8f-8f18-92bd560106e8",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/episode/script",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "episode",
+              "script"
+            ]
+          },
+          "description": "Get all items that are in the current selected rundown"
+        },
+        "response": [],
+        "uid": "13203914-2c824a2b-5c09-4d8f-8f18-92bd560106e8"
+      },
+      {
+        "name": "Get entire rundown",
+        "id": "7d646425-2f50-48b3-af92-638b6b5061a5",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/episode",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "episode"
+            ]
+          },
+          "description": "Get all items that are in the current selected rundown"
+        },
+        "response": [],
+        "uid": "13203914-7d646425-2f50-48b3-af92-638b6b5061a5"
+      },
+      {
+        "name": "Get one item",
+        "id": "a5a6fef2-1861-4682-8d06-33c34476756e",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/episode/items/e0db32fe-1cd3-a2ca-27e6-5aa98a42a62f",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "episode",
+              "items",
+              "e0db32fe-1cd3-a2ca-27e6-5aa98a42a62f"
+            ]
+          },
+          "description": "Get the content of one item in the selected rundown"
+        },
+        "response": [],
+        "uid": "13203914-a5a6fef2-1861-4682-8d06-33c34476756e"
+      },
+      {
+        "name": "Fire a macro",
+        "id": "7a8ad2d8-4d5a-450b-8755-d7b08f8b4513",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/macro/c66690ca-5879-a303-fc1a-dd65b4996db8",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "macro",
+              "c66690ca-5879-a303-fc1a-dd65b4996db8"
+            ]
+          },
+          "description": "Fire a macro by ID"
+        },
+        "response": [],
+        "uid": "13203914-7a8ad2d8-4d5a-450b-8755-d7b08f8b4513"
+      },
+      {
+        "name": "Get all timers",
+        "id": "78ec9909-0505-47da-a1ba-62a71d28ecf9",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/timer",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "timer"
+            ]
+          },
+          "description": "Get a list of all timesr"
+        },
+        "response": [],
+        "uid": "13203914-78ec9909-0505-47da-a1ba-62a71d28ecf9"
+      },
+      {
+        "name": "Start a timer",
+        "id": "d1825494-d5b4-475d-abb7-f992000fc2ee",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/timer/start/9c245298-806f-2c5c-8f5a-4a6a96909877",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "timer",
+              "start",
+              "9c245298-806f-2c5c-8f5a-4a6a96909877"
+            ]
+          },
+          "description": "Start a timer by ID"
+        },
+        "response": [],
+        "uid": "13203914-d1825494-d5b4-475d-abb7-f992000fc2ee"
+      },
+      {
+        "name": "Stop a timer",
+        "id": "b658dd8d-6c69-421e-aa2a-2148d73ba635",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/timer/stop/112af65b-60a1-fb19-fa17-926e2f75986b",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "timer",
+              "stop",
+              "112af65b-60a1-fb19-fa17-926e2f75986b"
+            ]
+          },
+          "description": "Stop a timer by ID"
+        },
+        "response": [],
+        "uid": "13203914-b658dd8d-6c69-421e-aa2a-2148d73ba635"
+      },
+      {
+        "name": "Stop all timers",
+        "id": "77b3a596-1c50-42c7-bf54-509321018c3e",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/timer/stop",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "timer",
+              "stop"
+            ]
+          },
+          "description": "Stop all running timers"
+        },
+        "response": [],
+        "uid": "13203914-77b3a596-1c50-42c7-bf54-509321018c3e"
+      },
+      {
+        "name": "Check api connection",
+        "id": "485d7b50-72d9-4635-8d0f-6b7df5a6df60",
+        "protocolProfileBehavior": {
+          "disableBodyPruning": true
+        },
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:7070/api/app/webconnection",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "7070",
+            "path": [
+              "api",
+              "app",
+              "webconnection"
+            ]
+          },
+          "description": "Check if the automator is properly connected, use this to get a list of all services the automator consumes online"
+        },
+        "response": [],
+        "uid": "13203914-485d7b50-72d9-4635-8d0f-6b7df5a6df60"
       }
     ]
   }
