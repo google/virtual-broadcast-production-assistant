@@ -81,13 +81,13 @@ logger.info('Using model: %s and voice: %s')
 # Cloud Function URLs with validation
 # TODO: This should be replaced with TOOL endpoints, they may not
 # be cloud functions
-TOOLS = {'cuez_automator': 'http://10.1.2.2:7070/api/'}
+TOOLS = {'cuez_automator': 'http://localhost:7070/api'}
 
 # Validate Cloud Function URLs
 for name, url in TOOLS.items():
   if not url:
     logger.warning('Missing URL for cloud function: %s', name)
-  elif not url.startswith('https://') or not url.startswith('http://'):
+  elif not url.startswith('https://') and not url.startswith('http://'):
     logger.warning('Invalid URL format for %s: %s', name, url)
 
 # Load system instructions
@@ -100,8 +100,9 @@ except Exception as e:
 
 # Load cuez swagger json
 try:
-  with open('config/cuez_swagger.json', 'r', encoding='utf-8') as f:
+  with open('config/cuez_api_swagger.json', 'r', encoding='utf-8') as f:
     SWAGGER_JSON = f.read()
+    logger.info('SWAGGER_JSON %s', SWAGGER_JSON[:100] + '...[truncated]')
 except Exception as e:
   logger.error('Failed to load cuez swagger json: %s', e)
   SWAGGER_JSON = ''
@@ -118,7 +119,22 @@ CONFIG = {
         'speech_config': VOICE
     },
     'tools': [{
-        'function_declarations': []
+        'function_declarations': [{
+            "name": "cuez_automator",
+            "description":
+            "A tool for querying the cuez automation system via API",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "The path to use for the API call."
+                    }
+                },
+                "required": ["path"]
+            }
+        }]
     }],
-    'system_instruction': SYSTEM_INSTRUCTIONS
+    'system_instruction':
+    SYSTEM_INSTRUCTIONS
 }

@@ -60,7 +60,7 @@
     const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
     const audioStreamer = new AudioStreamer(audioContext);
     const mediaHandler = new MediaHandler();
-    const api = new GeminiAPI('wss://websocket-server-278223310049.europe-west1.run.app');
+    const api = new GeminiAPI('ws://localhost:8081');
 
     let isRecording = false;
     let hasShownSpeakingMessage = false;
