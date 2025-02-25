@@ -35,6 +35,8 @@ steps:
   - '--service-account'
   - 'websocket-service-account@${PROJECT_ID}.iam.gserviceaccount.com'
   - '--session-affinity'
+  - '--vpc-connector=$_CONNECTOR_NAME'
+  - '--vpc-egress=private-ranges-only' # This is very important for security
 
 images:
 - 'gcr.io/$PROJECT_ID/websocket-server'
