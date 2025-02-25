@@ -1,4 +1,17 @@
 steps:
+# Step 1: Replace WebSocket Endpoint in HTML files
+- name: 'ubuntu'
+  id: 'replace-websocket-endpoint'
+  entrypoint: 'bash'
+  args:
+    - '-c'
+    - |
+      echo "Replacing WebSocket endpoint in index.html..."
+      sed -i "s|const api = new GeminiAPI('ws://localhost:8081');|const api = new GeminiAPI('${_WEBSOCKET_ENDPOINT}');|g" client/index.html
+      echo "Replacing WebSocket endpoint in mobile.html..."
+      sed -i "s|// const api = new GeminiAPI('ws://localhost:8081');|const api = new GeminiAPI('${_WEBSOCKET_ENDPOINT}');|g" client/mobile.html
+
+      echo "Endpoint substitution complete"
 # Build the container image
 - name: 'gcr.io/cloud-builders/docker'
   args: ['build', '-t', 'gcr.io/$PROJECT_ID/pastra-ui', '.']
