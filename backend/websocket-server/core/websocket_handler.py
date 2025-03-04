@@ -230,6 +230,7 @@ async def process_tool_queue(queue: asyncio.Queue, websocket: Any,
   """Process tool calls from the queue."""
   while True:
     tool_call = await queue.get()
+    logger.debug("Pulled tool call off queue: %s", tool_call)  # This line
     try:
       function_responses = []
       for function_call in tool_call.function_calls:
@@ -245,7 +246,8 @@ async def process_tool_queue(queue: asyncio.Queue, websocket: Any,
                     "args": function_call.args
                 }
             }))
-
+        logger.debug("Calling execute_tool with name: %s args: %s",
+                     function_call.name, function_call.args)
         tool_result = await execute_tool(function_call.name,
                                          function_call.args)
 
@@ -290,18 +292,24 @@ async def process_server_content(websocket: Any, session: SessionState,
     return
 
   if server_content.model_turn:
+    logger.debug('DEBUG: Received model turn response from Gemini %s',
+                 server_content.model_turn)
     session.received_model_response = True
     session.is_receiving_response = True
-    for part in server_content.model_turn.parts:
-      if part.inline_data:
-        audio_base64 = base64.b64encode(part.inline_data.data).decode('utf-8')
-        await websocket.send(
-            json.dumps({
-                "type": "audio",
-                "data": audio_base64
-            }))
-      elif part.text:
-        await websocket.send(json.dumps({"type": "text", "data": part.text}))
+    # Correctly check for the presence AND non-None value of 'parts'
+    if hasattr(server_content.model_turn,
+               'parts') and server_content.model_turn.parts is not None:
+      for part in server_content.model_turn.parts:
+        if part.inline_data:
+          audio_base64 = base64.b64encode(
+              part.inline_data.data).decode('utf-8')
+          await websocket.send(
+              json.dumps({
+                  "type": "audio",
+                  "data": audio_base64
+              }))
+        elif part.text:
+          await websocket.send(json.dumps({"type": "text", "data": part.text}))
 
   if server_content.turn_complete:
     await websocket.send(json.dumps({"type": "turn_complete"}))

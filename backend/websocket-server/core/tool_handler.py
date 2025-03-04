@@ -42,8 +42,8 @@ async def execute_tool(tool_name: str, params: Dict[str,
     query_string = urlencode(params)
     function_url = f"{function_url}?{query_string}" if params else function_url
 
-    logger.debug(f"Calling cloud function for {tool_name}")
-    logger.debug(f"URL with params: {function_url}")
+    logger.info(f"Calling cloud function for {tool_name}")
+    logger.info(f"URL with params: {function_url}")
 
     async with aiohttp.ClientSession() as session:
       async with session.get(function_url) as response:
