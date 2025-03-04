@@ -43,7 +43,6 @@ steps:
       - '8080'
       - '--set-env-vars'
       - 'BACKEND_URL=${_WEBSOCKET_ENDPOINT}'
-      - '--service-account'
     waitFor: ['push-client-server']
 
 images:
