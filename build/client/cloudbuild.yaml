@@ -14,49 +14,40 @@ steps:
         echo "Endpoint substitution complete"
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
-    id: 'build-websocket-server'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/websocket-server:$COMMIT_SHA', '.']
-    dir: 'backend/websocket-server'
+    id: 'build-client-server'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/pastra-ui:$COMMIT_SHA', '.']
+    dir: 'client'
     waitFor: ['replace-websocket-endpoint']
 
   # Push the container image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
-    id: 'push-websocket-server'
-    args: ['push', 'gcr.io/$PROJECT_ID/websocket-server:$COMMIT_SHA']
-    waitFor: ['build-websocket-server']
+    id: 'push-client-server'
+    args: ['push', 'gcr.io/$PROJECT_ID/pastra-ui:$COMMIT_SHA']
+    waitFor: ['build-client-server']
 
   # Deploy container image to Cloud Run
   - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'deploy-websocket-server'
+    id: 'deploy-client-server'
     args:
       - 'run'
       - 'deploy'
-      - 'websocket-server'
+      - 'client-frontend'
       - '--image'
-      - 'gcr.io/$PROJECT_ID/websocket-server:$COMMIT_SHA'
+      - 'gcr.io/$PROJECT_ID/pastra-ui:$COMMIT_SHA'
       - '--region'
       - '$_REGION'
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
       - '--port'
-      - '8081'
+      - '8080'
       - '--set-env-vars'
-      - |
-          PROJECT_ID=${PROJECT_ID},
-          LOG_LEVEL=INFO,
-          VERTEX_LOCATION=${_VERTEX_LOCATION},
-          VERTEX_API=true,
-          VOICE_VERTEX_API=Aoede,
-          MODEL_VERTEX_API=gemini-2.0-flash-exp,
-          CUEZ_AUTOMATOR_ENDPOINT=${_CUEZ_AUTOMATOR_ENDPOINT}
+      - 'BACKEND_URL=${_BACKEND_URL}'
       - '--service-account'
-      - 'websocket-service-account@${PROJECT_ID}.iam.gserviceaccount.com'
-      - '--session-affinity'
-    waitFor: ['push-websocket-server']
+    waitFor: ['push-client-server']
 
 images:
-  - 'gcr.io/$PROJECT_ID/websocket-server:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/pastra-ui:$COMMIT_SHA'
 
 options:
   logging: CLOUD_LOGGING_ONLY
