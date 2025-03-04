@@ -42,7 +42,7 @@ steps:
       - '--port'
       - '8080'
       - '--set-env-vars'
-      - 'BACKEND_URL=${_BACKEND_URL}'
+      - 'BACKEND_URL=${_WEBSOCKET_ENDPOINT}'
       - '--service-account'
     waitFor: ['push-client-server']
 
