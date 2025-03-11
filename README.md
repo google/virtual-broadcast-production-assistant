@@ -17,3 +17,9 @@ The UI will be both visual and through voice, each interface is good at specific
 that a director will have time to type instructions, so they are likely to input
 via voice, however having an agent list 28 news items that currently have issues or aren't quite
 in a ready state for some reason equally is not going to be efficient.
+
+## Acknowledgements
+
+Some of the backend websocket code has been inspired by Heiko's work on
+
+<https://github.com/heiko-hotz/gemini-multimodal-live-dev-guide>
