@@ -18,8 +18,18 @@ that a director will have time to type instructions, so they are likely to input
 via voice, however having an agent list 28 news items that currently have issues or aren't quite
 in a ready state for some reason equally is not going to be efficient.
 
+## Instructions
+
+For running locally see READMEs in client and backend/websocket-server folders.
+
+Teraform is set up for running on Google Cloud.
+
 ## Acknowledgements
 
 Some of the backend websocket code has been inspired by Heiko's work on
 
 <https://github.com/heiko-hotz/gemini-multimodal-live-dev-guide>
+
+This is not an officially supported Google product. This project is not
+eligible for the [Google Open Source Software Vulnerability Rewards
+Program](https://bughunters.google.com/open-source-security).
