@@ -40,10 +40,9 @@ module "backend_service_account" {
 }
 
 module "build_triggers" {
-  source                     = "./modules/build-triggers"
-  terraform_bucket_name      = var.terraform_bucket
-  websocket-service-account  = module.backend_service_account.websocket-service-account-name
-  cuez-proxy-service-account = module.cuez-proxy.proxy-service-account-email
+  source                    = "./modules/build-triggers"
+  terraform_bucket_name     = var.terraform_bucket
+  websocket-service-account = module.backend_service_account.websocket-service-account-name
 }
 
 module "backend_websocket_server" {
@@ -80,20 +79,6 @@ module "cuez-automator" {
   network    = module.networking.vpc-name
   subnetwork = module.networking.subnet-id
 }
-
-# Cuez Proxy CR service
-module "cuez-proxy" {
-  source                         = "./modules/cuez-proxy"
-  region                         = var.region
-  project                        = var.project_id
-  cuez-custom-proxy-service-name = "cuez-proxy-service"
-  vpc-access-connector-id        = module.networking.vpc-access-connector-id
-  cuez-proxy-sa-access-list      = [module.backend_service_account.websocket-service-account-name]
-  cuez-app-api-host              = module.cuez-automator.google_compute_address_exteral_ip_address
-}
-
-
-
 
 
 

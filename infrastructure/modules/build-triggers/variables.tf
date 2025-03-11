@@ -24,7 +24,3 @@ variable "cloud-source-repositories-repo-name" {
 variable "websocket-service-account" {
   type = string
 }
-
-variable "cuez-proxy-service-account" {
-  type = string
-}
