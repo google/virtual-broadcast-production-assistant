@@ -13,7 +13,7 @@
 # limitations under the License.
 steps:
     - name: 'hashicorp/terraform:1.10'
-      dir: 'infrastructure/'
+      dir: 'control-room-assistant/infrastructure/'
       entrypoint: 'sh'
       args:
       - '-c'
