@@ -17,7 +17,7 @@ steps:
 # Build the container image
 - name: 'gcr.io/cloud-builders/docker'
   args: ['build', '-t', 'gcr.io/$PROJECT_ID/websocket-server', '.']
-  dir: 'backend/websocket-server'
+  dir: 'control-room-assistant/backend/websocket-server'
 
 # Push the container image to Container Registry
 - name: 'gcr.io/cloud-builders/docker'

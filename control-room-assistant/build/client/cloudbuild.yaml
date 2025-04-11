@@ -30,7 +30,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build-client-server'
     args: ['build', '-t', 'gcr.io/$PROJECT_ID/pastra-ui:$COMMIT_SHA', '.']
-    dir: 'client'
+    dir: 'control-room-assistant/client'
     waitFor: ['replace-websocket-endpoint']
 
   # Push the container image to Container Registry
