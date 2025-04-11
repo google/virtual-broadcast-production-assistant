@@ -62,6 +62,14 @@ resource "google_project_iam_member" "cloud_build_runner_dns_zone_admin" {
   member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
 }
 
+# Allow Cloud Build Runner to manage Artifact Registry
+
+resource "google_project_iam_member" "cloud_build_runner_artifact_registry" {
+  project = data.google_project.default.project_id
+  role    = "roles/artifactregistry.admin" # Grant
+  member  = "serviceAccount:${google_service_account.cloud_build_runner.email}"
+}
+
 
 # Allow permission for the Cloud Build Runner to actAs the websocket SA
 resource "google_service_account_iam_member" "cloud_build_runner_impersonate_websocket" {
