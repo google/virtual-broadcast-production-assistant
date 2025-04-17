@@ -1,0 +1,56 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+steps:
+  # Build the container image to verify Dockerfile and dependencies
+  # We tag it uniquely for the PR to avoid conflicts, though we won't push it.
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--tag'
+      # Use Cloud Build's built-in substitutions for PR triggers
+      - 'gcr.io/$PROJECT_ID/websocket-server:pr-${_PR_NUMBER}-${SHORT_SHA}'
+      - '.'
+    # Specify the directory containing the Dockerfile and source code for this component
+    dir: 'control-room-assistant/websocket-server'
+    id: 'Build Image'
+
+  # Run Lint Check inside the built container
+  # --- IMPORTANT ---
+  # Replace 'flake8 .' below with the actual command needed to run your linter.
+  # This assumes your Dockerfile installs the necessary linting tools (e.g., flake8, pylint)
+  # and sets the appropriate WORKDIR.
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'run'
+      - '--rm' # Remove the container after running
+      - 'gcr.io/$PROJECT_ID/websocket-server:pr-${_PR_NUMBER}-${SHORT_SHA}'
+      # --- Your lint command goes here ---
+      - 'pylint'
+      - 'core'
+      - 'config'
+      - 'server.py'
+    # Run the docker command itself from the component's directory if needed,
+    # though the lint command runs *inside* the container based on its WORKDIR.
+    dir: 'control-room-assistant/websocket-server'
+    id: 'Lint Check'
+    waitFor: ['Build Image'] # Ensure the image is built before trying to run commands in it
+
+
+# Optional: Specify timeout
+timeout: 600s # 10 minutes
+
+options:
+  logging: CLOUD_LOGGING_ONLY
