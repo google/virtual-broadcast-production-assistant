@@ -1,0 +1,170 @@
+[
+  {
+    "frame": 96,
+    "timecode": "00:00:04:00",
+    "timestamp_unix": 1747074032.569398,
+    "analysis": "Analysis stopped: SAFETY",
+    "finish_reason": "SAFETY"
+  },
+  {
+    "frame": 97,
+    "timecode": "00:00:04:01",
+    "timestamp_unix": 1747074035.4204319,
+    "analysis": "The screen is black with white text that reads \"Blender Foundation Presents\". There is also some text in the upper left corner that reads \"400k 224x100 avc1 90\" and a small icon in the upper right corner. There is no audio.",
+    "finish_reason": "STOP"
+  },
+  {
+    "frame": 116,
+    "timecode": "00:00:04:20",
+    "timestamp_unix": 1747074037.424118,
+    "analysis": "The video is completely black, and there is no visual information to describe. The audio consists of a repetitive, electronic music loop. Without any visual context or changes in the audio, it's impossible to provide a more detailed commentary.\n",
+    "finish_reason": "STOP"
+  },
+  {
+    "frame": 145,
+    "timecode": "00:00:06:01",
+    "timestamp_unix": 1747074039.436691,
+    "analysis": "The video begins with a black screen displaying the text \"The Mango Open Movie Project\" along with two laurel wreath symbols. The audio is silent.\n",
+    "finish_reason": "STOP"
+  },
+  {
+    "frame": 177,
+    "timecode": "00:00:07:09",
+    "timestamp_unix": 1747074041.443514,
+    "analysis": "Okay, the screen is black with some text that reads \"The Mango Open Movie Project\" and two laurel wreath symbols. Then, we hear someone yell \"Action!\"\n",
+    "finish_reason": "STOP"
+  },
+  {
+    "frame": 182,
+    "timecode": "00:00:07:14",
+    "timestamp_unix": 1747074043.509918,
+    "analysis": "The screen is black with white text that reads \"The Mango Open Movie project\" and two award logos underneath. The audio features a deep voice saying \"destroy the world\".\n",
+    "finish_reason": "STOP"
+  },
+  {
+    "frame": 183,
+    "timecode": "00:00:07:15",
+    "timestamp_unix": 1747074045.884629,
+    "analysis": "The image shows a dark screen with text that reads \"The Mango Open Movie Project\" and two award logos. The audio seems to be a loud crash, suggesting something breaking or falling. Without further context, it's difficult to determine the connection between the visual and audio elements. It could be a scene from the movie project or a sound effect used in the film.\n",
+    "finish_reason": "STOP"
+  },
+  {
+    "frame": 197,
+    "timecode": "00:00:08:05",
+    "timestamp_unix": 1747074047.8885581,
+    "analysis": "The video begins with a completely black screen. Then, a loud, rushing sound fills the audio, like a powerful gust of wind or a vehicle speeding by. The sound intensifies, creating a sense of movement and speed.\n",
+    "finish_reason": "STOP"
+  },
+  {
+    "frame": 227,
+    "timecode": "00:00:09:11",
+    "timestamp_unix": 1747074049.888798,
+    "analysis": "The video shows a close-up of a spacecraft engine, with its red-hot interior clearly visible. The engine is surrounded by a complex network of pipes and structures, suggesting a high-tech environment. The audio features a dramatic, orchestral score, building tension and excitement. The combination of visuals and audio creates a sense of power and anticipation, hinting at an imminent launch or some other significant event.\n",
+    "finish_reason": "STOP"
+  },
+  {
+    "frame": 237,
+    "timecode": "00:00:09:21",
+    "timestamp_unix": 1747074051.9006138,
+    "analysis": "The image shows a close-up view of several rocket engines firing. The engines are large and metallic, with a red glow emanating from their nozzles. There is a lot of smoke and light. The audio is not available.",
+    "finish_reason": "STOP"
+  },
+  {
+    "frame": 262,
+    "timecode": "00:00:10:22",
+    "timestamp_unix": 1747074053.9090629,
+    "analysis": "The video shows a close-up of what appears to be a futuristic industrial setting, possibly a power plant or a spaceship engine room. Large, cylindrical structures with glowing interiors dominate the frame, suggesting intense heat or energy. The audio consists of a low, rumbling sound, possibly machinery or engines operating. The overall impression is one of power and technology.\n",
+    "finish_reason": "STOP"
+  },
+  {
+    "frame": 274,
+    "timecode": "00:00:11:10",
+    "timestamp_unix": 1747074055.912531,
+    "analysis": "The image shows a close-up of what appears to be rocket engines firing. The flames are bright and intense, filling the lower part of the frame. The engines themselves are large and industrial-looking, with metal structures and pipes visible. The overall scene suggests a powerful and energetic event, likely related to space travel or propulsion.\n",
+    "finish_reason": "STOP"
+  },
+  {
+    "frame": 279,
+    "timecode": "00:00:11:15",
+    "timestamp_unix": 1747074058.3694952,
+    "analysis": "Skipped - missing frame or audio",
+    "finish_reason": "SKIPPED"
+  },
+  {
+    "frame": 376,
+    "timecode": "00:00:15:16",
+    "timestamp_unix": 1747074060.372437,
+    "analysis": "Skipped - missing frame or audio",
+    "finish_reason": "SKIPPED"
+  },
+  {
+    "frame": 474,
+    "timecode": "00:00:19:18",
+    "timestamp_unix": 1747074062.376678,
+    "analysis": "Skipped - missing frame or audio",
+    "finish_reason": "SKIPPED"
+  },
+  {
+    "frame": 567,
+    "timecode": "00:00:23:15",
+    "timestamp_unix": 1747074064.395506,
+    "analysis": "Skipped - missing frame or audio",
+    "finish_reason": "SKIPPED"
+  },
+  {
+    "frame": 662,
+    "timecode": "00:00:27:14",
+    "timestamp_unix": 1747074066.435429,
+    "analysis": "Skipped - missing frame or audio",
+    "finish_reason": "SKIPPED"
+  },
+  {
+    "frame": 758,
+    "timecode": "00:00:31:14",
+    "timestamp_unix": 1747074068.468758,
+    "analysis": "Skipped - missing frame or audio",
+    "finish_reason": "SKIPPED"
+  },
+  {
+    "frame": 854,
+    "timecode": "00:00:35:14",
+    "timestamp_unix": 1747074070.5353851,
+    "analysis": "Skipped - missing frame or audio",
+    "finish_reason": "SKIPPED"
+  },
+  {
+    "frame": 951,
+    "timecode": "00:00:39:15",
+    "timestamp_unix": 1747074072.649247,
+    "analysis": "Skipped - missing frame or audio",
+    "finish_reason": "SKIPPED"
+  },
+  {
+    "frame": 1046,
+    "timecode": "00:00:43:14",
+    "timestamp_unix": 1747074074.7098281,
+    "analysis": "Skipped - missing frame or audio",
+    "finish_reason": "SKIPPED"
+  },
+  {
+    "frame": 1143,
+    "timecode": "00:00:47:15",
+    "timestamp_unix": 1747074076.730963,
+    "analysis": "Skipped - missing frame or audio",
+    "finish_reason": "SKIPPED"
+  },
+  {
+    "frame": 1242,
+    "timecode": "00:00:51:18",
+    "timestamp_unix": 1747074078.750435,
+    "analysis": "Skipped - missing frame or audio",
+    "finish_reason": "SKIPPED"
+  },
+  {
+    "frame": 1334,
+    "timecode": "00:00:55:14",
+    "timestamp_unix": 1747074080.853557,
+    "analysis": "Skipped - missing frame or audio",
+    "finish_reason": "SKIPPED"
+  }
+]
