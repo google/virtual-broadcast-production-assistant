@@ -18,9 +18,21 @@ that a director will have time to type instructions, so they are likely to input
 via voice, however having an agent list 28 news items that currently have issues or aren't quite
 in a ready state for some reason equally is not going to be efficient.
 
-## Instructions
+## NOTE on repo governance
 
-For running locally see READMEs in client and backend/websocket-server folders.
+Each domain area or component should have a top level directory. This could include full working code or
+examples of how it has been implemented else where.
+
+There is a top level **build** directory which is where any Google Cloud specific deployment configs go.
+In addition there is an **infrastructure** directory for terraform to reside for deployment of the project
+to Google Cloud. **Both these directories** should mirror the top level directories in structure when required.
+
+## Instructions for running the POC code
+
+The `control-room-assistant` directory holds the original POC code, this is here for record and maybe
+archived. It doesn't follow the agentic architecture we are now adopting.
+
+For running locally see READMEs in control-room-assistant/client and backend/websocket-server folders.
 
 Teraform is set up for running on Google Cloud.
 
