@@ -1,130 +1,129 @@
-Okay, if you're using an Agent Development Kit (ADK), the prompt will likely be part of a larger configuration file (like YAML or JSON) or passed as a string to an agent class. The ADK will handle the interaction with the LLM.
+Okay, let's reformat the Sofie agent's functionality into a structure that would be more typical for an Agent Development Kit (ADK).
 
-Here's a simple prompt formatted with ADK concepts in mind, which you can then place into the appropriate part of your ADK agent definition in your Python file:
+This usually involves:
+1.  **A System Prompt:** Defining the agent's role, capabilities, goals, and how it should use its tools.
+2.  **Tool Definitions:** Python functions that the agent can call. These functions will encapsulate interactions with the `SofieAPIClient` and the `MCPToolClient`. Docstrings for these tools are crucial as the ADK's LLM often uses them to understand how and when to use the tool.
+3.  **An Agent Class/Configuration:** How the ADK itself would instantiate and run this agent (this part will be more conceptual as ADKs vary).
 
-```
----------------------------------
-ADK Agent Prompt: Pirate Chatbot
----------------------------------
-
-Agent_ID: CapnRedbeardBot
-Version: 1.0
-
-Persona_Definition:
-  Name: Cap'n Redbeard
-  Role: A boisterous and (mostly) friendly pirate captain chatbot.
-  Core_Characteristic: Speaks *exclusively* in enthusiastic pirate slang and dialect.
-
-Primary_Goal:
-  - To engage users in entertaining, light-hearted conversation, strictly maintaining the pirate persona.
-
-Core_Instructions:
-  1.  **Language Mandate:** ALL responses MUST be in pirate-speak. Use terms like "Ahoy!", "Matey," "Shiver me timbers," "Scurvy dog," "Landlubber," "Booty," "Doubloons," "Savvy?", "Yo ho ho."
-  2.  **Greeting Protocol:** Always initiate or respond to greetings with a hearty pirate welcome.
-      - Example: "Ahoy there, me hearty! What treasure be ye seekin'?"
-  3.  **Pirate Worldview:** Interpret and respond to all user input from the perspective of a 17th/18th-century pirate.
-      - If modern concepts are mentioned (e.g., "internet," "phone"), feign pirate-like confusion or relate them to pirate-era equivalents (e.g., "Internet? Be that some newfangled spyglass to see across the seven seas?").
-  4.  **Character Consistency:** NEVER break character. Do not use modern slang, standard formal English, or acknowledge being an AI.
-      - If confused by user input, respond in a confused pirate manner: "Blast and barnacles, I don't rightly savvy what yer gettin' at, matey!"
-  5.  **Tone:** Maintain a fun, adventurous, and slightly mischievous tone.
-
-Constraints_and_Hard_Rules:
-  - MUST NOT use any non-pirate language.
-  - MUST NOT reveal itself as an AI or a computer program. The illusion of being Cap'n Redbeard is paramount.
-  - MUST keep answers relatively concise, fitting for a chat interaction.
-
-Example_Interactions:
-  - User: "Hello"
-    Agent: "Well, shiver me timbers! What brings a scallywag like ye to my deck?"
-  - User: "Tell me a joke."
-    Agent: "Why be pirates called pirates? 'Cause they ARRRRRR!"
-  - User: "What's your favorite food?"
-    Agent: "A fine slab o' salted pork and a tankard o' grog, that be a feast fit for a king o' the seas!"
-
-Tools_Available:
-  - None. Responses are generated based on persona and instructions using the underlying language model.
----------------------------------
-```
-
-**How you might use this in a hypothetical Python ADK script:**
+Here's the adaptation:
 
 ```python
-# Assume 'my_adk_library' is your ADK
-# from my_adk_library import Agent, LLMConfig
+#!/usr/bin/env python3
 
-PIRATE_CHATBOT_PROMPT = """
-Agent_ID: CapnRedbeardBot
-Version: 1.0
+"""
+Sofie Agent for ADK (Agent Development Kit)
 
-Persona_Definition:
-  Name: Cap'n Redbeard
-  Role: A boisterous and (mostly) friendly pirate captain chatbot.
-  Core_Characteristic: Speaks *exclusively* in enthusiastic pirate slang and dialect.
-
-Primary_Goal:
-  - To engage users in entertaining, light-hearted conversation, strictly maintaining the pirate persona.
-
-Core_Instructions:
-  1.  Language Mandate: ALL responses MUST be in pirate-speak. Use terms like "Ahoy!", "Matey," "Shiver me timbers," "Scurvy dog," "Landlubber," "Booty," "Doubloons," "Savvy?", "Yo ho ho."
-  2.  Greeting Protocol: Always initiate or respond to greetings with a hearty pirate welcome.
-      - Example: "Ahoy there, me hearty! What treasure be ye seekin'?"
-  3.  Pirate Worldview: Interpret and respond to all user input from the perspective of a 17th/18th-century pirate.
-      - If modern concepts are mentioned (e.g., "internet," "phone"), feign pirate-like confusion or relate them to pirate-era equivalents (e.g., "Internet? Be that some newfangled spyglass to see across the seven seas?").
-  4.  Character Consistency: NEVER break character. Do not use modern slang, standard formal English, or acknowledge being an AI.
-      - If confused by user input, respond in a confused pirate manner: "Blast and barnacles, I don't rightly savvy what yer gettin' at, matey!"
-  5.  Tone: Maintain a fun, adventurous, and slightly mischievous tone.
-
-Constraints_and_Hard_Rules:
-  - MUST NOT use any non-pirate language.
-  - MUST NOT reveal itself as an AI or a computer program. The illusion of being Cap'n Redbeard is paramount.
-  - MUST keep answers relatively concise, fitting for a chat interaction.
-
-Example_Interactions:
-  - User: "Hello"
-    Agent: "Well, shiver me timbers! What brings a scallywag like ye to my deck?"
-  - User: "Tell me a joke."
-    Agent: "Why be pirates called pirates? 'Cause they ARRRRRR!"
-  - User: "What's your favorite food?"
-    Agent: "A fine slab o' salted pork and a tankard o' grog, that be a feast fit for a king o' the seas!"
-
-Tools_Available:
-  - None. Responses are generated based on persona and instructions using the underlying language model.
+This file defines the components for a Sofie Agent intended to be run
+within an Agent Development Kit. It includes:
+- A detailed system prompt for the LLM.
+- Tool definitions (Python functions) that allow the agent to interact
+  with a Sofie Playout System and an MCP (Multi-Agent Co-ordination Protocol) tool
+  for communication with an Orchestrator Agent.
+- Placeholder API clients for Sofie and MCP.
 """
 
-# Example of how you might initialize an agent with an ADK
-# (This is purely illustrative, your ADK's API will differ)
-#
-# llm_config = LLMConfig(model_name="gpt-3.5-turbo") # Or whatever model your ADK uses
-#
-# capn_redbeard = Agent(
-#     system_prompt=PIRATE_CHATBOT_PROMPT,
-#     llm_configuration=llm_config,
-#     # Potentially other ADK-specific parameters like tools, memory_config, etc.
-#     tools=[] # No tools for this simple agent
-# )
+import time
+import logging
+from enum import Enum
+from typing import Any, Dict, Optional, List, Callable
 
-if __name__ == "__main__":
-    print("Cap'n Redbeard: Ahoy! I be ready to parley! (Type 'farewell' to end our chat)")
-    
-    # Simulated chat loop (your ADK will have its own way to run/interact with agents)
-    # while True:
-    #     user_message = input("You: ")
-    #     if user_message.lower() == "farewell":
-    #         print("Cap'n Redbeard: Fair winds and a following sea to ye, matey!")
-    #         break
-    #
-    #     # This is where you'd use your ADK's method to get a response
-    #     # agent_response = capn_redbeard.chat(user_message)
-    #     # print(f"Cap'n Redbeard: {agent_response}")
+# --- Configuration & Constants ---
+# (Same as before, but some might be implicitly handled by ADK or LLM context)
 
-    # --- Placeholder for your ADK interaction logic ---
-    print("\n--- To use this, integrate with your ADK library ---")
-    print("1. Import your ADK's Agent class and any configuration classes.")
-    print("2. Instantiate the agent using the PIRATE_CHATBOT_PROMPT as the system prompt.")
-    print("3. Use your ADK's methods to run the agent and handle user interaction.")
-    print("Example: agent_response = your_adk_agent.process_input(user_input)")
-    print("----------------------------------------------------")
+class MCP_MESSAGE_TAG(Enum):
+    RUNNING_ORDER_UPDATE = "RUNNING_ORDER_UPDATE"
+    PLAYOUT_EVENT = "PLAYOUT_EVENT"
+    STATE_CONFIRMATION = "STATE_CONFIRMATION"
+    QUERY_RESPONSE = "QUERY_RESPONSE"
+    ERROR_REPORT = "ERROR_REPORT"
+    # Tags for messages received FROM Orchestrator
+    COMMAND = "COMMAND"
+    QUERY_REQUEST = "QUERY_REQUEST"
 
-```
+class SOFIE_ITEM_STATUS(Enum):
+    ON_AIR = "on-air"
+    FINISHED = "finished"
+    NEXT_UP = "next up"
+    CUED = "cued"
+    ERROR = "error"
 
-This prompt structure is more aligned with how ADKs often conceptualize agent definitions. You'd copy the text between the `---` lines (or just the `PIRATE_CHATBOT_PROMPT` string content) into your Python file and use it with your specific ADK's API.
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("SofieADKAgent")
+
+# --- Placeholder External System Clients ---
+# These would be initialized and passed to the tool functions,
+# or the tools might be methods of a class that holds these clients.
+
+class MCPToolClient:
+    """Placeholder for the MCP tool client."""
+    def __init__(self, client_id: str, orchestrator_agent_id: str):
+        self.client_id = client_id
+        self.orchestrator_agent_id = orchestrator_agent_id
+        # In a real ADK, message listening might be handled by the ADK framework.
+        self.incoming_message_callback: Optional[Callable[[str, MCP_MESSAGE_TAG, Dict[str, Any]], None]] = None
+
+
+    def send_message(self, tag: MCP_MESSAGE_TAG, payload: Dict[str, Any]):
+        """Sends a structured message to the Orchestrator Agent via MCP."""
+        message_str = f"MCP SEND from {self.client_id} to {self.orchestrator_agent_id}: {tag.value}: {payload}"
+        logger.info(message_str)
+        # Actual network sending logic here
+        return {"status": "success", "message_sent": message_str}
+
+    def set_incoming_message_handler(self, handler: Callable[[str, MCP_MESSAGE_TAG, Dict[str, Any]], None]):
+        """ADK might call this to route Orchestrator messages to the agent's logic."""
+        self.incoming_message_callback = handler
+        logger.info(f"MCPToolClient: Incoming message handler set for {self.client_id}")
+
+    def _simulate_incoming_orchestrator_message(self, tag: MCP_MESSAGE_TAG, payload: Dict[str, Any]):
+        """Helper for simulation to trigger the agent's processing logic."""
+        if self.incoming_message_callback:
+            logger.info(f"MCP SIMULATED RECV by {self.client_id} from Orchestrator: {tag.value}: {payload}")
+            # In an ADK, the ADK framework would typically parse the incoming message
+            # and then invoke the agent's main processing function or a specific handler.
+            # The agent's system prompt would guide how it reacts to these incoming messages.
+            self.incoming_message_callback(self.orchestrator_agent_id, tag, payload)
+        else:
+            logger.warning(f"MCP SIMULATED RECV (no handler on {self.client_id}) for Orchestrator message.")
+
+
+class SofieAPIClient:
+    """Placeholder for the Sofie API client."""
+    def __init__(self, sofie_host: str):
+        self.sofie_host = sofie_host
+        self.sofie_event_callback: Optional[Callable[[Dict[str, Any]], None]] = None
+        self._logger = logging.getLogger("SofieAPIClient")
+        self._logger.info(f"Initialized for host {sofie_host}")
+        self._mock_state = { # Internal mock state for simulation
+            "rundown_id": "RD_INITIAL_STATE",
+            "active_segment": {"name": "Startup", "id": "seg_init"},
+            "active_item": {"slug": "SystemBoot", "id": "item_init", "status": SOFIE_ITEM_STATUS.ON_AIR.value},
+            "next_item": {"slug": "Standby", "id": "item_stby", "status": SOFIE_ITEM_STATUS.NEXT_UP.value}
+        }
+
+
+    def get_current_running_order_state(self) -> Dict[str, Any]:
+        self._logger.debug("Sofie API: Fetching current running order state...")
+        return self._mock_state.copy()
+
+    def set_event_callback(self, callback: Callable[[Dict[str, Any]], None]):
+        """ADK agent might register a callback to be notified of Sofie system events."""
+        self.sofie_event_callback = callback
+        self._logger.info("Sofie API: Event callback registered.")
+
+    def _trigger_sofie_event(self, event_data: Dict[str, Any]):
+        """Simulates Sofie system pushing an event."""
+        self._logger.info(f"Sofie API Event: {event_data}")
+        if self.sofie_event_callback:
+            self.sofie_event_callback(event_data)
+
+    def load_rundown(self, rundown_id: str) -> Dict[str, Any]:
+        self._logger.info(f"Sofie API: Attempting to load rundown '{rundown_id}'")
+        if rundown_id == "NON_EXISTENT_RUNDOWN":
+            self._logger.error(f"Sofie API: Rundown '{rundown_id}' not found.")
+            return {"status": "error", "message": f"Rundown '{rundown_id}' not found."}
+        self._mock_state = {
+            "rundown_id": rundown_id,
+            "active_segment": {"name": "NewRundown_Intro", "id": "seg_new0"},
+            "active_item": {"slug": "NR_Titles", "id": "item_new001", "status": SOFIE_ITEM_STATUS.CUED.value},
+            "next_item": {"slug": "NR_FirstStory", "id": "item_new002", "status":
