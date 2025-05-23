@@ -1,6 +1,7 @@
 import os
 from google.adk.agents import Agent
 from google.adk.tools import google_search  # Import the tool
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters
 
 def load_instructions_from_file(filename):
     """
@@ -35,6 +36,9 @@ def load_instructions_from_file(filename):
 # Load instructions from external file
 agent_instructions = load_instructions_from_file('agent_instructions.md')
 
+# Path to your Sofie MCP server
+SOFIE_MCP_PATH = os.path.join(os.path.dirname(__file__), "../sofie-tool")
+
 root_agent = Agent(
    # A unique name for the agent.
    name="basic_search_agent",
@@ -46,5 +50,12 @@ root_agent = Agent(
    # Instructions to set the agent's behavior.
    instruction=agent_instructions,
    # Add google_search tool to perform grounding with Google search.
-   tools=[google_search]
+   tools=[
+      MCPToolset(
+         connection_params=StdioServerParameters(
+            command='node',  # Assuming Node.js MCP server
+            args=[os.path.join(SOFIE_MCP_PATH, 'server.js')],
+         ),
+      )
+   ]
 )
