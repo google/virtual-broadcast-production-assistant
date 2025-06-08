@@ -1,16 +1,17 @@
 import logging
 import os
+import asyncio
 
 import uvicorn
 
-from .agent import create_agent
+from .agent import create_agent, mcp_toolset
 from .agent_executor import ADKAgentExecutor
+from .mcp_skills import get_skills_from_mcp, get_default_skills
 from dotenv import load_dotenv
 from google.adk.artifacts import InMemoryArtifactService
 from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
-from starlette.routing import Route
 
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
@@ -18,14 +19,13 @@ from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import (
     AgentCapabilities,
     AgentCard,
-    AgentSkill,
 )
-from starlette.applications import Starlette
 
 
 load_dotenv()
 
-logging.basicConfig()
+logging.basicConfig(level=logging.INFO)
+
 
 def main(host: str, port: int):
     # Verify an API key is set.
@@ -38,13 +38,17 @@ def main(host: str, port: int):
             "GOOGLE_GENAI_USE_VERTEXAI is not TRUE."
         )
 
-    skill = AgentSkill(
-        id="list_episodes",
-        name="List episodes in a project",
-        description="Lists all episodes in the specified project.",
-        tags=["episode", "list"],
-        examples=["list episodes in project"],
-    )
+    # Get skills from MCP server
+    logging.info("Retrieving skills from MCP server...")
+    skills = asyncio.run(get_skills_from_mcp(mcp_toolset))
+    
+    if not skills:
+        logging.warning("No skills retrieved from MCP server, using default skills")
+        skills = get_default_skills()
+    else:
+        logging.info(f"Successfully retrieved {len(skills)} skills from MCP server")
+        for skill in skills:
+            logging.info(f"  - {skill.id}: {skill.name}")
 
     agent_card = AgentCard(
         name="Cuez Agent",
@@ -54,7 +58,7 @@ def main(host: str, port: int):
         defaultInputModes=["text"],
         defaultOutputModes=["text"],
         capabilities=AgentCapabilities(streaming=True),
-        skills=[skill],
+        skills=skills,
     )
 
     adk_agent = create_agent()

@@ -24,6 +24,9 @@ mcp_toolset = MCPToolset(
     )
 )
 
+# Export mcp_toolset so it can be used in __main__.py
+__all__ = ['create_agent', 'mcp_toolset']
+
 def create_agent() -> LlmAgent:
     """Constructs the ADK agent."""
     return LlmAgent(
