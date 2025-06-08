@@ -16,7 +16,7 @@ from a2a.types import (
 )
 import traceback
 
-AGENT_URL = "http://localhost:8000"
+AGENT_URL = "http://localhost:8001"
 
 def create_send_message_payload(
     text: str, task_id: str | None = None, context_id: str | None = None
@@ -51,7 +51,7 @@ async def run_single_turn_test(client: A2AClient) -> None:
     """Runs a single-turn non-streaming test."""
 
     send_payload = create_send_message_payload(
-        text='List titles of all episodes',
+        text='Give titles of all parts in the episode.',
     )
     request = SendMessageRequest(id=str(uuid4()), params=MessageSendParams(**send_payload))
 

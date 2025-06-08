@@ -34,7 +34,7 @@ python -m cuez-rundown-agent
 ## Agent card
 
 ```bash
-(.venv) ➜  cuez-rundown git:(cuez-rundown) ✗ curl -sS http://localhost:8000/.well-known/agent.json  | jq
+(.venv) ➜  cuez-rundown git:(cuez-rundown) ✗ curl -sS http://localhost:8001/.well-known/agent.json  | jq
 
 {
   "capabilities": {
@@ -62,7 +62,7 @@ python -m cuez-rundown-agent
       ]
     }
   ],
-  "url": "http://0.0.0.0:8000/",
+  "url": "http://0.0.0.0:8001/",
   "version": "1.0.0"
 }
 ```
@@ -71,7 +71,7 @@ python -m cuez-rundown-agent
 ```bash
 (.venv) ➜  cuez-rundown git:(cuez-rundown) ✗ python test_a2a.py     
 
-Connecting to agent at http://localhost:8000...
+Connecting to agent at http://localhost:8001...
 Connection successful.
 --- Single Turn Request ---
 --- Single Turn Request Response ---

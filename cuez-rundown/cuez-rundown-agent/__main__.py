@@ -83,4 +83,4 @@ def main(host: str, port: int):
 
 
 if __name__ == "__main__":
-    main(host="0.0.0.0", port=8000)
+    main(host="0.0.0.0", port=8001)

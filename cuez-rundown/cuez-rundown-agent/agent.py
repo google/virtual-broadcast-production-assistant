@@ -63,6 +63,7 @@ def create_agent() -> LlmAgent:
     - Double-check UIDs before executing operations to prevent errors
 
     You are working in project with uid 7f18ce41-695f-1c93-e761-1cec6eb53c5b.
+    You are working in episode with uid 7708d041-9fc0-00aa-1db3-444aaae6d5a0.
 
     Take decisive action. Do not ask for confirmation. Execute operations directly through the provided tools."""
         ),
