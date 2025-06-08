@@ -159,6 +159,8 @@ class RoutingAgent:
         * **Active Agent Prioritization:** If an active agent is already engaged, route subsequent related requests to that agent using the         appropriate task update tool.
         
         **Agent Roster:**
+
+        To Spellcheck, first ask cuez agents the parts and there uids from the rundown, then uses the spellcheck agent, if there is something to fix, ask the user to confirm and then ask the rundown to fix it.
         
         * Available Agents: `{self.agents}`
         * Currently Active Agent: `{current_agent["active_agent"]}`
@@ -292,7 +294,7 @@ def _get_initialized_routing_agent_sync():
         routing_agent_instance = await RoutingAgent.create(
             remote_agent_addresses=[
                 os.getenv("CUEZ_AGENT_URL", "http://localhost:8001"),
-                # os.getenv("WEA_AGENT_URL", "http://localhost:10001"),
+                os.getenv("POSTURE_STUBZY_AGENT_URL", "http://localhost:10001"),
             ]
         )
         return routing_agent_instance.create_agent()
