@@ -1,4 +1,24 @@
+import os
+from dotenv import load_dotenv
 from google.adk.agents import Agent
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StreamableHTTPServerParams
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Get environment variables
+mcp_server_url = os.getenv("MCP_SERVER_URL")
+mcp_server_api_key = os.getenv("MCP_SERVER_API_KEY")
+
+# Create MCP toolset with streamable HTTP connection
+mcp_toolset = MCPToolset(
+    connection_params=StreamableHTTPServerParams(
+        url=mcp_server_url,
+        headers={
+            "Authorization": mcp_server_api_key,
+        },
+    )
+)
 
 root_agent = Agent(
     name="cuez_rundown_agent",
@@ -33,7 +53,9 @@ WORKFLOW PRINCIPLES:
 - Use the appropriate tool for each specific operation
 - Double-check UIDs before executing operations to prevent errors
 
+You are working in project with uid 7f18ce41-695f-1c93-e761-1cec6eb53c5b.
+
 Take decisive action. Do not ask for confirmation. Execute operations directly through the provided tools."""
     ),
-    tools=[],
+    tools=[mcp_toolset],
 )
