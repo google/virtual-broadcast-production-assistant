@@ -18,3 +18,9 @@ source .venv/bin/activate
 ```bash
 .venv\Scripts\Activate.ps1
 ```
+
+## Install packages
+
+```bash
+pip install -r requirements.txt
+```
