@@ -17,15 +17,15 @@
 import os
 
 def load_system_instructions():
-  """Loads the system instructions from a text file using an absolute path."""
-  # Get the directory of the current script
-  script_dir = os.path.dirname(os.path.abspath(__file__))
+    """Loads the system instructions from a text file using an absolute path."""
+    # Get the directory of the current script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
 
-  # Construct the absolute path to the file
-  file_path = os.path.join(script_dir, "system_instructions.txt")
+    # Construct the absolute path to the file
+    file_path = os.path.join(script_dir, "system_instructions.txt")
 
-  # Open the file using the absolute path
-  with open(file_path, "r", encoding="utf-8") as f:
-    system_instructions = f.read()
+    # Open the file using the absolute path
+    with open(file_path, "r", encoding="utf-8") as f:
+        system_instructions = f.read()
 
-  return system_instructions
+    return system_instructions
