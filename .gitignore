@@ -12,6 +12,9 @@ cuez-custom-proxy/.venv
 cuez-custom-proxy/.venv/*
 cuez-custom-proxy/.venv/**
 
+cuez-rundown/.venv/*
+cuez-rundown/.venv/**
+
 local-env-vars.txt
 cuez-custom-proxy/local-env-vars.txt
 
