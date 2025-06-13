@@ -16,6 +16,7 @@
 
 import os
 
+
 def load_system_instructions():
   """Loads the system instructions from a text file using an absolute path."""
   # Get the directory of the current script

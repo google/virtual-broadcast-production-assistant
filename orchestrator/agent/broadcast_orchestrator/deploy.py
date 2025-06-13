@@ -13,16 +13,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  """
-
-"""
-This file manages the deployment to Agent Engine (in preview) an is as at
-ADK 1.0.0
-"""
 import os
-
+import agent  # type: ignore
 import vertexai
 from vertexai import agent_engines
-import agent
 
 project = os.environ.get('GOOGLE_CLOUD_PROJECT')
 
@@ -34,22 +28,22 @@ staging_buecket = os.environ.get('STORAGE_BUCKET')
 if staging_buecket is None:
   raise Exception('No staging bucket set.')
 
-vertexai.init(staging_bucket=f"gs://{staging_buecket}")
+vertexai.init(staging_bucket=f'gs://{staging_buecket}')
 
 root_agent = agent.root_agent
 
-display_name = "Orchestrater Agent"
+display_name = 'Orchestrater Agent'
 
-description = """
-  This is the agent responsible for choosing which remote agents to send
-  tasks to and coordinate their work on helping user in the live broadcast
-  control room
-"""
+description = '''
+    This is the agent responsible for choosing which remote agents to send
+    tasks to and coordinate their work on helping user in the live broadcast
+    control room
+'''
 
 remote_agent = agent_engines.create(
     root_agent,
     display_name=display_name,
     description=description,
     gcs_dir_name=staging_buecket,
-    requirements="../requirements.txt",
+    requirements='../requirements.txt',
 )
