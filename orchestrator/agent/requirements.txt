@@ -76,3 +76,5 @@ urllib3==2.4.0
 uvicorn==0.34.3
 websockets==15.0.1
 zipp==3.22.0
+pytest
+pytest-asyncio
