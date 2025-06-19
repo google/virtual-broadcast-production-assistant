@@ -47,7 +47,7 @@ opentelemetry-sdk==1.33.1
 opentelemetry-semantic-conventions==0.54b1
 packaging==25.0
 proto-plus==1.26.1
-protobuf==6.31.0
+protobuf==6.31.1
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
 pycparser==2.22
@@ -71,7 +71,7 @@ typing-inspection==0.4.1
 typing_extensions==4.13.2
 tzlocal==5.3.1
 uritemplate==4.1.1
-urllib3==2.4.0
+urllib3==2.5.0
 uvicorn==0.34.2
 websockets==15.0.1
 wrapt==1.17.2
