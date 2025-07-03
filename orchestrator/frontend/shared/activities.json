@@ -1,0 +1,263 @@
+[
+  {
+    "id": "14b184ee-fa2e-47be-b734-cffff78c5038",
+    "type": "sofie",
+    "title": "Deactivate Playlist",
+    "message": "Deactivated playlist mgWrSuD6zwuRoN5QL",
+    "metadata": {
+      "playlist_id": "mgWrSuD6zwuRoN5QL"
+    },
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-07-03T19:16:00.309Z",
+    "createdAt": 1751570160309
+  },
+  {
+    "id": "cb449233-e3d0-4101-8e2f-a325e4f54711",
+    "type": "sofie",
+    "title": "List Playlists",
+    "message": "Found one playlist with ID mgWrSuD6zwuRoN5QL",
+    "metadata": {
+      "playlist_id": "mgWrSuD6zwuRoN5QL"
+    },
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-07-03T19:15:42.739Z",
+    "createdAt": 1751570142739
+  },
+  {
+    "id": "a0229712-5a2c-4307-a01a-ef54c8c11611",
+    "type": "sofie",
+    "title": "List Playlists",
+    "message": "Found one playlist with ID mgWrSuD6zwuRoN5QL",
+    "metadata": {
+      "playlist_id": "mgWrSuD6zwuRoN5QL"
+    },
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-07-03T19:15:28.945Z",
+    "createdAt": 1751570128945
+  },
+  {
+    "id": "9ae41799-92f7-4814-bc36-d738dec57cb9",
+    "type": "system",
+    "title": "Failed to list playlists",
+    "message": "Failed to list playlists due to a missing file: ENOENT: no such file or directory, open '/Users/ben/Documents/GIT/Glo&Co/virtual-broadcast-production-assistant/sofie/agents/ibc-agents.json'",
+    "metadata": {},
+    "priority": "high",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-07-03T19:14:24.575Z",
+    "createdAt": 1751570064575
+  },
+  {
+    "id": "8245f16f-b61a-478f-b13e-3a00c3d8fa5c",
+    "type": "sofie",
+    "title": "List playlists",
+    "message": "Found one playlist with ID mgWrSuD6zwuRoN5QL",
+    "metadata": {
+      "playlist_id": "mgWrSuD6zwuRoN5QL"
+    },
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-07-03T19:12:25.859Z",
+    "createdAt": 1751569945859
+  },
+  {
+    "id": "90ce1bf4-24b4-4f26-b15a-a5219de711be",
+    "type": "sofie",
+    "title": "List Playlists",
+    "message": "Found one playlist with ID mgWrSuD6zwuRoN5QL",
+    "metadata": {
+      "playlist_id": "mgWrSuD6zwuRoN5QL"
+    },
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-07-03T19:08:58.995Z",
+    "createdAt": 1751569738995
+  },
+  {
+    "id": "1d9d70df-17e3-489d-8b9e-ddb6924532c3",
+    "type": "sofie",
+    "title": "Take",
+    "message": "Moved to the next item in playlist mgWrSuD6zwuRoN5QL",
+    "metadata": {
+      "result": "success",
+      "action": "take",
+      "playlistId": "mgWrSuD6zwuRoN5QL"
+    },
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-07-03T19:07:33.773Z",
+    "createdAt": 1751569653773
+  },
+  {
+    "id": "75055138-f5e9-44ca-97ea-921e77a55463",
+    "type": "sofie",
+    "title": "Take",
+    "message": "Moved to the next item in playlist mgWrSuD6zwuRoN5QL",
+    "metadata": {
+      "playlistId": "mgWrSuD6zwuRoN5QL",
+      "result": "success",
+      "action": "take"
+    },
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-07-03T19:07:28.093Z",
+    "createdAt": 1751569648093
+  },
+  {
+    "id": "65557e2f-e4fe-4a58-86d2-7b52998a1c0a",
+    "type": "sofie",
+    "title": "Activate playlist",
+    "message": "Activated playlist mgWrSuD6zwuRoN5QL in rehearsal mode",
+    "metadata": {
+      "action": "activate_playlist",
+      "playlistId": "mgWrSuD6zwuRoN5QL",
+      "result": "success",
+      "rehearsal": true
+    },
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-07-03T19:07:03.303Z",
+    "createdAt": 1751569623303
+  },
+  {
+    "id": "c2e87192-2334-43f6-af22-1ddee8df8f9e",
+    "type": "sofie",
+    "title": "List playlists",
+    "message": "Listed playlists and found one with ID mgWrSuD6zwuRoN5QL",
+    "metadata": {
+      "action": "list_playlists",
+      "playlist_count": 1,
+      "result": "success"
+    },
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-07-03T19:06:39.307Z",
+    "createdAt": 1751569599307
+  },
+  {
+    "id": "4f4111d8-4743-406a-b111-9e057c03ad0f",
+    "type": "sofie",
+    "title": "Playlist Deactivated",
+    "message": "Deactivated playlist qC6EH35y53RtY54MK per user request.",
+    "metadata": {
+      "action": "deactivate_playlist",
+      "playlistId": "qC6EH35y53RtY54MK"
+    },
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-06-06T14:57:25.102Z",
+    "createdAt": 1749221845102
+  },
+  {
+    "id": "67bb9f4a-a367-4541-8fa5-a06a01b0031e",
+    "type": "sofie",
+    "title": "Playlist Activated",
+    "message": "Activated playlist qC6EH35y53RtY54MK per user request.",
+    "metadata": {
+      "action": "activate_playlist",
+      "playlistId": "qC6EH35y53RtY54MK"
+    },
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-06-06T14:57:06.864Z",
+    "createdAt": 1749221826864
+  },
+  {
+    "id": "35f74cb9-b1ff-4a69-984e-7be6c3ba540b",
+    "type": "sofie",
+    "title": "Playlist Deactivated",
+    "message": "Deactivated playlist qC6EH35y53RtY54MK per user request.",
+    "metadata": {
+      "playlistId": "qC6EH35y53RtY54MK",
+      "action": "deactivate_playlist"
+    },
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-06-06T14:56:53.304Z",
+    "createdAt": 1749221813304
+  },
+  {
+    "id": "7d23e79e-07be-4c12-95d9-4fa8fa7c4d00",
+    "type": "sofie",
+    "title": "Showed Playlists",
+    "message": "Showed the available playlists to the user.",
+    "metadata": {
+      "action": "list_playlists"
+    },
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-06-06T14:56:46.016Z",
+    "createdAt": 1749221806016
+  },
+  {
+    "id": "f06b3ea7-9565-48e0-8193-2acb970277b6",
+    "type": "sofie",
+    "title": "Take Next",
+    "message": "Executed take next command on playlist qC6EH35y53RtY54MK",
+    "metadata": {},
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-06-06T14:53:27.244Z",
+    "createdAt": 1749221607244
+  },
+  {
+    "id": "17053028-bb7f-40be-b109-b92cefb131ba",
+    "type": "sofie",
+    "title": "Take Next",
+    "message": "Executed take next command on playlist qC6EH35y53RtY54MK",
+    "metadata": {},
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-06-06T14:52:51.169Z",
+    "createdAt": 1749221571169
+  },
+  {
+    "id": "3d342ebd-ba25-41c6-b443-be1ab2f70d72",
+    "type": "sofie",
+    "title": "Take Next",
+    "message": "Executed take next command on playlist qC6EH35y53RtY54MK",
+    "metadata": {},
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-06-06T14:52:47.273Z",
+    "createdAt": 1749221567273
+  },
+  {
+    "id": "03c50710-a6d7-4801-9d1d-dbee76bf4469",
+    "type": "sofie",
+    "title": "Acknowledge Playlist ID",
+    "message": "Acknowledged playlist ID qC6EH35y53RtY54MK for future use.",
+    "metadata": {},
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-06-06T14:52:40.829Z",
+    "createdAt": 1749221560829
+  },
+  {
+    "id": "5d140b98-7df2-456f-a757-e5bd35ffb887",
+    "type": "sofie",
+    "title": "List playlists",
+    "message": "Found one playlist with ID qC6EH35y53RtY54MK",
+    "metadata": {},
+    "priority": "normal",
+    "agent": "central_broadcast_agent",
+    "timestamp": "2025-06-06T14:52:33.889Z",
+    "createdAt": 1749221553889
+  },
+  {
+    "id": "d403023d-f28b-4d44-90da-b46ab3e4de28",
+    "type": "system",
+    "title": "🚨 title",
+    "message": "message",
+    "metadata": {
+      "severity": "warning",
+      "isAlert": true
+    },
+    "priority": "high",
+    "agent": "system",
+    "timestamp": "2025-06-06T14:52:14.057Z",
+    "createdAt": 1749221534057
+  }
+]
