@@ -1,3 +1,6 @@
+
+sofie/sofie-agent/.env
+
 cloudbuild-iam.sh
 
 infrastructure/.terraform/**
