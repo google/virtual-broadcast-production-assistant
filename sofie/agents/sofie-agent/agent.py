@@ -31,8 +31,9 @@ def load_instructions_from_file(filename):
                 return instructions
         except Exception as e:
             print(f"Error loading instructions from {path}: {e}")
-            return "Your instructions are not available at the moment. Tell the user they haven't loaded"
 
+    # Fallback return if no paths succeed
+    return "Your instructions are not available at the moment. Tell the user they haven't loaded"
 # Load instructions from external file
 agent_instructions = load_instructions_from_file('agent_instructions.md')
 
