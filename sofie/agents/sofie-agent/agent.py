@@ -38,6 +38,7 @@ agent_instructions = load_instructions_from_file('agent_instructions.md')
 
 # Path to your Sofie MCP server
 SOFIE_MCP_PATH = os.path.join(os.path.dirname(__file__), "../sofie-tool")
+WEBSITE_MCP_PATH = os.path.join(os.path.dirname(__file__), "../../../orchestrator/frontend")
 
 root_agent = Agent(
    # A unique name for the agent.
@@ -51,11 +52,19 @@ root_agent = Agent(
    instruction=agent_instructions,
    # Add google_search tool to perform grounding with Google search.
    tools=[
-      MCPToolset(
-         connection_params=StdioServerParameters(
-            command='node',  # Assuming Node.js MCP server
-            args=[os.path.join(SOFIE_MCP_PATH, 'server.js')],
-         ),
-      )
+        MCPToolset(
+            connection_params=StdioServerParameters(
+                command='node',  # Assuming Node.js MCP server
+                args=[os.path.join(SOFIE_MCP_PATH, 'server.js')],
+            ),
+        ),
+
+        # Website MCP
+        MCPToolset(
+            connection_params=StdioServerParameters(
+                command='node',
+                args=[os.path.join(WEBSITE_MCP_PATH, 'server.js')],
+            ),
+        )
    ]
 )
