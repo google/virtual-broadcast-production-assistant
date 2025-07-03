@@ -42,7 +42,11 @@ async function createAuthenticatedClient() {
 
 class RundownTools {
   constructor() {
-    this.tools = [
+    this.tools = this.getToolDefinitions();
+  }
+
+  getToolDefinitions() {
+    return [
       // Basic playlist operations
       'list_playlists',
       'get_playlist',
