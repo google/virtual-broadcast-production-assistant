@@ -65,27 +65,22 @@ class FirestoreRepo:
         return results
 
 
-    def batch_add(self, entries: list[dict]) -> list[dict]:
+    def batch_add(self, entries: list[dict], embeddings: list[list[float]]) -> None:
         """
         Add multiple documents in a single batch write.
         Each entry in `entries` is a dict to store.
         Returns a list of dicts with keys 'documentId' and 'content'.
         """
         batch = self._client.batch()
-        created = []
         logger.debug(f"Adding {len(entries)} documents to collection")
-        for data in entries:
+        for idx, data in enumerate(entries):
             # Create a document with an auto-generated ID
             doc_ref = self._collection.document()
+            embedding = next(iter(embeddings[idx:idx+1]), [])
+            data["embeddings"] = Vector(embedding)
             batch.set(doc_ref, data)
-            # Record the new document ID and its content field
-            created.append({
-                'documentId': doc_ref.id,
-                'content': data.get('content', '')
-            })
         # Commit all writes in one request
         batch.commit()
-        return created
 
 
     def update(self, embedding_entries: list[dict]) -> None:

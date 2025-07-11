@@ -1,59 +1,45 @@
-from config import SENTENCE_TRANSFORMERS_LOCAL
-from transformers import AutoTokenizer, AutoModel
-import torch
+from config import GOOGLE_EMBEDDING_MODEL
+from google import genai
+from google.genai import types
 
-# Load tokenizer and model without joblib
-tokenizer = AutoTokenizer.from_pretrained(
-    SENTENCE_TRANSFORMERS_LOCAL,
-    local_files_only=True
-)
-model = AutoModel.from_pretrained(
-    SENTENCE_TRANSFORMERS_LOCAL,
-    local_files_only=True
-)
-model.eval()
-# Force CPU to avoid MPS-related shutdown segmentation faults on Mac
-device = torch.device('cpu')
-model.to(device)
+client = genai.Client()
 
-def embed_texts(texts: list[str]) -> list[list[float]]:
+def generate_embeddings_for_query(content: str) -> list[float]:
     """
-    Compute embeddings using Hugging Face Transformers + PyTorch.
+    Create an embedding for querying database
+
+    Args:
+      content: Text query to make the embedding
+    
+    Returns:
+      List of embeddings for the provided text
     """
-    enc = tokenizer(
-        texts,
-        padding=True,
-        truncation=True,
-        return_tensors='pt'
-    ).to(device)
-    with torch.no_grad():
-        out = model(**enc)
-        hidden = out.last_hidden_state
-        mask = enc['attention_mask'].unsqueeze(-1).expand(hidden.size()).float()
-        summed = (hidden * mask).sum(dim=1)
-        counts = mask.sum(dim=1)
-        return (summed / counts).cpu().tolist()
+    result = client.models.embed_content(
+        model=GOOGLE_EMBEDDING_MODEL,
+        contents=content,
+        config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY")
+    )
+    return result.embeddings[0].values
 
 
-def generate_embeddings(entries):
+def generate_embeddings_for_index(entries: list[dict]) -> list[list[float]]:
     """
     Compute embeddings for a list of entries.
 
     Args:
-        entries: list of dicts with keys 'documentId' and 'content'.
+      entries: list of dicts with keys 'documentId' and 'content'.
 
     Returns:
-        List of dicts with keys 'documentId' and 'embeddings'.
+      List of list with the 'embeddings'.
     """
-    # Extract texts for embedding
-    texts = [entry.get('content', '') for entry in entries]
-    # Compute embeddings for all texts at once
-    vectors = embed_texts(texts)
-    # Pair each embedding with its document ID
-    result = []
-    for entry, vector in zip(entries, vectors):
-        result.append({
-            'documentId': entry['documentId'],
-            'embeddings': vector
-        })
-    return result
+    contents = [entry.get('content', '') for entry in entries]
+    results = client.models.embed_content(
+        model=GOOGLE_EMBEDDING_MODEL,
+        contents=contents,
+        config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
+    )
+    values = []
+    for e in results.embeddings:
+        values.append(e.values)
+    
+    return values

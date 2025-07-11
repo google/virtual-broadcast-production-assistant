@@ -92,6 +92,17 @@ python3 -m venv .venv
 pip install -r requirements.txt
 ```
 
+### Create index in FireStore
+
+To create a new vector index in Firestore we need to run this command, params are:
+> Notes: "dimension" in the vector-config should match the size of the generated embeddings. <br />
+In this case `768` is the output length returned from the [google api request (embeddings)](https://ai.google.dev/gemini-api/docs/embedding).
+
+
+```bash
+gcloud firestore indexes composite create --project=<PROJECT_ID> --collection-group=<COLLECTION_NAME> --query-scope=COLLECTION --field-config=vector-config='{"dimension":"768","flat": "{}"}',field-path=embeddings
+```
+
 Run the main file:
 
 ```bash
