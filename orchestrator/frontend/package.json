@@ -1,0 +1,24 @@
+{
+  "name": "website-mcp-tools",
+  "version": "1.0.0",
+  "description": "MCP server for broadcast activity feed with websockets",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node web-server.js",
+    "build-web": "cd web && npm build dev",
+    "run-web": "cd web && npm run dev",
+    "mcp": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "dotenv": "^16.0.0",
+    "ws": "^8.14.0",
+    "express": "^4.18.0",
+    "cors": "^2.8.5",
+    "uuid": "^9.0.0"
+  },
+  "author": "Ben Sheppard",
+  "license": "MIT"
+}
