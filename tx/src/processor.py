@@ -9,7 +9,7 @@ from google.adk.agents.run_config import RunConfig
 from google.adk.agents import Agent
 from google.genai.types import Blob, Part, Content
 from src.prompts import ROOT_PROMPT, INSTRUCTIONS
-from src.embeddings import generate_embeddings
+from src.embeddings import generate_embeddings_for_index
 from src.firestore_repo import FirestoreRepo
 from src.utils import (
     fetch_program_start,
@@ -55,7 +55,6 @@ async def start_agent_session(user_id: str):
 async def process_agent_events(live_events):
     """Processes agent responses"""
     buffer = []
-    print("Waiting for the AI responses")
     async for event in live_events:
         if event.turn_complete or event.interrupted:
             full_text = "".join(buffer).strip()
@@ -70,9 +69,8 @@ async def process_agent_events(live_events):
                 continue
             
             # Store entries and their embeddings
-            stored_entries = firestoreDB.batch_add(entries)
-            embeddings = generate_embeddings(stored_entries)
-            firestoreDB.update(embeddings)
+            embeddings = generate_embeddings_for_index(entries)
+            firestoreDB.batch_add(entries, embeddings)
             continue
 
         part: Part = (event.content and event.content.parts and event.content.parts[0])

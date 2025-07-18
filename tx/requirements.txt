@@ -1,3 +1,4 @@
+a2a-sdk==0.2.10
 annotated-types==0.7.0
 anyio==4.9.0
 attrs==25.3.0
@@ -50,7 +51,9 @@ googleapis-common-protos==1.70.0
 graphviz==0.21
 grpc-google-iam-v1==0.14.2
 grpcio==1.73.1
+grpcio-reflection==1.71.2
 grpcio-status==1.73.1
+grpcio-tools==1.71.2
 h11==0.16.0
 h2==4.2.0
 hf-xet==1.1.5
@@ -96,7 +99,7 @@ packaging==25.0
 pillow==11.3.0
 posthog==6.0.1
 proto-plus==1.26.1
-protobuf==6.31.1
+protobuf==5.29.5
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
 pybase64==1.4.1
