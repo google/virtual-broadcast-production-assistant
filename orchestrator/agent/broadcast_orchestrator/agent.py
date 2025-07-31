@@ -327,9 +327,9 @@ def _get_initialized_routing_agent_sync():
   async def _async_main():
     cuez_agent_url = "http://localhost:8001"
     posture_url = "http://localhost:10002"
+
     routing_agent_instance = await RoutingAgent.create(remote_agent_addresses=[
         os.getenv("CUEZ_AGENT_URL", cuez_agent_url),
-        os.getenv("POSTURE_STUBZY_AGENT_URL", posture_stubzy_url),
         os.getenv("POSTURE_AGENT_URL", posture_url)
     ])
     return routing_agent_instance.create_agent()
