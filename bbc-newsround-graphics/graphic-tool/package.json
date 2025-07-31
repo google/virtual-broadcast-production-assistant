@@ -1,0 +1,29 @@
+{
+  "name": "broadcast-graphics-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for controlling broadcast graphics and straps",
+  "type": "module",
+  "main": "server.js",
+  "bin": {
+    "broadcast-graphics-mcp": "./server.js"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0",
+    "dotenv": "^16.4.5",
+    "node-fetch": "^3.3.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "broadcast",
+    "graphics",
+    "newsroom",
+    "straps"
+  ]
+}
