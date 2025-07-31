@@ -24,94 +24,10 @@ The TX Worker is the backbone of the system, responsible for capturing and under
   * **Metadata Extraction:** Log timecodes, programme segment information, and any other available broadcast metadata, all associated with timestamps.
 * **Data Structuring & Logging:** Organize the extracted information into distinct, timestamped log entries in the database. For instance, a transcript snippet and a visual scene description for the same moment would be separate entries sharing very close timestamps.
 
-**Potential Technologies & Techniques:**
 
-* **Audio Transcription:**
-  * Google Cloud Speech-to-Text (especially models like Chirp).
-  * Other cloud-based Speech-to-Text services.
-  * Open-source models (e.g., Whisper).
-* **Video Analysis:**
-  * Google Cloud Video AI (leveraging Gemini models).
-  * Other Cloud AI Video Intelligence Platforms.
-  * Computer Vision Libraries (OpenCV, TensorFlow, PyTorch).
-* **Frame Extraction:** FFmpeg.
-* **Real-time Processing Pipelines:** Google Cloud Pub/Sub, Apache Kafka, etc.
+## 2. TX Agent: Conversational Access to Broadcast History
 
-**Example Log Entries in Firestore (Conceptual):**
-
-These examples illustrate how different pieces of information about the *same broadcast moment* would be stored as separate, timestamped documents in a collection (e.g., `broadcast_log_entries`).
-
-* **Audio Transcript Segment:**
-
-    ```json
-    {
-      "doc_id": "audio_event_001",
-      "timestamp_utc": "2025-05-13T10:15:32.500Z",
-      "timecode": "01:15:32:12",
-      "log_type": "audio_transcript_segment",
-      "data": {
-        "speaker_id": "Commentator_A",
-        "transcript": "And that's a fantastic goal from Smith! What a strike from outside the box!"
-      }
-    }
-    ```
-
-* **Video Scene Description:**
-
-    ```json
-    {
-      "doc_id": "video_event_001",
-      "timestamp_utc": "2025-05-13T10:15:33.000Z",
-      "timecode": "01:15:33:00",
-      "log_type": "video_scene_description",
-      "data": {
-        "description": "Player #10 (Smith) scores a goal. Ball enters top left of net. Crowd celebrating.",
-        "objects_detected": ["football", "goal_net", "player_smith", "crowd"],
-        "keyframe_path": "/mnt/storage/frames/20250513/goal_smith_101532.jpg"
-      }
-    }
-    ```
-
-* **On-Screen Graphic Information:**
-
-    ```json
-    {
-      "doc_id": "osg_event_001",
-      "timestamp_utc": "2025-05-13T10:15:33.200Z",
-      "timecode": "01:15:33:05",
-      "log_type": "on_screen_graphic",
-      "data": {
-        "graphic_type": "score_update",
-        "text_content": "Team A 1 - 0 Team B"
-      }
-    }
-    ```
-
-## 2. Database: Storing Broadcast Events
-
-The choice of database is critical. It must support fast writes of individual log entries and efficient querying by timestamp and content.
-
-**Considerations:**
-
-* **Scalability, Query Performance, Data Types, Real-time Capabilities, Ease of Use & SDKs.**
-
-**Potential Database Technologies:**
-
-* **NoSQL Databases:**
-  * **Google Cloud Firestore:** Highly recommended.
-    * **Real-time Listeners:** Enables the TX Agent to be aware of new log entries instantly.
-    * **Scalability & Performance:** Handles high-volume writes and fast, indexed queries (especially by `timestamp_utc`).
-    * **User-friendly SDKs.**
-    * Ideal for storing collections of individual, timestamped JSON log entries.
-  * MongoDB, Elasticsearch (for advanced text search).
-  * Redis (for caching).
-* **Time-Series Databases:** InfluxDB, TimescaleDB.
-* **Relational Databases with Extensions:** Google Cloud SQL for PostgreSQL.
-* **Vector Databases:** Google Cloud Vertex AI Vector Search, Pinecone, Weaviate (for semantic search on embeddings).
-
-## 3. TX Agent: Conversational Access to Broadcast History
-
-The TX Agent uses an LLM (e.g., Gemini) with a Retrieval Augmented Generation (RAG) approach.
+The TX Agent uses an LLM with a Retrieval Augmented Generation (RAG) approach.
 
 **Responsibilities:**
 
@@ -121,14 +37,19 @@ The TX Agent uses an LLM (e.g., Gemini) with a Retrieval Augmented Generation (R
     2. Query the database (e.g., Firestore) for all relevant log entries (audio, video, graphics, etc.) within that time window or associated with those events, using timestamps as the primary linking mechanism.
 * **Contextual Data Retrieval:** Gather the disparate log entries (e.g., a transcript, a scene description, an on-screen graphic text) that correspond to the same broadcast moment or period.
 * **Information Synthesis & Presentation (via LLM):** Pass the retrieved, time-correlated data along with the original query to the LLM. The LLM then synthesizes this information into a coherent answer.
-* **Context Management:** Handle follow-up questions.
 
-**Potential Technologies & Techniques:**
 
-* **Large Language Models (LLMs) (e.g., Google Gemini) using RAG.**
-* **Frameworks for Conversational AI:** Google Dialogflow CX.
+## 3. Technologies:
 
-**Example Interaction Flow (Simplified):**
+- Python 3.8+
+- FFmpeg
+- ADK (Agent Development Kit)
+- Google Cloud Gemini
+- Google Cloud Firestore
+
+
+
+### Example Interaction Flow (Simplified):
 
 1. **Director:** "TX Agent, what did the commentator say when Smith scored that goal around 01:15?"
 2. **TX Agent:**
@@ -148,42 +69,43 @@ graph LR
     subgraph TX Worker Process
         B -- Timestamped Segments --> C{Audio Ingest};
         B -- Timestamped Segments --> D{Video Ingest};
-        C --> E[Audio Transcription Service e.g. Google Speech-to-Text];
-        D --> F[Video Analysis Service e.g. Google Video AI];
+        C --> E[Audio Transcription];
+        D --> F[Video Analysis];
         D --> G[Keyframe Extraction];
     end
 
-    E -- Timestamped Log Entry --> H((Database e.g. Firestore Collection 'broadcast_log_entries'));
+    E -- Timestamped Log Entry --> H[Firestore Database];
     F -- Timestamped Log Entry --> H;
     G -- Timestamped Log Entry --> H;
 
-    I(TX Agent with LLM e.g. Gemini);
+    I(TX Agent - ADK);
     I -- Queries by Time/Content --> H;
     H -- Returns Multiple Log Entries --> I;
     J[Production Team User] <--> I;
     K[Other AI Agents/Systems] <--> I;
-
-    style A fill:#f9f,stroke:#333,stroke-width:2px
-    style B fill:#bbf,stroke:#333,stroke-width:2px
-    style H fill:#lightgrey,stroke:#333,stroke-width:2px
-    style I fill:#ccf,stroke:#333,stroke-width:2px
-    style J fill:#dfd,stroke:#333,stroke-width:2px
 ```
 
-**Flow:**
+## 5. Installation & Usage
 
-1. The **Live Broadcast Feed** is fed into the **TX Worker**.
-2. The TX Worker processes segments, assigning **precise timestamps**, and sends them to analysis services.
-3. Each piece of analyzed information (transcript, video description, etc.) is logged as a **separate, timestamped entry** in the **Database** (e.g., Firestore).
-4. The **Production Team User** interacts with the **TX Agent**.
-5. The TX Agent queries the **Database** for multiple relevant log entries based on time and content, then uses the LLM to synthesize an answer from this retrieved context.
+```bash
+python3 -m venv .venv
+pip install -r requirements.txt
+```
 
-## 5. Key Considerations & Challenges
+### Create index in FireStore
 
-* **Real-time Performance, Accuracy, Scalability, Cost, Data Management & Retention, Specificity vs. Generality, UI/UX, Integration, Error Handling.**
+To create a new vector index in Firestore we need to run this command, params are:
+> Notes: "dimension" in the vector-config should match the size of the generated embeddings. <br />
+In this case `768` is the output length returned from the [google api request (embeddings)](https://ai.google.dev/gemini-api/docs/embedding).
 
-## Next Steps & Potential Enhancements
 
-* **Speaker Diarization, Sentiment Analysis, Automated Highlight Generation, Cross-referencing with Schedules, Visual Search.**
+```bash
+gcloud firestore indexes composite create --project=<PROJECT_ID> --collection-group=<COLLECTION_NAME> --query-scope=COLLECTION --field-config=vector-config='{"dimension":"768","flat": "{}"}',field-path=embeddings
+```
 
-This conceptual framework provides a starting point. The specific implementation details would depend heavily on the exact requirements of the broadcast environment, available budget, and technical expertise.
+Run the main file:
+
+```bash
+python3 main.py --stream-url https://somedomain.com/stream.m3u8
+```
+
