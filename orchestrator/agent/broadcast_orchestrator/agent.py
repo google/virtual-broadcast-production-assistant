@@ -12,7 +12,6 @@ from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.tools.tool_context import ToolContext
 from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
-from a2a.client import A2ACardResolver
 
 from a2a.types import (
     SendMessageResponse,
@@ -23,6 +22,8 @@ from a2a.types import (
     Part,
     AgentCard,
 )
+
+from a2a.client import A2ACardResolver
 
 from dotenv import load_dotenv
 
@@ -126,7 +127,7 @@ class RoutingAgent:
 
   def create_agent(self) -> Agent:
     return Agent(
-        model="gemini-2.5-flash-preview-04-17",
+        model="gemini-2.5-flash",
         name="Routing_agent",
         instruction=self.root_instruction,
         before_model_callback=self.before_model_callback,
@@ -149,15 +150,15 @@ class RoutingAgent:
 
         **Communication Style:**
 
-        *   **CONCISE AND DIRECT LANGUAGE:** Use short, clear phrases typical
+        * **CONCISE AND DIRECT LANGUAGE:** Use short, clear phrases typical
             of a live broadcast control room. Time is critical. Do not keep
             asking how else can you help. The director will ask if they need
             it.
-        *   **PROMPT RESPONSES:** Respond immediately. Delays are
+        * **PROMPT RESPONSES:** Respond immediately. Delays are
             unacceptable in live production.
-        *   **STANDARD TERMINOLOGY:** Employ standard broadcast terms (examples
+        * **STANDARD TERMINOLOGY:** Employ standard broadcast terms (examples
             provided below).
-        *   **DO NOT MAKE ANYTHING UP** You MUST use the right tools and
+        * **DO NOT MAKE ANYTHING UP** You MUST use the right tools and
             agents to get information, if you don't have any available you
             should say so. Again, do not make information up that sounds
             plausible.
@@ -207,7 +208,7 @@ class RoutingAgent:
       return {"active_agent": f"{state['active_agent']}"}
     return {"active_agent": "None"}
 
-  def before_model_callback(self, callback_context: CallbackContext):
+  def before_model_callback(self, callback_context: CallbackContext, **kwargs):
     state = callback_context.state
     if "session_active" not in state or not state["session_active"]:
       if "session_id" not in state:
@@ -242,7 +243,7 @@ class RoutingAgent:
             tool_context: The tool context this method runs in.
 
         Yields:
-            A dictionary of JSON data.
+          A dictionary of JSON data.
         """
     if agent_name not in self.remote_agent_connections:
       raise ValueError(f"Agent {agent_name} not found")
@@ -325,7 +326,6 @@ def _get_initialized_routing_agent_sync():
 
   async def _async_main():
     cuez_agent_url = "http://localhost:8001"
-    posture_stubzy_url = "http://localhost:10001"  # Shortened variable
     posture_url = "http://localhost:10002"
     routing_agent_instance = await RoutingAgent.create(remote_agent_addresses=[
         os.getenv("CUEZ_AGENT_URL", cuez_agent_url),
