@@ -11,23 +11,11 @@ from a2a.server.agent_execution import AgentExecutor
 from a2a.server.agent_execution.context import RequestContext
 from a2a.server.events.event_queue import EventQueue
 from a2a.server.tasks import TaskUpdater
-from a2a.types import (
-    AgentCard,
-    FilePart,
-    FileWithBytes,
-    FileWithUri,
-    Part,
-    TaskState,
-    TextPart,
-    UnsupportedOperationError,
-)
+from a2a.types import AgentCard, FilePart, FileWithBytes, FileWithUri, Part, TaskState, TextPart, UnsupportedOperationError
 from a2a.utils.errors import ServerError
-from a2a.utils.message import new_agent_text_message
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
 
 class ADKAgentExecutor(AgentExecutor):
     """An AgentExecutor that runs an ADK-based Agent."""
