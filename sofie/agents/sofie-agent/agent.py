@@ -38,7 +38,8 @@ def load_instructions_from_file(filename):
 agent_instructions = load_instructions_from_file('agent_instructions.md')
 
 # Path to your Sofie MCP server
-SOFIE_MCP_PATH = os.path.join(os.path.dirname(__file__), "../sofie-tool")
+SOFIE_MCP_PATH = os.path.join(os.path.dirname(__file__), "../", "sofie-tool")
+print (SOFIE_MCP_PATH)
 WEBSITE_MCP_PATH = os.path.join(os.path.dirname(__file__), "../../../orchestrator/frontend")
 
 root_agent = Agent(
@@ -56,15 +57,7 @@ root_agent = Agent(
         MCPToolset(
             connection_params=StdioServerParameters(
                 command='node',  # Assuming Node.js MCP server
-                args=[os.path.join(SOFIE_MCP_PATH, 'server.js')],
-            ),
-        ),
-
-        # Website MCP
-        MCPToolset(
-            connection_params=StdioServerParameters(
-                command='node',
-                args=[os.path.join(WEBSITE_MCP_PATH, 'server.js')],
+                args=[SOFIE_MCP_PATH],
             ),
         )
    ]

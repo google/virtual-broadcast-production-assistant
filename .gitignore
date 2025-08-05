@@ -1,5 +1,5 @@
 
-sofie/sofie-agent/.env
+sofie/agents/sofie-tool/node_modules
 
 cloudbuild-iam.sh
 

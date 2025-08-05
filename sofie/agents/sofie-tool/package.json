@@ -1,25 +1,52 @@
 {
-  "name": "sofie-mcp-tools",
-  "version": "1.0.0",
-  "description": "MCP server for Sofie automation tools",
-  "type": "module",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.5.0",
-    "axios": "^1.9.0",
-    "dotenv": "^16.0.0",
-    "google-auth-library": "^9.15.1",
-    "ws": "^8.18.2"
-  },
-  "keywords": [
-    "mcp",
-    "sofie",
-    "automation"
-  ],
-  "author": "Your Name",
-  "license": "MIT"
+	"name": "sofie-mcp-tools",
+	"version": "1.0.0",
+	"description": "MCP server for Sofie automation tools",
+	"keywords": [
+		"mcp",
+		"sofie",
+		"automation"
+	],
+	"license": "MIT",
+	"type": "module",
+	"main": "dist/index.js",
+	"scripts": {
+		"build": "tsc",
+		"lint": "eslint .",
+		"lint:fix": "npm run lint -- --fix",
+		"start": "npm run build && node dist/index.js",
+		"watch": "tsx watch ./src/index.ts"
+	},
+	"overrides": {
+		"typescript-eslint": {
+			"typescript": "$typescript"
+		}
+	},
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^0.5.0",
+		"@sofie-automation/openapi": "^1.52.0",
+		"dotenv": "^16.0.0",
+		"google-auth-library": "^9.15.1",
+		"pino": "^9.7.0",
+		"pino-pretty": "^13.1.1",
+		"undici": "^7.13.0",
+		"ws": "^8.18.2"
+	},
+	"devDependencies": {
+		"@tsconfig/node22": "^22.0.2",
+		"@types/node": "^24.2.0",
+		"eslint": "^9.32.0",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-import": "^2.32.0",
+		"eslint-plugin-n": "^17.21.3",
+		"eslint-plugin-prettier": "^5.5.3",
+		"prettier": "^3.6.2",
+		"prettier-plugin-organize-imports": "^4.2.0",
+		"tsx": "^4.20.3",
+		"typescript": "^5.9.2",
+		"typescript-eslint": "^8.39.0"
+	},
+	"engines": {
+		"node": ">=22"
+	}
 }

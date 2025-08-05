@@ -13,14 +13,19 @@ Installation
 Clone or download the source files
 Create the project structure:
 
-bashmkdir sofie-mcp-server
+```bash
+mkdir sofie-mcp-server
 cd sofie-mcp-server
 mkdir src
+```
 
 Copy the main TypeScript file to src/index.ts
 Install dependencies:
 
-bashnpm install
+```bash
+npm install
+```
+
 Configuration
 Before using the server, you need to configure the headers in the SOFIE_CONFIG object:
 typescriptconst SOFIE_CONFIG = {
