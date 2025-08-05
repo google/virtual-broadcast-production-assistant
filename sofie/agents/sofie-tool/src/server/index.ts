@@ -86,6 +86,8 @@ export class SofieMCPServer {
 	}
 
 	async open() {
+		await this.rundownTools.open()
+
 		const transport = new StdioServerTransport()
 		await this.server.connect(transport)
 		logger.info('Sofie MCP server running on stdio')

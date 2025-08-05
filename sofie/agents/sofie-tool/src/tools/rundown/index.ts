@@ -7,6 +7,7 @@ import { version } from '../../config/version.js'
 import { Config } from '../../typings/config/index.js'
 import { logError } from '../../util/index.js'
 import { toolDefinitions } from './definitions.js'
+import { SofieWebsocket } from './websocket.js'
 
 type Tools = (typeof ListToolsResultSchema)['_output']['tools']
 
@@ -19,12 +20,23 @@ export class RundownTools {
 
 	private readonly dispatcher = new EnvHttpProxyAgent()
 
+	private readonly ws: SofieWebsocket
+
 	constructor(config: Config) {
 		this.config = config
 		this.tools = this.getToolDefinitions()
 		this.auth = new GoogleAuth({
 			keyFile: this.config.serviceAccountPath,
 		})
+		this.ws = new SofieWebsocket(config)
+	}
+
+	async open() {
+		await this.ws.open()
+	}
+
+	async close() {
+		this.ws.close()
 	}
 
 	private async request(
