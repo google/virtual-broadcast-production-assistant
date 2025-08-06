@@ -2,6 +2,16 @@ import { Level, Logger } from 'pino'
 import { inspect } from 'util'
 
 /**
+ * Type guard.
+ *
+ * @param {T} obj Object to check
+ * @returns {T} Object.
+ */
+export function literal<T>(obj: T): T {
+	return obj
+}
+
+/**
  * Log an error message with suitable debug.
  *
  * @param {Logger} log Log instance.

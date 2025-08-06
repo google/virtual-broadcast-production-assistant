@@ -1,7 +1,8 @@
 import os
 from google.adk.agents import Agent
-from google.adk.tools import google_search  # Import the tool
-from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
+from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPServerParams
+
 
 def load_instructions_from_file(filename):
     """
@@ -55,10 +56,7 @@ root_agent = Agent(
    # Add google_search tool to perform grounding with Google search.
    tools=[
         MCPToolset(
-            connection_params=StdioServerParameters(
-                command='node',  # Assuming Node.js MCP server
-                args=[SOFIE_MCP_PATH],
-            ),
+            connection_params=StreamableHTTPServerParams(url="http://localhost:3000/mcp")
         )
    ]
 )

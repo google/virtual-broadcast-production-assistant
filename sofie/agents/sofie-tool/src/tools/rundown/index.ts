@@ -1,3 +1,4 @@
+import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { CallToolResult, ListToolsResultSchema } from '@modelcontextprotocol/sdk/types.js'
 import { DeviceItem, PlaylistItem, ShowStyleBaseItem, StudioItem } from '@sofie-automation/openapi'
 import { GoogleAuth } from 'google-auth-library'
@@ -22,13 +23,13 @@ export class RundownTools {
 
 	private readonly ws: SofieWebsocket
 
-	constructor(config: Config) {
+	constructor(config: Config, server: Server) {
 		this.config = config
 		this.tools = this.getToolDefinitions()
 		this.auth = new GoogleAuth({
 			keyFile: this.config.serviceAccountPath,
 		})
-		this.ws = new SofieWebsocket(config)
+		this.ws = new SofieWebsocket(config, server)
 	}
 
 	async open() {
@@ -104,7 +105,7 @@ export class RundownTools {
 		return this.tools.find((t) => t.name === toolName)
 	}
 
-	async callTool(toolName: string, args: Record<string, any>) {
+	async callTool(toolName: string, args: Record<string, any>): Promise<CallToolResult> {
 		logger.debug(`Tool: '${toolName}' called with ${JSON.stringify(args)}`)
 		try {
 			switch (toolName) {
@@ -180,7 +181,7 @@ export class RundownTools {
 	}
 
 	// Basic playlist operations
-	private async listPlaylists() {
+	private async listPlaylists(): Promise<CallToolResult> {
 		try {
 			const response = await this.request('/playlists')
 
@@ -199,7 +200,7 @@ export class RundownTools {
 	}
 
 	// THIS DOESN'T EXIST
-	private async getPlaylist(playlistId: string) {
+	private async getPlaylist(playlistId: string): Promise<CallToolResult> {
 		try {
 			const response = await this.request(`/playlists/${playlistId}`)
 			return this.getResponse(`Playlist Details:\n\n${JSON.stringify(response, null, 2)}`)
@@ -209,7 +210,7 @@ export class RundownTools {
 	}
 
 	// NEITHER DOES THIS # lol
-	private async getPlaylistStatus(playlistId: string) {
+	private async getPlaylistStatus(playlistId: string): Promise<CallToolResult> {
 		try {
 			const response = await this.request(`/playlists/${playlistId}/status`)
 			return this.getResponse(`Playlist Status:\n\n${JSON.stringify(response, null, 2)}`)
@@ -219,7 +220,7 @@ export class RundownTools {
 	}
 
 	// Playlist lifecycle management
-	private async activatePlaylist(playlistId: string, rehearsal = false) {
+	private async activatePlaylist(playlistId: string, rehearsal = false): Promise<CallToolResult> {
 		try {
 			await this.request(`/playlists/${playlistId}/activate`, {
 				rehearsal,
@@ -232,7 +233,7 @@ export class RundownTools {
 		}
 	}
 
-	private async deactivatePlaylist(playlistId: string) {
+	private async deactivatePlaylist(playlistId: string): Promise<CallToolResult> {
 		try {
 			await this.request(`/playlists/${playlistId}/deactivate`, undefined, 'PUT')
 			return this.getResponse(`✅ Playlist ${playlistId} deactivated successfully!`)
@@ -241,7 +242,7 @@ export class RundownTools {
 		}
 	}
 
-	private async reloadPlaylist(playlistId: string) {
+	private async reloadPlaylist(playlistId: string): Promise<CallToolResult> {
 		try {
 			await this.request(`/playlists/${playlistId}/reload`, undefined, 'PUT')
 			return this.getResponse(`✅ Playlist ${playlistId} reloaded successfully!`)
@@ -250,7 +251,7 @@ export class RundownTools {
 		}
 	}
 
-	private async resetPlaylist(playlistId: string) {
+	private async resetPlaylist(playlistId: string): Promise<CallToolResult> {
 		try {
 			await this.request(`/playlists/${playlistId}/reset`, undefined, 'PUT')
 			return this.getResponse(`✅ Playlist ${playlistId} reset successfully!`)
@@ -260,7 +261,7 @@ export class RundownTools {
 	}
 
 	// Playout control
-	private async take(playlistId: string, fromPartInstanceId?: string) {
+	private async take(playlistId: string, fromPartInstanceId?: string): Promise<CallToolResult> {
 		try {
 			const requestBody = fromPartInstanceId ? { fromPartInstanceId } : {}
 			await this.request(`/playlists/${playlistId}/take`, requestBody, 'POST')
@@ -270,7 +271,7 @@ export class RundownTools {
 		}
 	}
 
-	private async setNextPart(playlistId: string, partId: string) {
+	private async setNextPart(playlistId: string, partId: string): Promise<CallToolResult> {
 		try {
 			await this.request(`/playlists/${playlistId}/set-next-part`, {
 				partId,
@@ -281,7 +282,7 @@ export class RundownTools {
 		}
 	}
 
-	private async setNextSegment(playlistId: string, segmentId: string) {
+	private async setNextSegment(playlistId: string, segmentId: string): Promise<CallToolResult> {
 		try {
 			const response = await this.request(
 				`/playlists/${playlistId}/set-next-segment`,
@@ -296,7 +297,7 @@ export class RundownTools {
 		}
 	}
 
-	private async moveNextPart(playlistId: string, delta: number) {
+	private async moveNextPart(playlistId: string, delta: number): Promise<CallToolResult> {
 		try {
 			const response = await this.request(
 				`/playlists/${playlistId}/move-next-part`,
@@ -311,7 +312,7 @@ export class RundownTools {
 		}
 	}
 
-	private async moveNextSegment(playlistId: string, delta: number, ignoreQuickLoop?: boolean) {
+	private async moveNextSegment(playlistId: string, delta: number, ignoreQuickLoop?: boolean): Promise<CallToolResult> {
 		try {
 			const requestBody: Record<string, any> = { delta }
 			if (ignoreQuickLoop !== undefined) {
@@ -324,7 +325,7 @@ export class RundownTools {
 		}
 	}
 
-	private async queueNextSegment(playlistId: string, segmentId: string) {
+	private async queueNextSegment(playlistId: string, segmentId: string): Promise<CallToolResult> {
 		try {
 			const response = await this.request(
 				`/playlists/${playlistId}/queue-next-segment`,
@@ -345,7 +346,7 @@ export class RundownTools {
 		adLibId: string,
 		actionType?: string,
 		adLibOptions?: Record<string, any>,
-	) {
+	): Promise<CallToolResult> {
 		try {
 			const requestBody: Record<string, any> = { adLibId }
 			if (actionType) {
@@ -361,7 +362,12 @@ export class RundownTools {
 		}
 	}
 
-	private async executeBucketAdLib(playlistId: string, bucketId: string, externalId: string, actionType?: string) {
+	private async executeBucketAdLib(
+		playlistId: string,
+		bucketId: string,
+		externalId: string,
+		actionType?: string,
+	): Promise<CallToolResult> {
 		try {
 			const requestBody: Record<string, any> = { bucketId, externalId }
 			if (actionType) {
@@ -375,7 +381,7 @@ export class RundownTools {
 	}
 
 	// Source layer control
-	private async clearSourceLayers(playlistId: string, sourceLayerIds: string[]) {
+	private async clearSourceLayers(playlistId: string, sourceLayerIds: string[]): Promise<CallToolResult> {
 		try {
 			await this.request(`/playlists/${playlistId}/clear-sourcelayers`, {
 				sourceLayerIds,
@@ -386,7 +392,7 @@ export class RundownTools {
 		}
 	}
 
-	private async clearSourceLayer(playlistId: string, sourceLayerId: string) {
+	private async clearSourceLayer(playlistId: string, sourceLayerId: string): Promise<CallToolResult> {
 		try {
 			await this.request(`/playlists/${playlistId}/sourcelayer/${sourceLayerId}`, undefined, 'DELETE')
 			return this.getResponse(`✅ Source layer ${sourceLayerId} cleared (deprecated endpoint)`)
@@ -395,7 +401,7 @@ export class RundownTools {
 		}
 	}
 
-	private async recallSticky(playlistId: string, sourceLayerId: string) {
+	private async recallSticky(playlistId: string, sourceLayerId: string): Promise<CallToolResult> {
 		try {
 			await this.request(`/playlists/${playlistId}/sourcelayer/${sourceLayerId}/sticky`, undefined, 'POST')
 			return this.getResponse(`✅ Sticky piece recalled for source layer ${sourceLayerId}`)
@@ -405,7 +411,7 @@ export class RundownTools {
 	}
 
 	// System information (unchanged)
-	private async getStudios() {
+	private async getStudios(): Promise<CallToolResult> {
 		try {
 			const response = await this.request('/studios')
 			if (!response || !response.result) {
@@ -420,7 +426,7 @@ export class RundownTools {
 		}
 	}
 
-	private async getShowStyles() {
+	private async getShowStyles(): Promise<CallToolResult> {
 		try {
 			const response = await this.request('/showstyles')
 			if (!response || !response.result) {
@@ -436,7 +442,7 @@ export class RundownTools {
 		}
 	}
 
-	private async getDevices() {
+	private async getDevices(): Promise<CallToolResult> {
 		try {
 			const response = await this.request('/devices')
 			if (!response || !response.result) {
@@ -456,7 +462,7 @@ export class RundownTools {
 		}
 	}
 
-	private async getSystemStatus() {
+	private async getSystemStatus(): Promise<CallToolResult> {
 		try {
 			const response = await this.request('/')
 			if (!response || !response.result) {

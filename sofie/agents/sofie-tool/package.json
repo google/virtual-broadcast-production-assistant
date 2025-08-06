@@ -23,14 +23,15 @@
 		}
 	},
 	"dependencies": {
-		"@modelcontextprotocol/sdk": "^0.5.0",
-		"@sofie-automation/openapi": "^1.52.0",
-		"dotenv": "^16.0.0",
-		"google-auth-library": "^9.15.1",
+		"@modelcontextprotocol/sdk": "^1.17.1",
+		"@sofie-automation/live-status-gateway-api": "^1.53.0-nightly-release53-20250702-092104-8eba5bc.0",
+		"@sofie-automation/openapi": "^1.53.0-nightly-release53-20250702-092104-8eba5bc.0",
+		"dotenv": "^17.2.1",
+		"fastify": "^5.4.0",
+		"google-auth-library": "^10.2.1",
 		"pino": "^9.7.0",
 		"pino-pretty": "^13.1.1",
-		"undici": "^7.13.0",
-		"ws": "^8.18.2"
+		"undici": "^7.13.0"
 	},
 	"devDependencies": {
 		"@tsconfig/node22": "^22.0.2",

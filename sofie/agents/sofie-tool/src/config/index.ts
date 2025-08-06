@@ -24,7 +24,7 @@ export const loadConfig = (): Config => {
 		liveStatusEndpoint: process.env.SOFIE_LIVE_STATUS_WS || 'wss://sofie-live-status.justingrayston.com',
 		iapClientId:
 			process.env.IAP_CLIENT_ID?.trim() || '542328728538-okirhoruutf0bk3cci4190htqb06g6s1.apps.googleusercontent.com',
-		serviceAccountPath: process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim() || './ibc-agents.json',
+		serviceAccountPath: process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim() || '../ibc-agents.json',
 	}
 
 	logger.info('Config loaded')
