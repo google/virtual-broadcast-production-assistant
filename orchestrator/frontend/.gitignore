@@ -1,5 +1,6 @@
 git # Dependencies
 /node_modules
+/web/node_modules
 
 # Vite build output
 /dist

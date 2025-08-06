@@ -1,7 +1,59 @@
+import logging
 import os
+
+import click
+import uvicorn
+
+from agent import create_agent
+from agent_executor import ADKAgentExecutor
+
 from google.adk.agents import Agent
 from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPServerParams
+from dotenv import load_dotenv
+from google.adk.artifacts import InMemoryArtifactService
+from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
+from google.adk.runners import Runner
+from google.adk.sessions import InMemorySessionService
+from starlette.routing import Route
+
+from a2a.server.apps import A2AStarletteApplication
+from a2a.server.request_handlers import DefaultRequestHandler
+from a2a.server.tasks import InMemoryTaskStore
+from a2a.types import (
+    AgentCapabilities,
+    AgentCard,
+    AgentSkill,
+)
+from starlette.applications import Starlette
+
+
+load_dotenv()
+
+logging.basicConfig()
+
+
+ENV = os.getenv("ENV")
+
+if ENV == "production":
+    HOST = "LINK TO WHERE WE'RE HOSTING"
+elif ENV == "local":
+    HOST = "https://0.0.0.0:10005"
+
+# Create MCP toolset with streamable HTTP connection
+mcp_toolset = MCPToolset(
+    connection_params=StreamableHTTPServerParams(
+        url="http://localhost:3000/mcp"
+    )
+)
+
+# Export mcp_toolset so it can be used in __main__.py
+__all__ = ['create_agent', 'mcp_toolset']
+
+
+@click.command()
+@click.option("--host", "host", default="0.0.0.0")
+@click.option("--port", "port", default=10005)
 
 
 def load_instructions_from_file(filename):
@@ -43,20 +95,14 @@ SOFIE_MCP_PATH = os.path.join(os.path.dirname(__file__), "../", "sofie-tool")
 print (SOFIE_MCP_PATH)
 WEBSITE_MCP_PATH = os.path.join(os.path.dirname(__file__), "../../../orchestrator/frontend")
 
-root_agent = Agent(
-   # A unique name for the agent.
-   name="basic_search_agent",
-   # The Large Language Model (LLM) that agent will use.
-   model="gemini-2.0-flash-exp",
-   # model="gemini-2.0-flash-live-001",  # New streaming model version as of Feb 2025
-   # A short description of the agent's purpose.
-   description="Agent to answer questions using Google Search.",
-   # Instructions to set the agent's behavior.
-   instruction=agent_instructions,
-   # Add google_search tool to perform grounding with Google search.
-   tools=[
-        MCPToolset(
-            connection_params=StreamableHTTPServerParams(url="http://localhost:3000/mcp")
-        )
-   ]
-)
+def create_agent() -> LlmAgent:
+    """Constructs the ADK agent."""
+    return LlmAgent(
+    name="sofie_agent",
+    model="gemini-2.0-flash-ext",
+    description=(
+        "An agent built to assist with the Sofie Rundown application"
+    ),
+    instruction=agent_instructions,
+        tools=[mcp_toolset],
+    )
