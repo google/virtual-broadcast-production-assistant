@@ -1,4 +1,6 @@
 # Orchestrator Fromntend UI
 
-This is the web based UI that will take an audio input and respond within a
-timeline.
+## Dev
+
+1. Run `npm install`
+2. Run `npm run dev`
