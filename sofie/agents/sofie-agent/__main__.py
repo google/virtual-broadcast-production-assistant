@@ -4,9 +4,9 @@ import asyncio
 
 import uvicorn
 
-from .agent import create_agent
-from .agent_executor import ADKAgentExecutor
-from .mcp_skills import get_skills_from_mcp, get_default_skills
+from agent import create_agent, mcp_toolset
+from agent_executor import ADKAgentExecutor
+from mcp_skills import get_skills_from_mcp, get_default_skills
 from dotenv import load_dotenv
 from google.adk.artifacts import InMemoryArtifactService
 from google.adk.memory.in_memory_memory_service import InMemoryMemoryService

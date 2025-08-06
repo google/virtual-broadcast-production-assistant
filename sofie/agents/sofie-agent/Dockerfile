@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.13-alpine
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -7,10 +7,10 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
+RUN apk update && apk add --no-cache \
+    build-base \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    rm -rf /var/cache/apk/*
 
 # Copy requirements and install dependencies
 COPY requirements.txt .
@@ -23,4 +23,4 @@ COPY . .
 EXPOSE 10004
 
 # Run the agent using your existing entrypoint style
-CMD ["python", "./agents/"]
+CMD ["python", "."]

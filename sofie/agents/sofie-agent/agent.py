@@ -1,32 +1,10 @@
 import logging
 import os
 
-import click
-import uvicorn
-
-from agent import create_agent
-from agent_executor import ADKAgentExecutor
-
-from google.adk.agents import Agent
 from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPServerParams
 from dotenv import load_dotenv
-from google.adk.artifacts import InMemoryArtifactService
-from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
-from google.adk.runners import Runner
-from google.adk.sessions import InMemorySessionService
-from starlette.routing import Route
-
-from a2a.server.apps import A2AStarletteApplication
-from a2a.server.request_handlers import DefaultRequestHandler
-from a2a.server.tasks import InMemoryTaskStore
-from a2a.types import (
-    AgentCapabilities,
-    AgentCard,
-    AgentSkill,
-)
-from starlette.applications import Starlette
-
+from google.adk.agents.llm_agent import LlmAgent
 
 load_dotenv()
 
@@ -49,11 +27,6 @@ mcp_toolset = MCPToolset(
 
 # Export mcp_toolset so it can be used in __main__.py
 __all__ = ['create_agent', 'mcp_toolset']
-
-
-@click.command()
-@click.option("--host", "host", default="0.0.0.0")
-@click.option("--port", "port", default=10005)
 
 
 def load_instructions_from_file(filename):
