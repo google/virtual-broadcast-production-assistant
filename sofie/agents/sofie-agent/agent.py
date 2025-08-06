@@ -10,18 +10,12 @@ load_dotenv()
 
 logging.basicConfig()
 
-
-ENV = os.getenv("ENV")
-
-if ENV == "production":
-    HOST = "LINK TO WHERE WE'RE HOSTING"
-elif ENV == "local":
-    HOST = "https://0.0.0.0:10005"
+HOST = os.getenv("HOST")
 
 # Create MCP toolset with streamable HTTP connection
 mcp_toolset = MCPToolset(
     connection_params=StreamableHTTPServerParams(
-        url="http://localhost:3000/mcp"
+        url=HOST
     )
 )
 
