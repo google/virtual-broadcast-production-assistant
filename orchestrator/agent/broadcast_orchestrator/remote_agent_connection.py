@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import logging
 
 from typing import Callable
 
@@ -27,32 +28,39 @@ from a2a.types import (
     TaskStatusUpdateEvent,
     TaskArtifactUpdateEvent,
 )
-from dotenv import load_dotenv
 
-load_dotenv()
+logger = logging.getLogger(__name__)
 
 TaskCallbackArg = Task | TaskStatusUpdateEvent | TaskArtifactUpdateEvent
 TaskUpdateCallback = Callable[[TaskCallbackArg, AgentCard], Task]
 
 
 class RemoteAgentConnections:
-  """A class to hold the connections to the remote agents."""
+    """A class to hold the connections to the remote agents."""
 
-  def __init__(self, agent_card: AgentCard, agent_url: str):
-    print(f"agent_card: {agent_card}")
-    print(f"agent_url: {agent_url}")
-    self._httpx_client = httpx.AsyncClient(timeout=30)
-    self.agent_client = A2AClient(self._httpx_client,
-                                  agent_card,
-                                  url=agent_url)
-    self.card = agent_card
-    self.conversation_name = None
-    self.conversation = None
-    self.pending_tasks = set()
+    def __init__(self,
+                 agent_card: AgentCard,
+                 agent_url: str,
+                 api_key: str | None = None):
+        logger.info("agent_card: %s", agent_card)
+        logger.info("agent_url: %s", agent_url)
+        headers = {}
+        if api_key:
+            headers["X-ApiKey"] = api_key
+            logger.info("Using API Key for agent: %s", agent_card.name)
 
-  def get_agent(self) -> AgentCard:
-    return self.card
+        self._httpx_client = httpx.AsyncClient(timeout=30, headers=headers)
+        self.agent_client = A2AClient(self._httpx_client,
+                                      agent_card,
+                                      url=agent_url)
+        self.card = agent_card
+        self.conversation_name = None
+        self.conversation = None
+        self.pending_tasks = set()
 
-  async def send_message(
-      self, message_request: SendMessageRequest) -> SendMessageResponse:
-    return await self.agent_client.send_message(message_request)
+    def get_agent(self) -> AgentCard:
+        return self.card
+
+    async def send_message(
+            self, message_request: SendMessageRequest) -> SendMessageResponse:
+        return await self.agent_client.send_message(message_request)

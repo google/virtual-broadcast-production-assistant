@@ -1,0 +1,129 @@
+:root {
+  --md-sys-color-primary: #6750a4;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #eaddff;
+  --md-sys-color-on-primary-container: #21005d;
+  --md-sys-color-secondary: #625b71;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #e8def8;
+  --md-sys-color-on-secondary-container: #1d192b;
+  --md-sys-color-tertiary: #7d5260;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #ffd8e4;
+  --md-sys-color-on-tertiary-container: #31111d;
+  --md-sys-color-error: #b3261e;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #f9dedc;
+  --md-sys-color-on-error-container: #410e0b;
+  --md-sys-color-background: #1c1b1f;
+  --md-sys-color-on-background: #e6e1e5;
+  --md-sys-color-surface: #1c1b1f;
+  --md-sys-color-on-surface: #e6e1e5;
+  --md-sys-color-surface-variant: #49454f;
+  --md-sys-color-on-surface-variant: #cac4d0;
+  --md-sys-color-outline: #938f99;
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-inverse-surface: #e6e1e5;
+  --md-sys-color-inverse-on-surface: #313033;
+  --md-sys-color-inverse-primary: #6750a4;
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-background);
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+#app {
+  width: 100%;
+  max-width: 800px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--md-sys-color-surface);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.app-header {
+  padding: 16px;
+  text-align: center;
+  border-bottom: 1px solid var(--md-sys-color-outline);
+}
+
+.chat-container {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.chat-messages {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding-right: 16px;
+}
+
+.message {
+  padding: 12px;
+  border-radius: 18px;
+  margin-bottom: 8px;
+  max-width: 75%;
+  word-wrap: break-word;
+}
+
+.user-message {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  align-self: flex-end;
+  margin-left: auto;
+}
+
+.agent-message {
+  background-color: var(--md-sys-color-surface-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  align-self: flex-start;
+}
+
+.chat-input-area {
+  display: flex;
+  align-items: center;
+  padding-top: 16px;
+  gap: 8px;
+}
+
+.text-input-container {
+  flex-grow: 1;
+  position: relative;
+}
+
+.message-input {
+  width: 100%;
+  background-color: var(--md-sys-color-surface-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 4px;
+  padding: 16px;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.message-input:focus {
+  outline: none;
+  border-color: var(--md-sys-color-primary);
+}
+
+.send-button,
+.mic-button {
+  --md-icon-button-icon-color: var(--md-sys-color-on-primary);
+}
+
+.mic-button.recording {
+  --md-filled-icon-button-container-color: var(--md-sys-color-error);
+}
