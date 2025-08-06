@@ -1,0 +1,24 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+
+# Python virtual environment
+venv
+.venv
+__pycache__
+
+# IDE settings
+.vscode/
+
+# Terraform state
+infrastructure/
+*.tfstate*
+*/terraform.tfvars
+
+# Local environment variables
+**/.env
+local-env-vars.txt
+.DS_Store
