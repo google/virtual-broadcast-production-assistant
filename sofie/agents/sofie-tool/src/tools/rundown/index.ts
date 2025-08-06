@@ -108,11 +108,19 @@ export class RundownTools {
 		logger.debug(`Tool: '${toolName}' called with ${JSON.stringify(args)}`)
 		try {
 			switch (toolName) {
+				// Basic package operations
+				case 'get_packages':
+					return this.getResponse(this.ws.Packages)
+
 				// Basic playlist operations
 				case 'list_playlists':
 					return await this.listPlaylists()
 				case 'get_active_playlist':
-					return this.ws.ActivePlaylist
+					return this.getResponse(this.ws.ActivePlaylist)
+				case 'get_active_pieces':
+					return this.getResponse(this.ws.ActivePieces)
+				case 'get_segments':
+					return this.getResponse(this.ws.Segments)
 
 				// Playlist lifecycle management
 				case 'activate_playlist':
@@ -139,6 +147,10 @@ export class RundownTools {
 					return await this.queueNextSegment(args?.playlistId, args?.segmentId)
 
 				// AdLib operations
+				case 'get_adlibs':
+					return this.getResponse(this.ws.AdLibs)
+				case 'get_buckets':
+					return this.getResponse(this.ws.Buckets)
 				case 'execute_adlib':
 					return await this.executeAdLib(args?.playlistId, args?.adLibId, args?.actionType, args?.adLibOptions)
 				case 'execute_bucket_adlib':

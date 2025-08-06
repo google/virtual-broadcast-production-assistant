@@ -1,5 +1,13 @@
-import { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
-import { ActivePlaylistEvent, Slash, SubscriptionName } from '@sofie-automation/live-status-gateway-api'
+import {
+	ActivePiecesEvent,
+	ActivePlaylistEvent,
+	AdLibsEvent,
+	BucketsEvent,
+	PackagesEvent,
+	SegmentsEvent,
+	Slash,
+	SubscriptionName,
+} from '@sofie-automation/live-status-gateway-api'
 import EventEmitter from 'events'
 import { GoogleAuth } from 'google-auth-library'
 import { EnvHttpProxyAgent, ErrorEvent, WebSocket } from 'undici'
@@ -19,11 +27,65 @@ export class SofieWebsocket extends EventEmitter {
 
 	private activePlaylist?: ActivePlaylistEvent
 
-	get ActivePlaylist(): CallToolResult {
+	private activePieces?: ActivePiecesEvent
+
+	private adLibs?: AdLibsEvent
+
+	private buckets?: BucketsEvent
+
+	private packages?: PackagesEvent
+
+	private segments?: SegmentsEvent
+
+	get ActivePlaylist(): string {
 		if (this.activePlaylist) {
-			return this.getResponse(`The active playlist is ${this.activePlaylist.name}`)
+			return `The active playlist ID is: ${this.activePlaylist.id}\n
+			Name: ${this.activePlaylist.name}\n
+			Current Part: ${this.activePlaylist.currentPart?.name}\n
+			Next Part: ${this.activePlaylist.currentPart?.name}`
 		}
-		return this.getResponse('There is no active playlist')
+		return 'There is no active playlist'
+	}
+
+	get ActivePieces(): string {
+		if (this.activePieces) {
+			return `The Active Pieces are:\n
+			${this.activePieces.activePieces.map((v) => JSON.stringify(v) + '\n')}`
+		}
+		return 'There are no Active Pieces'
+	}
+
+	get AdLibs(): string {
+		if (this.adLibs) {
+			return `The AdLibs are:\n
+			Global: ${this.adLibs.globalAdLibs.map((v) => JSON.stringify(v) + '\n')}\n
+			Part Specific: ${this.adLibs.adLibs.map((v) => JSON.stringify(v) + '\n')}`
+		}
+		return 'There are no AdLibs'
+	}
+
+	get Buckets(): string {
+		if (this.buckets) {
+			return `The Buckets are:\n
+			${this.buckets.buckets.map((v) => JSON.stringify(v) + '\n')}`
+		}
+		return 'There are no buckets'
+	}
+
+	get Packages(): string {
+		if (this.packages) {
+			return `The Packages are:\n
+			${this.packages.packages.map((v) => JSON.stringify(v) + '\n')}`
+		}
+		return 'There are no packages'
+	}
+
+	get Segments(): string {
+		if (this.segments) {
+			return `The Segments are:\n
+			${this.segments.segments.map((v) => JSON.stringify(v) + '\n')}`
+		}
+		return 'There are no segments'
 	}
 
 	constructor(config: Config) {
@@ -36,22 +98,6 @@ export class SofieWebsocket extends EventEmitter {
 		this.onError = this.onError.bind(this)
 		this.onOpen = this.onOpen.bind(this)
 		this.onMessage = this.onMessage.bind(this)
-	}
-
-	private getResponse(text: string, error?: unknown): CallToolResult {
-		if (error instanceof Error) {
-			text += `: ${error.message}`
-		}
-		const result: CallToolResult = {
-			content: [
-				{
-					type: 'text',
-					text,
-				},
-			],
-		}
-		logger.debug(`Sending result: ${JSON.stringify(result)}`)
-		return result
 	}
 
 	async open() {
@@ -126,15 +172,27 @@ export class SofieWebsocket extends EventEmitter {
 		}
 		switch (result.event) {
 			case 'activePieces':
+				this.activePieces = result
 				break
+
 			case 'activePlaylist':
 				this.activePlaylist = result
 				break
+
 			case 'adLibs':
+				this.adLibs = result
+				break
+
 			case 'buckets':
+				this.buckets = result
+				break
+
 			case 'packages':
+				this.packages = result
+				break
+
 			case 'segments':
-			case 'studio':
+				this.segments = result
 				break
 		}
 	}

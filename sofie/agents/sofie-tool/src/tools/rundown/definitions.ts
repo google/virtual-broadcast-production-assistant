@@ -3,6 +3,16 @@ import { ListToolsResultSchema } from '@modelcontextprotocol/sdk/types.js'
 type Tools = (typeof ListToolsResultSchema)['_output']['tools']
 
 export const toolDefinitions: Tools = [
+	// Package operations
+	{
+		name: 'get_packages',
+		description: 'Get all the packages in the active playlist',
+		inputSchema: {
+			type: 'object',
+			properties: {},
+		},
+	},
+
 	// Basic playlist operations
 	{
 		name: 'list_playlists',
@@ -15,6 +25,22 @@ export const toolDefinitions: Tools = [
 	{
 		name: 'get_active_playlist',
 		description: 'Get detailed information about the active playlist',
+		inputSchema: {
+			type: 'object',
+			properties: {},
+		},
+	},
+	{
+		name: 'get_active_pieces',
+		description: 'Get detailed information about active pieces in the active playlist',
+		inputSchema: {
+			type: 'object',
+			properties: {},
+		},
+	},
+	{
+		name: 'get_segments',
+		description: 'Get detailed information about segments in the active playlist',
 		inputSchema: {
 			type: 'object',
 			properties: {},
@@ -200,6 +226,22 @@ export const toolDefinitions: Tools = [
 	},
 
 	// AdLib operations
+	{
+		name: 'get_adlibs',
+		description: 'Get detailed information about AdLibs in the active playlist',
+		inputSchema: {
+			type: 'object',
+			properties: {},
+		},
+	},
+	{
+		name: 'get_buckets',
+		description: 'Get detailed information about Buckets in the active playlist',
+		inputSchema: {
+			type: 'object',
+			properties: {},
+		},
+	},
 	{
 		name: 'execute_adlib',
 		description: 'Executes the requested AdLib/AdLib Action',
