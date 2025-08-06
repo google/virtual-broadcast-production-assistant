@@ -25,6 +25,7 @@ from a2a.types import (
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
+EXTERNAL_HOST = os.getenv("EXTERNAL_HOST")
 
 
 def main(host: str, port: int):
@@ -53,7 +54,7 @@ def main(host: str, port: int):
     agent_card = AgentCard(
         name="Sofie Agent",
         description="Helps with the sofie rundown",
-        url=f"http://{host}:{port}/",
+        url=EXTERNAL_HOST,
         version="1.0.0",
         defaultInputModes=["text"],
         defaultOutputModes=["text"],
