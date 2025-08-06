@@ -22,9 +22,8 @@ export const loadConfig = (): Config => {
 		logLevel,
 		sofieApiBase: process.env.SOFIE_API_BASE?.trim() || 'https://ibc-sofie.justingrayston.com/api/v1.0',
 		liveStatusEndpoint: process.env.SOFIE_LIVE_STATUS_WS || 'wss://sofie-live-status.justingrayston.com',
-		iapClientId:
-			process.env.IAP_CLIENT_ID?.trim() || '542328728538-okirhoruutf0bk3cci4190htqb06g6s1.apps.googleusercontent.com',
-		serviceAccountPath: process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim() || '../ibc-agents.json',
+		iapClientId: process.env.IAP_CLIENT_ID?.trim(),
+		serviceAccountPath: process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim(),
 	}
 
 	logger.info('Config loaded')

@@ -17,7 +17,7 @@ import { Config } from '../../typings/config/index.js'
 import { logError } from '../../util/index.js'
 
 export class SofieWebsocket extends EventEmitter {
-	private readonly auth: GoogleAuth
+	private readonly auth?: GoogleAuth
 
 	private readonly dispatcher = new EnvHttpProxyAgent()
 
@@ -91,9 +91,11 @@ export class SofieWebsocket extends EventEmitter {
 	constructor(config: Config) {
 		super()
 		this.config = config
-		this.auth = new GoogleAuth({
-			keyFile: this.config.serviceAccountPath,
-		})
+		if (!config.iapClientId || !config.serviceAccountPath) {
+			this.auth = new GoogleAuth({
+				keyFile: this.config.serviceAccountPath,
+			})
+		}
 		this.onClose = this.onClose.bind(this)
 		this.onError = this.onError.bind(this)
 		this.onOpen = this.onOpen.bind(this)
@@ -106,14 +108,17 @@ export class SofieWebsocket extends EventEmitter {
 		}
 		logger.info(`Connecting to Live Status Gateway - Endpoint: ${this.config.liveStatusEndpoint}`)
 		const token = await this.getToken()
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+			Accept: 'application/json',
+			'User-Agent': `Sofie-MCP-Client/${version}`,
+		}
+		if (token) {
+			headers.Authorization = `Bearer ${token}`
+		}
 		this.ws = new WebSocket(this.config.liveStatusEndpoint, {
 			dispatcher: this.dispatcher,
-			headers: {
-				Authorization: `Bearer ${token}`,
-				'Content-Type': 'application/json',
-				Accept: 'application/json',
-				'User-Agent': `Sofie-MCP-Client/${version}`,
-			},
+			headers,
 		})
 		this.ws.addEventListener('close', this.onClose)
 		this.ws.addEventListener('error', this.onError)
@@ -130,6 +135,9 @@ export class SofieWebsocket extends EventEmitter {
 	}
 
 	private async getToken() {
+		if (!this.auth || !this.config.iapClientId) {
+			return undefined
+		}
 		const client = await this.auth.getIdTokenClient(this.config.iapClientId)
 		return await client.idTokenProvider.fetchIdToken(this.config.iapClientId)
 	}

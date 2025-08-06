@@ -5,6 +5,6 @@ export interface Config {
 	logLevel: pino.LevelOrString
 	sofieApiBase: string
 	liveStatusEndpoint: string
-	iapClientId: string
-	serviceAccountPath: string
+	iapClientId?: string
+	serviceAccountPath?: string
 }

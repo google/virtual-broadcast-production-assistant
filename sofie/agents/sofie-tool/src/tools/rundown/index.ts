@@ -16,7 +16,7 @@ export class RundownTools {
 
 	private readonly config: Config
 
-	private readonly auth: GoogleAuth
+	private readonly auth?: GoogleAuth
 
 	private readonly dispatcher = new EnvHttpProxyAgent()
 
@@ -25,9 +25,11 @@ export class RundownTools {
 	constructor(config: Config) {
 		this.config = config
 		this.tools = this.getToolDefinitions()
-		this.auth = new GoogleAuth({
-			keyFile: this.config.serviceAccountPath,
-		})
+		if (!config.iapClientId || !config.serviceAccountPath) {
+			this.auth = new GoogleAuth({
+				keyFile: this.config.serviceAccountPath,
+			})
+		}
 		this.ws = new SofieWebsocket(config)
 	}
 
@@ -50,16 +52,20 @@ export class RundownTools {
 
 		logger.debug(`Sending request to ${url} - Method: ${method} - Body: ${reqBody}`)
 
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+			Accept: 'application/json',
+			'User-Agent': `Sofie-MCP-Client/${version}`,
+		}
+		if (token) {
+			headers.Authorization = `Bearer ${token}`
+		}
+
 		const result = await request(url, {
 			dispatcher: this.dispatcher,
 			body: reqBody,
 			method,
-			headers: {
-				Authorization: `Bearer ${token}`,
-				'Content-Type': 'application/json',
-				Accept: 'application/json',
-				'User-Agent': `Sofie-MCP-Client/${version}`,
-			},
+			headers,
 		})
 
 		if (result.statusCode < 200 || result.statusCode > 299) {
@@ -76,6 +82,9 @@ export class RundownTools {
 	}
 
 	private async getToken() {
+		if (!this.auth || !this.config.iapClientId) {
+			return undefined
+		}
 		const client = await this.auth.getIdTokenClient(this.config.iapClientId)
 		return await client.idTokenProvider.fetchIdToken(this.config.iapClientId)
 	}
