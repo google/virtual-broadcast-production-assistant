@@ -33,3 +33,6 @@ venv/**
 **/.vscode/
 
 */terraform.tfvars
+
+.idx
+/idx/**
