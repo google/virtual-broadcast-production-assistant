@@ -50,3 +50,4 @@
           * `Cuez Rundown Agent`
           * `Momentslab Agent`
           * `Posture Agent`
+          * 'Newsroom Agent`

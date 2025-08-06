@@ -154,6 +154,11 @@ class RoutingAgent:
                     "key_env": "MOMENTSLAB_AGENT_API_KEY",
                     "default_url": "http://localhost:10003"
                 },
+                "HIGHFIELD_AGENT": {
+                    "url_env": "HIGHFIELD_AGENT_URL",
+                    "key_env": "HIGHFIELD_AGENT_API_KEY",
+                    "default_url": "http://localhost:10004",
+                }
             }
 
             remote_agents_config = {}
@@ -169,29 +174,6 @@ class RoutingAgent:
     def create_agent(self) -> Agent:
         """Creates the ADK Agent instance."""
         system_instructions = load_system_instructions()
-        # You can not seem to send any speechConfig along with ADK Live requests
-        # speech_config = {
-        #     # To adjust the speed of the voice, use 'speechRate'.
-        #     # The value is a number between 0.25 and 4.0, where 1.0 is the default speed.
-        #     "speechRate": 1.2,  # Example: 20% faster
-
-        #     # To change the voice, use 'voiceConfig'.
-        #     "voiceConfig": {
-        #         # For standard voices, use 'prebuiltVoiceConfig'.
-        #         "prebuiltVoiceConfig": {
-        #             # Specify the voice name here.
-        #             # Valid voices include: Zephyr, Puck, Kore, Fenrir, Leda, Orus, etc.
-        #             "voiceName": "Puck",
-        #         },
-        #     },
-        # }
-        voice_config = VoiceConfig(prebuilt_voice_config=PrebuiltVoiceConfig(
-            voice_name="Fenrir"))
-        speech_config = SpeechConfig(voice_config=voice_config,
-                                     language_code="en-GB")
-
-        generate_content_config = GenerateContentConfig(
-            speech_config=speech_config)
 
         return Agent(
             model="gemini-live-2.5-flash",
@@ -202,7 +184,6 @@ class RoutingAgent:
             description=(
                 "This Routing agent orchestrates requests for the user "
                 "to assist in live news or sports broadcast control"),
-            generate_content_config=generate_content_config,
             tools=[
                 self.send_message,
             ],
