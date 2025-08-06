@@ -28,11 +28,8 @@ from a2a.types import (
     TaskStatusUpdateEvent,
     TaskArtifactUpdateEvent,
 )
-from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
-
-load_dotenv()
 
 TaskCallbackArg = Task | TaskStatusUpdateEvent | TaskArtifactUpdateEvent
 TaskUpdateCallback = Callable[[TaskCallbackArg, AgentCard], Task]
@@ -41,10 +38,18 @@ TaskUpdateCallback = Callable[[TaskCallbackArg, AgentCard], Task]
 class RemoteAgentConnections:
     """A class to hold the connections to the remote agents."""
 
-    def __init__(self, agent_card: AgentCard, agent_url: str):
+    def __init__(self,
+                 agent_card: AgentCard,
+                 agent_url: str,
+                 api_key: str | None = None):
         logger.info("agent_card: %s", agent_card)
         logger.info("agent_url: %s", agent_url)
-        self._httpx_client = httpx.AsyncClient(timeout=30)
+        headers = {}
+        if api_key:
+            headers["X-ApiKey"] = api_key
+            logger.info("Using API Key for agent: %s", agent_card.name)
+
+        self._httpx_client = httpx.AsyncClient(timeout=30, headers=headers)
         self.agent_client = A2AClient(self._httpx_client,
                                       agent_card,
                                       url=agent_url)
