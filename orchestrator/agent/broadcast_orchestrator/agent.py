@@ -5,7 +5,7 @@ import json
 import os
 import logging
 import uuid
-from typing import Any, List
+from typing import Any
 from dotenv import load_dotenv
 import httpx
 from a2a.client import A2ACardResolver
@@ -23,7 +23,7 @@ from .config import load_system_instructions
 
 load_dotenv()
 
-logger = logging.getLogger("orchestartor::routing_agent" + __name__)
+logger = logging.getLogger(__name__)
 
 
 def convert_part(part: Part):
@@ -86,12 +86,17 @@ class RoutingAgent:
         self._initialized = False
         self._init_lock = asyncio.Lock()
 
-    async def _async_init_components(self, remote_agent_addresses: List[str]):
+    async def _async_init_components(self,
+                                     remote_agents_config: dict[str,
+                                                                str | None]):
         """Asynchronously initializes components that require network I/O."""
+        logger.info("Initializing remote agent connections...")
         # Use a single httpx.AsyncClient for all card resolutions for
         # efficiency
         async with httpx.AsyncClient(timeout=30) as client:
-            for address in remote_agent_addresses:
+            for address, api_key in remote_agents_config.items():
+                logger.info("Attempting to connect to remote agent at: %s",
+                            address)
                 card_resolver = A2ACardResolver(client, address)
                 try:
                     card: AgentCard = await card_resolver.get_agent_card()
@@ -109,7 +114,7 @@ class RoutingAgent:
                         card.url = address
 
                     remote_connection = RemoteAgentConnections(
-                        agent_card=card, agent_url=card.url)
+                        agent_card=card, agent_url=card.url, api_key=api_key)
                     self.remote_agent_connections[
                         card.name] = remote_connection
                     self.cards[card.name] = card
@@ -133,17 +138,32 @@ class RoutingAgent:
         async with self._init_lock:
             if self._initialized:
                 return
-            # Get the base URL for the agent from environment variables.
-            cuez_agent_url = os.getenv("CUEZ_AGENT_URL",
-                                       "http://localhost:8001")
-            posture_url = os.getenv("POSTURE_AGENT_URL",
-                                    "http://localhost:10002")
-            momentslab_url = os.getenv("MOMENTSLAB_AGENT_URL",
-                                       "http://localhost:10003")
-            remote_agent_addresses = [
-                cuez_agent_url, momentslab_url, posture_url
-            ]
-            await self._async_init_components(remote_agent_addresses)
+            agent_configs = {
+                "CUEZ_AGENT": {
+                    "url_env": "CUEZ_AGENT_URL",
+                    "key_env": "CUEZ_AGENT_API_KEY",
+                    "default_url": "http://localhost:8001"
+                },
+                "POSTURE_AGENT": {
+                    "url_env": "POSTURE_AGENT_URL",
+                    "key_env": "POSTURE_AGENT_API_KEY",
+                    "default_url": "http://localhost:10002"
+                },
+                "MOMENTSLAB_AGENT": {
+                    "url_env": "MOMENTSLAB_AGENT_URL",
+                    "key_env": "MOMENTSLAB_AGENT_API_KEY",
+                    "default_url": "http://localhost:10003"
+                },
+            }
+
+            remote_agents_config = {}
+            for agent_name, config in agent_configs.items():
+                url = os.getenv(config["url_env"], config["default_url"])
+                api_key = os.getenv(config["key_env"])
+                if url:
+                    remote_agents_config[url] = api_key
+
+            await self._async_init_components(remote_agents_config)
             self._initialized = True
 
     def create_agent(self) -> Agent:

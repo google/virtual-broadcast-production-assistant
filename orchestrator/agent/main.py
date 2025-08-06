@@ -7,6 +7,7 @@ import json
 import asyncio
 import base64
 import warnings
+import logging
 
 from dotenv import load_dotenv
 
@@ -25,6 +26,13 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from broadcast_orchestrator.agent import root_agent
 
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
+
+# Configure logging to show messages from all modules
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 #
 # ADK Streaming
@@ -79,7 +87,7 @@ async def agent_to_client_messaging(websocket, live_events):
                     "interrupted": event.interrupted,
                 }
                 await websocket.send_text(json.dumps(message))
-                print(f"[AGENT TO CLIENT]: {message}")
+                logger.info("[AGENT TO CLIENT]: %s", message)
                 continue
 
             # Read the Content and its first Part
@@ -99,18 +107,17 @@ async def agent_to_client_messaging(websocket, live_events):
                         "data": base64.b64encode(audio_data).decode("ascii")
                     }
                     await websocket.send_text(json.dumps(message))
-                    print(
-                        f"[AGENT TO CLIENT]: audio/pcm: {len(audio_data)} bytes."
-                    )
+                    logger.info("[AGENT TO CLIENT]: audio/pcm: %d bytes.",
+                                len(audio_data))
                     continue
 
             # If it's text and a parial text, send it
             if part.text and event.partial:
                 message = {"mime_type": "text/plain", "data": part.text}
                 await websocket.send_text(json.dumps(message))
-                print(f"[AGENT TO CLIENT]: text/plain: {message}")
+                logger.info("[AGENT TO CLIENT]: text/plain: %s", message)
     except WebSocketDisconnect:
-        print("Client disconnected, closing agent->client messaging.")
+        logger.info("Client disconnected, closing agent->client messaging.")
 
 
 async def client_to_agent_messaging(websocket, live_request_queue):
@@ -129,7 +136,7 @@ async def client_to_agent_messaging(websocket, live_request_queue):
                 content = Content(role="user",
                                   parts=[Part.from_text(text=data)])
                 live_request_queue.send_content(content=content)
-                print(f"[CLIENT TO AGENT]: {data}")
+                logger.info("[CLIENT TO AGENT]: %s", data)
             elif mime_type == "audio/pcm":
                 # Send an audio data
                 decoded_data = base64.b64decode(data)
@@ -138,7 +145,7 @@ async def client_to_agent_messaging(websocket, live_request_queue):
             else:
                 raise ValueError(f"Mime type not supported: {mime_type}")
     except WebSocketDisconnect:
-        print("Client disconnected, closing client->agent messaging.")
+        logger.info("Client disconnected, closing client->agent messaging.")
 
 
 #
@@ -154,26 +161,25 @@ async def health_check():
     return {"status": "ok"}
 
 
-
 @app.websocket("/ws/{user_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: int, is_audio: str):
+async def websocket_endpoint(websocket: WebSocket, user_id: int,
+                             is_audio: str):
     """Client websocket endpoint"""
 
     # Wait for client connection
     await websocket.accept()
-    print(f"Client #{user_id} connected, audio mode: {is_audio}")
+    logger.info("Client #%d connected, audio mode: %s", user_id, is_audio)
 
     # Start agent session
     user_id_str = str(user_id)
-    live_events, live_request_queue = await start_agent_session(user_id_str, is_audio == "true")
+    live_events, live_request_queue = await start_agent_session(
+        user_id_str, is_audio == "true")
 
     # Start tasks
     agent_to_client_task = asyncio.create_task(
-        agent_to_client_messaging(websocket, live_events)
-    )
+        agent_to_client_messaging(websocket, live_events))
     client_to_agent_task = asyncio.create_task(
-        client_to_agent_messaging(websocket, live_request_queue)
-    )
+        client_to_agent_messaging(websocket, live_request_queue))
 
     # Wait until the websocket is disconnected or an error occurs
     tasks = [agent_to_client_task, client_to_agent_task]
@@ -183,4 +189,4 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, is_audio: str):
     live_request_queue.close()
 
     # Disconnected
-    print(f"Client #{user_id} disconnected")
+    logger.info("Client #%d disconnected", user_id)
