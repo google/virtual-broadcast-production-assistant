@@ -13,31 +13,11 @@ export const toolDefinitions: Tools = [
 		},
 	},
 	{
-		name: 'get_playlist',
-		description: 'Get detailed information about a specific playlist by ID',
+		name: 'get_active_playlist',
+		description: 'Get detailed information about the active playlist',
 		inputSchema: {
 			type: 'object',
-			properties: {
-				playlistId: {
-					type: 'string',
-					description: 'The ID of the playlist to retrieve',
-				},
-			},
-			required: ['playlistId'],
-		},
-	},
-	{
-		name: 'get_playlist_status',
-		description: 'Get the current status of a playlist',
-		inputSchema: {
-			type: 'object',
-			properties: {
-				playlistId: {
-					type: 'string',
-					description: 'The ID of the playlist to check status for',
-				},
-			},
-			required: ['playlistId'],
+			properties: {},
 		},
 	},
 

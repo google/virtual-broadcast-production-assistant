@@ -1,4 +1,3 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { CallToolResult, ListToolsResultSchema } from '@modelcontextprotocol/sdk/types.js'
 import { DeviceItem, PlaylistItem, ShowStyleBaseItem, StudioItem } from '@sofie-automation/openapi'
 import { GoogleAuth } from 'google-auth-library'
@@ -23,13 +22,13 @@ export class RundownTools {
 
 	private readonly ws: SofieWebsocket
 
-	constructor(config: Config, server: Server) {
+	constructor(config: Config) {
 		this.config = config
 		this.tools = this.getToolDefinitions()
 		this.auth = new GoogleAuth({
 			keyFile: this.config.serviceAccountPath,
 		})
-		this.ws = new SofieWebsocket(config, server)
+		this.ws = new SofieWebsocket(config)
 	}
 
 	async open() {
@@ -105,55 +104,53 @@ export class RundownTools {
 		return this.tools.find((t) => t.name === toolName)
 	}
 
-	async callTool(toolName: string, args: Record<string, any>): Promise<CallToolResult> {
+	async callTool(toolName: string, args?: Record<string, any>): Promise<CallToolResult> {
 		logger.debug(`Tool: '${toolName}' called with ${JSON.stringify(args)}`)
 		try {
 			switch (toolName) {
 				// Basic playlist operations
 				case 'list_playlists':
 					return await this.listPlaylists()
-				case 'get_playlist':
-					return await this.getPlaylist(args.playlistId)
-				case 'get_playlist_status':
-					return await this.getPlaylistStatus(args.playlistId)
+				case 'get_active_playlist':
+					return this.ws.ActivePlaylist
 
 				// Playlist lifecycle management
 				case 'activate_playlist':
-					return await this.activatePlaylist(args.playlistId, args.rehearsal)
+					return await this.activatePlaylist(args?.playlistId, args?.rehearsal)
 				case 'deactivate_playlist':
-					return await this.deactivatePlaylist(args.playlistId)
+					return await this.deactivatePlaylist(args?.playlistId)
 				case 'reload_playlist':
-					return await this.reloadPlaylist(args.playlistId)
+					return await this.reloadPlaylist(args?.playlistId)
 				case 'reset_playlist':
-					return await this.resetPlaylist(args.playlistId)
+					return await this.resetPlaylist(args?.playlistId)
 
 				// Playout control
 				case 'take':
-					return await this.take(args.playlistId, args.fromPartInstanceId)
+					return await this.take(args?.playlistId, args?.fromPartInstanceId)
 				case 'set_next_part':
-					return await this.setNextPart(args.playlistId, args.partId)
+					return await this.setNextPart(args?.playlistId, args?.partId)
 				case 'set_next_segment':
-					return await this.setNextSegment(args.playlistId, args.segmentId)
+					return await this.setNextSegment(args?.playlistId, args?.segmentId)
 				case 'move_next_part':
-					return await this.moveNextPart(args.playlistId, args.delta)
+					return await this.moveNextPart(args?.playlistId, args?.delta)
 				case 'move_next_segment':
-					return await this.moveNextSegment(args.playlistId, args.delta, args.ignoreQuickLoop)
+					return await this.moveNextSegment(args?.playlistId, args?.delta, args?.ignoreQuickLoop)
 				case 'queue_next_segment':
-					return await this.queueNextSegment(args.playlistId, args.segmentId)
+					return await this.queueNextSegment(args?.playlistId, args?.segmentId)
 
 				// AdLib operations
 				case 'execute_adlib':
-					return await this.executeAdLib(args.playlistId, args.adLibId, args.actionType, args.adLibOptions)
+					return await this.executeAdLib(args?.playlistId, args?.adLibId, args?.actionType, args?.adLibOptions)
 				case 'execute_bucket_adlib':
-					return await this.executeBucketAdLib(args.playlistId, args.bucketId, args.externalId, args.actionType)
+					return await this.executeBucketAdLib(args?.playlistId, args?.bucketId, args?.externalId, args?.actionType)
 
 				// Source layer control
 				case 'clear_source_layers':
-					return await this.clearSourceLayers(args.playlistId, args.sourceLayerIds)
+					return await this.clearSourceLayers(args?.playlistId, args?.sourceLayerIds)
 				case 'clear_source_layer':
-					return await this.clearSourceLayer(args.playlistId, args.sourceLayerId)
+					return await this.clearSourceLayer(args?.playlistId, args?.sourceLayerId)
 				case 'recall_sticky':
-					return await this.recallSticky(args.playlistId, args.sourceLayerId)
+					return await this.recallSticky(args?.playlistId, args?.sourceLayerId)
 
 				// System information
 				case 'get_studios':
@@ -196,26 +193,6 @@ export class RundownTools {
 			)
 		} catch (error) {
 			return this.getResponse('❌ Failed to list playlists', error)
-		}
-	}
-
-	// THIS DOESN'T EXIST
-	private async getPlaylist(playlistId: string): Promise<CallToolResult> {
-		try {
-			const response = await this.request(`/playlists/${playlistId}`)
-			return this.getResponse(`Playlist Details:\n\n${JSON.stringify(response, null, 2)}`)
-		} catch (error) {
-			return this.getResponse(`❌ Failed to get playlist ${playlistId}`, error)
-		}
-	}
-
-	// NEITHER DOES THIS # lol
-	private async getPlaylistStatus(playlistId: string): Promise<CallToolResult> {
-		try {
-			const response = await this.request(`/playlists/${playlistId}/status`)
-			return this.getResponse(`Playlist Status:\n\n${JSON.stringify(response, null, 2)}`)
-		} catch (error) {
-			return this.getResponse('❌ Failed to get playlist status', error)
 		}
 	}
 

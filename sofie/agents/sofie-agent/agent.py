@@ -38,9 +38,6 @@ def load_instructions_from_file(filename):
 # Load instructions from external file
 agent_instructions = load_instructions_from_file('agent_instructions.md')
 
-# Path to your Sofie MCP server
-SOFIE_MCP_PATH = os.path.join(os.path.dirname(__file__), "../", "sofie-tool")
-print (SOFIE_MCP_PATH)
 WEBSITE_MCP_PATH = os.path.join(os.path.dirname(__file__), "../../../orchestrator/frontend")
 
 root_agent = Agent(

@@ -10,6 +10,7 @@ import {
 import { randomUUID } from 'crypto'
 import fastify, { FastifyBaseLogger, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { logger } from '../config/log.js'
+import { version } from '../config/version.js'
 import { RundownTools } from '../tools/rundown/index.js'
 import { Config } from '../typings/config/index.js'
 import { logError } from '../util/index.js'
@@ -35,14 +36,15 @@ export class SofieMCPServer {
 				{
 					msgPrefix: 'server - ',
 					serializers: {
-						req(req) {
+						req(req: FastifyRequest) {
 							return {
 								host: req.headers['x-forwarded-host'] ?? req.hostname,
 								path: req.headers['x-forwarded-uri'] ?? req.url,
 								clientIp: req.headers['x-forwarded-for'] ?? req.ip,
+								body: req.body,
 							}
 						},
-						res(res) {
+						res(res: FastifyReply) {
 							return {
 								statusCode: res.statusCode,
 							}
@@ -66,7 +68,7 @@ export class SofieMCPServer {
 				const server = new Server(
 					{
 						name: 'sofie-mcp-server',
-						version: '1.0.0',
+						version,
 					},
 					{
 						capabilities: {
@@ -78,8 +80,10 @@ export class SofieMCPServer {
 						},
 					},
 				)
-				const rundownTools = new RundownTools(config, server)
 
+				// Todo: Make this shared between sessions as it's not session specific
+				const rundownTools = new RundownTools(config)
+				await rundownTools.open()
 				this.setupToolHandlers(server, rundownTools)
 				this.setupErrorHandling(server)
 
@@ -93,10 +97,6 @@ export class SofieMCPServer {
 							transport,
 						}
 					},
-					// DNS rebinding protection is disabled by default for backwards compatibility. If you are running this server
-					// locally, make sure to set:
-					// enableDnsRebindingProtection: true,
-					// allowedHosts: ['127.0.0.1'],
 				})
 
 				// Clean up transport when closed
@@ -109,8 +109,6 @@ export class SofieMCPServer {
 						delete this.sessions[transport.sessionId]
 					}
 				}
-
-				// ... set up server resources, tools, and prompts ...
 
 				// Connect to the MCP server
 				await server.connect(transport)

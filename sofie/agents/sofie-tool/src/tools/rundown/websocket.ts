@@ -1,5 +1,5 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { Slash, SubscriptionName } from '@sofie-automation/live-status-gateway-api'
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import { ActivePlaylistEvent, Slash, SubscriptionName } from '@sofie-automation/live-status-gateway-api'
 import EventEmitter from 'events'
 import { GoogleAuth } from 'google-auth-library'
 import { EnvHttpProxyAgent, ErrorEvent, WebSocket } from 'undici'
@@ -17,19 +17,41 @@ export class SofieWebsocket extends EventEmitter {
 
 	private ws?: WebSocket
 
-	private readonly server: Server
+	private activePlaylist?: ActivePlaylistEvent
 
-	constructor(config: Config, server: Server) {
+	get ActivePlaylist(): CallToolResult {
+		if (this.activePlaylist) {
+			return this.getResponse(`The active playlist is ${this.activePlaylist.name}`)
+		}
+		return this.getResponse('There is no active playlist')
+	}
+
+	constructor(config: Config) {
 		super()
 		this.config = config
 		this.auth = new GoogleAuth({
 			keyFile: this.config.serviceAccountPath,
 		})
-		this.server = server
 		this.onClose = this.onClose.bind(this)
 		this.onError = this.onError.bind(this)
 		this.onOpen = this.onOpen.bind(this)
 		this.onMessage = this.onMessage.bind(this)
+	}
+
+	private getResponse(text: string, error?: unknown): CallToolResult {
+		if (error instanceof Error) {
+			text += `: ${error.message}`
+		}
+		const result: CallToolResult = {
+			content: [
+				{
+					type: 'text',
+					text,
+				},
+			],
+		}
+		logger.debug(`Sending result: ${JSON.stringify(result)}`)
+		return result
 	}
 
 	async open() {
@@ -105,41 +127,13 @@ export class SofieWebsocket extends EventEmitter {
 		switch (result.event) {
 			case 'activePieces':
 				break
-
 			case 'activePlaylist':
-				await this.server.createMessage(
-					{
-						'maxTokens': 100,
-						'messages': [
-							{
-								content: {
-									type: 'text',
-									text: 'Playlists changed'
-								},
-								'role': 'assistant'
-							}
-						]
-					}
-				)
-				await this.server.sendResourceUpdated({
-					uri: 'http://localhost/active-playlist',
-					playlist: result,
-					updated: Date.now(),
-				})
+				this.activePlaylist = result
 				break
-
 			case 'adLibs':
-				break
-
 			case 'buckets':
-				break
-
 			case 'packages':
-				break
-
 			case 'segments':
-				break
-
 			case 'studio':
 				break
 		}
