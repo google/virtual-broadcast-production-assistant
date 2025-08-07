@@ -12,14 +12,17 @@ from a2a.client import A2ACardResolver
 from a2a.types import (AgentCard, MessageSendParams, Part, SendMessageRequest,
                        SendMessageResponse, SendMessageSuccessResponse, Task,
                        TextPart, Message)
+from google.cloud import firestore
 from google.adk import Agent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools.tool_context import ToolContext
-from google.genai.types import GenerateContentConfig, SpeechConfig, VoiceConfig, PrebuiltVoiceConfig
 
+from .automation_system_instructions import (AUTOMATION_SYSTEMS, CUEZ_CONFIG,
+                                             DEFAULT_INSTRUCTIONS,
+                                             SOFIE_CONFIG)
+from .config import (load_remote_agents_config, load_system_instructions)
 from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
-from .config import load_system_instructions
 
 load_dotenv()
 
@@ -85,46 +88,63 @@ class RoutingAgent:
         self.agents: str = ""
         self._initialized = False
         self._init_lock = asyncio.Lock()
+        self._agent: Agent | None = None
+
+    async def _load_agent(
+            self, address: str,
+            api_key: str | None) -> RemoteAgentConnections | None:
+        """Loads a single remote agent and returns its connection object."""
+        logger.info("Attempting to connect to remote agent at: %s", address)
+        headers = {}
+        if api_key:
+            headers["X-API-Key"] = api_key
+
+        async with httpx.AsyncClient(timeout=10, headers=headers) as client:
+            card_resolver = A2ACardResolver(client, address)
+            try:
+                card: AgentCard = await card_resolver.get_agent_card()
+                # The remote agent card might contain a non-routable URL
+                # (e.g., http://0.0.0.0:port). We should prioritize the public
+                # address we used for discovery.
+                card_url_parts = urlparse(card.url)
+                if card_url_parts.hostname in ("0.0.0.0", "localhost",
+                                               "127.0.0.1"):
+                    logger.warning(
+                        "Remote agent '%s' has a non-routable URL '%s'. "
+                        "Correcting it to use the discovery address '%s'.",
+                        card.name, card.url, address)
+                    card.url = address
+
+                return RemoteAgentConnections(agent_card=card,
+                                              agent_url=card.url,
+                                              api_key=api_key)
+            except httpx.ConnectError as e:
+                logger.error("Failed to get agent card from %s: %s", address,
+                             e)
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code in (401, 403):
+                    logger.error(
+                        "Authentication error for agent at %s. Check if the API key is correct. Status: %s",
+                        address, e.response.status_code)
+                else:
+                    logger.error("HTTP error for agent at %s: %s", address, e)
+            except Exception as e:
+                logger.error("Failed to initialize connection for %s: %s",
+                             address, e)
+
+        return None
 
     async def _async_init_components(self,
                                      remote_agents_config: dict[str,
                                                                 str | None]):
         """Asynchronously initializes components that require network I/O."""
         logger.info("Initializing remote agent connections...")
-        # Use a single httpx.AsyncClient for all card resolutions for
-        # efficiency
-        async with httpx.AsyncClient(timeout=30) as client:
-            for address, api_key in remote_agents_config.items():
-                logger.info("Attempting to connect to remote agent at: %s",
-                            address)
-                card_resolver = A2ACardResolver(client, address)
-                try:
-                    card: AgentCard = await card_resolver.get_agent_card()
-                    logger.info(card)
-                    # The remote agent card might contain a non-routable URL
-                    # (e.g., http://0.0.0.0:port). We should prioritize the public
-                    # address we used for discovery.
-                    card_url_parts = urlparse(card.url)
-                    if card_url_parts.hostname in ("0.0.0.0", "localhost",
-                                                   "127.0.0.1"):
-                        logger.warning(
-                            "Remote agent '%s' has a non-routable URL '%s'. "
-                            "Correcting it to use the discovery address '%s'.",
-                            card.name, card.url, address)
-                        card.url = address
-
-                    remote_connection = RemoteAgentConnections(
-                        agent_card=card, agent_url=card.url, api_key=api_key)
-                    self.remote_agent_connections[
-                        card.name] = remote_connection
-                    self.cards[card.name] = card
-                except httpx.ConnectError as e:
-                    logger.error("Failed to get agent card from %s: %s",
-                                 address, e)
-                # Catch other potential errors
-                except Exception as e:
-                    logger.error("Failed to initialize connection for %s: %s",
-                                 address, e)
+        for address, api_key in remote_agents_config.items():
+            connection = await self._load_agent(address, api_key)
+            if connection:
+                self.remote_agent_connections[
+                    connection.card.name] = connection
+                self.cards[connection.card.name] = connection.card
 
         # Populate self.agents using the logic from original __init__ (via
         # list_remote_agents)
@@ -138,61 +158,51 @@ class RoutingAgent:
         async with self._init_lock:
             if self._initialized:
                 return
-            agent_configs = {
-                "CUEZ_AGENT": {
-                    "url_env": "CUEZ_AGENT_URL",
-                    "key_env": "CUEZ_AGENT_API_KEY",
-                    "default_url": "http://localhost:8001"
-                },
-                "POSTURE_AGENT": {
-                    "url_env": "POSTURE_AGENT_URL",
-                    "key_env": "POSTURE_AGENT_API_KEY",
-                    "default_url": "http://localhost:10002"
-                },
-                "MOMENTSLAB_AGENT": {
-                    "url_env": "MOMENTSLAB_AGENT_URL",
-                    "key_env": "MOMENTSLAB_AGENT_API_KEY",
-                    "default_url": "http://localhost:10003"
-                },
-                "HIGHFIELD_AGENT": {
-                    "url_env": "HIGHFIELD_AGENT_URL",
-                    "key_env": "HIGHFIELD_AGENT_API_KEY",
-                    "default_url": "http://localhost:10004"
-                },
-                "EVS_AGENT": {
-                    "url_env": "EVS_AGENT_URL",
-                    "key_env": "EVS_AGENT_API_KEY",
-                    "default_url": "http://localhost:10010"
-                }
+            agent_configs = load_remote_agents_config()
+
+            rundown_agent_config_names = {
+                config['config_name']
+                for config in AUTOMATION_SYSTEMS.values()
             }
 
             remote_agents_config = {}
-            for agent_name, config in agent_configs.items():
+            for config in agent_configs:
+                if config["name"] in rundown_agent_config_names:
+                    continue
+                agent_name = config["name"]
                 url = os.getenv(config["url_env"], config["default_url"])
                 api_key = os.getenv(config["key_env"])
+                if api_key:
+                    logger.info('API KEY FOUND for %s', agent_name)
+                else:
+                    logger.info('No API KEY for %s', agent_name)
                 if url:
                     remote_agents_config[url] = api_key
 
             await self._async_init_components(remote_agents_config)
             self._initialized = True
 
-    def create_agent(self) -> Agent:
-        """Creates the ADK Agent instance."""
-        system_instructions = load_system_instructions()
+    def get_agent(self) -> Agent:
+        """Creates and returns the ADK Agent instance if it doesn't exist."""
+        if self._agent:
+            return self._agent
 
-        return Agent(
+        # Load the base instructions. The placeholders will be filled in
+        # before each turn in the before_agent_callback.
+        initial_instructions = load_system_instructions()
+
+        self._agent = Agent(
             model="gemini-live-2.5-flash",
             name="Routing_agent",
-            instruction=system_instructions,
+            instruction=initial_instructions,
             before_agent_callback=self.before_agent_callback,
             before_model_callback=self.before_model_callback,
             description=(
                 "This Routing agent orchestrates requests for the user "
                 "to assist in live news or sports broadcast control"),
-            tools=[
-                self.send_message,
-            ],
+            tools=[self.send_message],
         )
+        return self._agent
 
     def check_active_agent(self, context: ReadonlyContext):
         """Checks for an active agent session in the context."""
@@ -202,11 +212,95 @@ class RoutingAgent:
             return {"active_agent": f"{state['active_agent']}"}
         return {"active_agent": "None"}
 
+    def _get_formatted_instructions(self,
+                                    rundown_system_preference: str) -> str:
+        """
+        Formats the system instructions with all necessary placeholders based on
+        the selected rundown system.
+        """
+        system_config = AUTOMATION_SYSTEMS.get(rundown_system_preference, {})
+        rundown_instructions = system_config.get("instructions",
+                                                 DEFAULT_INSTRUCTIONS)
+
+        # Return the correct rundown instruction to be placed into state
+        # for placeholder replacement.
+        return rundown_instructions
+
     async def before_agent_callback(self, callback_context: CallbackContext,
                                     **kwargs):
         """A callback executed before the agent is called."""
         await self._async_init_if_needed()
-        logger.info("before_agent_callback called %s", callback_context)
+        user_id = callback_context.state.get("user_id")
+
+        logger.info("before_agent_callback called for user: %s", user_id)
+        rundown_system_preference = "cuez"  # A safe default
+
+        if user_id:
+            try:
+                db = firestore.AsyncClient()
+
+                # Fetch the user's preference document
+                doc_ref = db.collection('user_preferences').document(user_id)
+                doc = await doc_ref.get()
+
+                if doc.exists:
+                    rundown_system_preference = doc.to_dict().get(
+                        'rundown_system', 'cuez')
+
+                logger.info("User '%s' preference set to: %s", user_id,
+                            rundown_system_preference)
+
+            except Exception as e:
+                logger.error(
+                    "Failed to fetch user preferences for %s: %s. Using default.",
+                    user_id, e)
+
+        # Dynamically load the preferred rundown agent
+        rundown_agent_connection = None
+        preferred_system_config = AUTOMATION_SYSTEMS.get(
+            rundown_system_preference)
+        if preferred_system_config:
+            agent_configs = load_remote_agents_config()
+            target_config_name = preferred_system_config['config_name']
+
+            rundown_agent_config = next(
+                (c for c in agent_configs if c['name'] == target_config_name),
+                None)
+
+            if rundown_agent_config:
+                url = os.getenv(rundown_agent_config["url_env"],
+                                rundown_agent_config["default_url"])
+                api_key = os.getenv(rundown_agent_config["key_env"])
+                rundown_agent_connection = await self._load_agent(url, api_key)
+                if rundown_agent_connection:
+                    callback_context.state[
+                        'rundown_agent_connection'] = rundown_agent_connection
+                    logger.info("Dynamically loaded rundown agent: %s",
+                                rundown_agent_connection.card.name)
+                else:
+                    logger.error(
+                        "Failed to dynamically load rundown agent for preference: %s",
+                        rundown_system_preference)
+
+        # Build the list of available agents for the prompt
+        available_agents = []
+        for name, conn in self.remote_agent_connections.items():
+            available_agents.append(f"- `{name}`: {conn.card.description}")
+
+        if rundown_agent_connection:
+            card = rundown_agent_connection.card
+            available_agents.append(f"- `{card.name}`: {card.description}")
+
+        available_agents_list = "\n".join(available_agents)
+        rundown_instructions = self._get_formatted_instructions(
+            rundown_system_preference)
+
+        # Set the template variables in the state for the ADK to format.
+        callback_context.state[
+            'rundown_system_instructions'] = rundown_instructions
+        callback_context.state['available_agents_list'] = available_agents_list
+        callback_context.state[
+            'rundown_system_preference'] = rundown_system_preference
 
     async def before_model_callback(self, callback_context: CallbackContext,
                                     **kwargs):
@@ -218,15 +312,15 @@ class RoutingAgent:
                 state["session_id"] = str(uuid.uuid4())
             state["session_active"] = True
 
-    def list_remote_agents(self):
+    def list_remote_agents(self) -> list[dict[str, str]]:
         """List the available remote agents you can use to delegate the task."""
         if not self.cards:
             return []
 
         remote_agent_info = []
         for card in self.cards.values():
-            logger.info("Found agent card: %s",
-                        card.model_dump(exclude_none=True))
+            # This tool is for the agent to discover available remote agents.
+            logger.info("Found agent card: %s", card.name)
             logger.info("=" * 100)
             remote_agent_info.append({
                 "name": card.name,
@@ -250,15 +344,42 @@ class RoutingAgent:
             A list of parts from the remote agent's response.
         """
         await self._async_init_if_needed()
-        if agent_name not in self.remote_agent_connections:
+        state = tool_context.state
+
+        rundown_agent_names = {
+            config['agent_name']
+            for config in AUTOMATION_SYSTEMS.values()
+        }
+
+        client = None
+        if agent_name in rundown_agent_names:
+            rundown_connection = state.get('rundown_agent_connection')
+            if rundown_connection and rundown_connection.card.name == agent_name:
+                client = rundown_connection
+            else:
+                error_message = (
+                    f"Error: Rundown agent '{agent_name}' not loaded for this session."
+                )
+                logger.error(error_message)
+                return [error_message]
+        else:
+            if agent_name in self.remote_agent_connections:
+                client = self.remote_agent_connections[agent_name]
+
+        if not client:
+            available_agents = list(self.remote_agent_connections.keys())
+            if 'rundown_agent_connection' in state:
+                available_agents.append(
+                    state['rundown_agent_connection'].card.name)
+
             error_message = (f"Error: Agent '{agent_name}' not found. "
                              "Available agents are: "
-                             f"{list(self.remote_agent_connections.keys())}")
+                             f"{available_agents}")
             logger.error(error_message)
             return [error_message]
+
         state = tool_context.state
         state["active_agent"] = agent_name
-        client = self.remote_agent_connections[agent_name]
 
         if not client:
             raise ValueError(f"Client not available for {agent_name}")
@@ -312,7 +433,7 @@ class RoutingAgent:
 
         resp = []
         json_content = json.loads(content)
-        logger.info(json_content)
+
         if json_content.get("result") and json_content["result"].get(
                 "artifacts"):
             for artifact in json_content["result"]["artifacts"]:
@@ -335,4 +456,4 @@ class RoutingAgent:
 # Create the agent instance synchronously.
 # The async initialization will be handled lazily on the first call.
 routing_agent_instance = RoutingAgent()
-root_agent = routing_agent_instance.create_agent()
+root_agent = routing_agent_instance.get_agent()
