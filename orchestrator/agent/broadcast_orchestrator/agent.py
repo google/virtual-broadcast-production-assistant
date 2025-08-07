@@ -157,7 +157,12 @@ class RoutingAgent:
                 "HIGHFIELD_AGENT": {
                     "url_env": "HIGHFIELD_AGENT_URL",
                     "key_env": "HIGHFIELD_AGENT_API_KEY",
-                    "default_url": "http://localhost:10004",
+                    "default_url": "http://localhost:10004"
+                },
+                "EVS_AGENT": {
+                    "url_env": "EVS_AGENT_URL",
+                    "key_env": "EVS_AGENT_API_KEY",
+                    "default_url": "http://localhost:10010"
                 }
             }
 
