@@ -15,6 +15,8 @@
  """
 
 import os
+import yaml
+from typing import List, Dict, Any
 
 
 def load_system_instructions() -> str:
@@ -30,3 +32,12 @@ def load_system_instructions() -> str:
         system_instructions = f.read()
 
     return system_instructions
+
+
+def load_remote_agents_config() -> List[Dict[str, Any]]:
+    """Loads the remote agents configuration from a YAML file."""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(script_dir, "remote_agents_config.yaml")
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)

@@ -42,7 +42,6 @@ class RemoteAgentConnections:
                  agent_card: AgentCard,
                  agent_url: str,
                  api_key: str | None = None):
-        logger.info("agent_card: %s", agent_card)
         logger.info("agent_url: %s", agent_url)
         headers = {}
         if api_key:
