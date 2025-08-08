@@ -49,6 +49,7 @@ class RemoteAgentConnections:
             agent_url: The URL of the remote agent.
             api_key: The API key for the remote agent, if required.
         """
+
         logger.info("agent_url: %s", agent_url)
         headers = {}
         if api_key:

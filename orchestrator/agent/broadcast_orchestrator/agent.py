@@ -18,9 +18,11 @@ from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools.tool_context import ToolContext
 
+
 from .automation_system_instructions import (AUTOMATION_SYSTEMS, CUEZ_CONFIG,
                                              DEFAULT_INSTRUCTIONS,
                                              SOFIE_CONFIG)
+
 from .config import (load_remote_agents_config, load_system_instructions)
 from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
 
@@ -140,12 +142,12 @@ class RoutingAgent:
         """Asynchronously initializes components that require network I/O."""
         logger.info("Initializing remote agent connections...")
         for address, api_key in remote_agents_config.items():
+
             connection = await self._load_agent(address, api_key)
             if connection:
                 self.remote_agent_connections[
                     connection.card.name] = connection
                 self.cards[connection.card.name] = connection.card
-
         # Populate self.agents using the logic from original __init__ (via
         # list_remote_agents)
         agent_info = []
@@ -160,6 +162,7 @@ class RoutingAgent:
                 return
             agent_configs = load_remote_agents_config()
 
+
             rundown_agent_config_names = {
                 config['config_name']
                 for config in AUTOMATION_SYSTEMS.values()
@@ -169,6 +172,7 @@ class RoutingAgent:
             for config in agent_configs:
                 if config["name"] in rundown_agent_config_names:
                     continue
+
                 agent_name = config["name"]
                 url = os.getenv(config["url_env"], config["default_url"])
                 api_key = os.getenv(config["key_env"])
@@ -319,6 +323,7 @@ class RoutingAgent:
 
         remote_agent_info = []
         for card in self.cards.values():
+
             # This tool is for the agent to discover available remote agents.
             logger.info("Found agent card: %s", card.name)
             logger.info("=" * 100)
