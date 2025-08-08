@@ -16,10 +16,9 @@ from google.adk import Agent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools.tool_context import ToolContext
-from google.genai.types import GenerateContentConfig, SpeechConfig, VoiceConfig, PrebuiltVoiceConfig
 
+from .config import (load_remote_agents_config, load_system_instructions)
 from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
-from .config import load_system_instructions
 
 load_dotenv()
 
@@ -91,16 +90,18 @@ class RoutingAgent:
                                                                 str | None]):
         """Asynchronously initializes components that require network I/O."""
         logger.info("Initializing remote agent connections...")
-        # Use a single httpx.AsyncClient for all card resolutions for
-        # efficiency
-        async with httpx.AsyncClient(timeout=30) as client:
-            for address, api_key in remote_agents_config.items():
-                logger.info("Attempting to connect to remote agent at: %s",
-                            address)
+        for address, api_key in remote_agents_config.items():
+            logger.info("Attempting to connect to remote agent at: %s",
+                        address)
+            headers = {}
+            if api_key:
+                headers["X-API-Key"] = api_key
+            logger.info('Headers are %s', headers)
+            async with httpx.AsyncClient(timeout=30,
+                                         headers=headers) as client:
                 card_resolver = A2ACardResolver(client, address)
                 try:
                     card: AgentCard = await card_resolver.get_agent_card()
-                    logger.info(card)
                     # The remote agent card might contain a non-routable URL
                     # (e.g., http://0.0.0.0:port). We should prioritize the public
                     # address we used for discovery.
@@ -121,6 +122,14 @@ class RoutingAgent:
                 except httpx.ConnectError as e:
                     logger.error("Failed to get agent card from %s: %s",
                                  address, e)
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code in (401, 403):
+                        logger.error(
+                            "Authentication error for agent at %s. Check if the API key is correct. Status: %s",
+                            address, e.response.status_code)
+                    else:
+                        logger.error("HTTP error for agent at %s: %s", address,
+                                     e)
                 # Catch other potential errors
                 except Exception as e:
                     logger.error("Failed to initialize connection for %s: %s",
@@ -138,38 +147,17 @@ class RoutingAgent:
         async with self._init_lock:
             if self._initialized:
                 return
-            agent_configs = {
-                "CUEZ_AGENT": {
-                    "url_env": "CUEZ_AGENT_URL",
-                    "key_env": "CUEZ_AGENT_API_KEY",
-                    "default_url": "http://localhost:8001"
-                },
-                "POSTURE_AGENT": {
-                    "url_env": "POSTURE_AGENT_URL",
-                    "key_env": "POSTURE_AGENT_API_KEY",
-                    "default_url": "http://localhost:10002"
-                },
-                "MOMENTSLAB_AGENT": {
-                    "url_env": "MOMENTSLAB_AGENT_URL",
-                    "key_env": "MOMENTSLAB_AGENT_API_KEY",
-                    "default_url": "http://localhost:10003"
-                },
-                "HIGHFIELD_AGENT": {
-                    "url_env": "HIGHFIELD_AGENT_URL",
-                    "key_env": "HIGHFIELD_AGENT_API_KEY",
-                    "default_url": "http://localhost:10004"
-                },
-                "EVS_AGENT": {
-                    "url_env": "EVS_AGENT_URL",
-                    "key_env": "EVS_AGENT_API_KEY",
-                    "default_url": "http://localhost:10010"
-                }
-            }
+            agent_configs = load_remote_agents_config()
 
             remote_agents_config = {}
-            for agent_name, config in agent_configs.items():
+            for config in agent_configs:
+                agent_name = config["name"]
                 url = os.getenv(config["url_env"], config["default_url"])
                 api_key = os.getenv(config["key_env"])
+                if api_key:
+                    logger.info('API KEY FOUND for %s', agent_name)
+                else:
+                    logger.info('No API KEY for %s', agent_name)
                 if url:
                     remote_agents_config[url] = api_key
 
@@ -225,8 +213,7 @@ class RoutingAgent:
 
         remote_agent_info = []
         for card in self.cards.values():
-            logger.info("Found agent card: %s",
-                        card.model_dump(exclude_none=True))
+            logger.info("Found agent card: %s", card.name)
             logger.info("=" * 100)
             remote_agent_info.append({
                 "name": card.name,
@@ -312,7 +299,7 @@ class RoutingAgent:
 
         resp = []
         json_content = json.loads(content)
-        logger.info(json_content)
+
         if json_content.get("result") and json_content["result"].get(
                 "artifacts"):
             for artifact in json_content["result"]["artifacts"]:
