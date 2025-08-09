@@ -15,11 +15,36 @@ Navigate to this directory and install the required npm packages:
 npm install
 ```
 
-### 2. Configure the Backend API
+### 2. Create Environment Configuration
 
-The frontend needs to know the URL of the agent's API. By default, it will try to connect to `http://localhost:8080`. This can be configured via environment variables if your agent is running elsewhere.
+The frontend requires a `.env.local` file for configuration, including Firebase credentials.
 
-### 3. Run the Development Server
+1.  **Create the file:**
+    ```bash
+    touch .env.local
+    ```
+
+2.  **Populate the file:**
+    Add the following environment variables to the file. The values for your Firebase project can be found in the Firebase console. These secrets should be sourced securely and not be committed to the repository.
+
+    ```
+    VITE_FIREBASE_API_KEY="YOUR_API_KEY"
+    VITE_FIREBASE_AUTH_DOMAIN="YOUR_AUTH_DOMAIN"
+    VITE_FIREBASE_PROJECT_ID="YOUR_PROJECT_ID"
+    VITE_FIREBASE_STORAGE_BUCKET="YOUR_STORAGE_BUCKET"
+    VITE_FIREBASE_MESSAGING_SENDER_ID="YOUR_MESSAGING_SENDER_ID"
+    VITE_FIREBASE_APP_ID="YOUR_APP_ID"
+    ```
+
+### 3. Configure the Backend API
+
+The frontend needs to know the URL of the agent's API. By default, it will try to connect to `http://localhost:8080`. This can be configured via an environment variable if your agent is running elsewhere. You can add this to your `.env.local` file:
+
+```
+VITE_AGENT_API_URL="http://localhost:8080"
+```
+
+### 4. Run the Development Server
 
 To start the local development server:
 

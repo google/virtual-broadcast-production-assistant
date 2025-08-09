@@ -17,6 +17,13 @@ The orchestrator is composed of a central **agent** and multiple **frontends** f
 
 This is the recommended setup for local development. You will need to open two separate terminal windows.
 
+### Prerequisite: Environment Configuration
+
+Before launching the services, you must create environment files for both the agent and the frontend. These files contain sensitive information and are not stored in the repository.
+
+*   **For the Agent:** Create a `.env` file in the `orchestrator/agent` directory. See the [Agent README](./agent/README.MD) for detailed instructions.
+*   **For the Frontend:** Create a `.env.local` file in the `orchestrator/frontend_v2` directory. See the [Frontend v2 README](./frontend_v2/README.md) for detailed instructions.
+
 ### Terminal 1: Run the Agent
 
 1.  **Navigate to the agent directory:**
@@ -24,20 +31,10 @@ This is the recommended setup for local development. You will need to open two s
     cd orchestrator/agent
     ```
 
-2.  **Set up the Python environment and install dependencies** (if you haven't already):
-    ```bash
-    python -m venv .venv
-    source .venv/bin/activate
-    pip install -r requirements.txt
-    ```
+2.  **Set up and configure the agent:**
+    Follow the setup steps in the [Agent README](./agent/README.MD), which include creating a virtual environment, installing dependencies, and creating your `.env` and `remote_agents_config.yaml` files.
 
-3.  **Configure the remote agents:**
-    ```bash
-    cp broadcast_orchestrator/remote_agents_config.yaml.example broadcast_orchestrator/remote_agents_config.yaml
-    ```
-    *Update `remote_agents_config.yaml` with the correct endpoints for your downstream agents.*
-
-4.  **Start the agent server:**
+3.  **Start the agent server:**
     ```bash
     uvicorn main:app --host 0.0.0.0 --port 8080 --reload
     ```
@@ -50,10 +47,8 @@ This is the recommended setup for local development. You will need to open two s
     cd orchestrator/frontend_v2
     ```
 
-2.  **Install dependencies** (if you haven't already):
-    ```bash
-    npm install
-    ```
+2.  **Set up and configure the frontend:**
+    Follow the setup steps in the [Frontend v2 README](./frontend_v2/README.md), which include installing dependencies and creating your `.env.local` file.
 
 3.  **Start the development server:**
     ```bash

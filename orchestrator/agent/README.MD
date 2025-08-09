@@ -37,7 +37,21 @@ Install the required Python packages using pip:
 pip install -r requirements.txt
 ```
 
-### 3. Configure Remote Agents
+### 3. Create Environment Configuration
+
+The agent requires a `.env` file for sensitive configuration, such as API keys and service endpoints.
+
+1.  **Create the `.env` file:**
+    ```bash
+    cp .env-example .env
+    ```
+
+2.  **Populate the `.env` file:**
+    You must populate the `.env` file with the correct values for your environment. These secrets (like `GOOGLE_API_KEY`) are not stored in the repository and should be obtained from a secure source, such as Google Cloud Storage or your project's secret manager.
+
+    For local development, you may also need to set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable to point to your Firebase service account key file.
+
+### 4. Configure Remote Agents
 
 The agent needs to know the endpoints of the specialized agents it orchestrates. This is configured in the `broadcast_orchestrator/remote_agents_config.yaml` file. Before running the agent, create a copy of the example config and update it with the correct URLs for your remote agent instances.
 
@@ -46,7 +60,7 @@ The agent needs to know the endpoints of the specialized agents it orchestrates.
 cp broadcast_orchestrator/remote_agents_config.yaml.example broadcast_orchestrator/remote_agents_config.yaml
 ```
 
-### 4. Run the Agent Server
+### 5. Run the Agent Server
 
 The agent is served using `uvicorn`. To run it in development mode with auto-reloading:
 
