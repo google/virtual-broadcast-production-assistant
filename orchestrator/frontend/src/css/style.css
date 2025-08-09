@@ -3,6 +3,7 @@
   --md-sys-color-on-primary: #ffffff;
   --md-sys-color-primary-container: #eaddff;
   --md-sys-color-on-primary-container: #21005d;
+  --md-sys-color-primary-bright: #BEA5F7;
   --md-sys-color-secondary: #625b71;
   --md-sys-color-on-secondary: #ffffff;
   --md-sys-color-secondary-container: #e8def8;
@@ -77,7 +78,7 @@ body {
 }
 
 .rundown-label.active {
-  color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-primary-bright);
   font-weight: 500;
 }
 
