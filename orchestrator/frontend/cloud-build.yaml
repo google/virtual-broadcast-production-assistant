@@ -53,7 +53,7 @@ steps:
   # This final step deploys the container image to Cloud Run, making the frontend live.
   # It uses the service name and region provided as substitutions.
   # --allow-unauthenticated makes the web app publicly accessible.
-  - name: 'gcloud'
+  - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy to Cloud Run'
     dir: 'orchestrator/frontend'
     entrypoint: 'gcloud'
