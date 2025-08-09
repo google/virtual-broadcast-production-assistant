@@ -1,21 +1,14 @@
-# Stage 1: Build the frontend assets
-FROM node:20-alpine as builder
-WORKDIR /app
-# Copy package.json and package-lock.json
-COPY package*.json ./
-# Install dependencies
-RUN npm install
-# Copy the rest of the application source code
-COPY . .
-# Build the application (assumes output is in /app/dist)
-RUN npm run build
-
-# Stage 2: Serve the application with Nginx
+# This Dockerfile assumes the application has already been built
+# and the resulting static assets are in the `dist` directory.
 FROM nginx:1.25-alpine
+
 # Install gettext for envsubst
 RUN apk add --no-cache gettext
-# Copy the built assets from the builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy the pre-built assets from the `dist` directory into the Nginx public folder.
+# The `dist` directory is created by the `npm run build` step in cloud-build.yaml.
+COPY dist /usr/share/nginx/html
+
 # Copy the nginx configuration template and entrypoint script
 COPY nginx.conf.template /etc/nginx/conf.d/default.conf.template
 COPY entrypoint.sh /entrypoint.sh

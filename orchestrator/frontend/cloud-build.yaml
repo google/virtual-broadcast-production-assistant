@@ -1,0 +1,68 @@
+# This file defines the continuous integration and deployment pipeline for the frontend application.
+# It is used by Google Cloud Build to automatically build, test, and deploy the application.
+
+steps:
+  # 1. Install npm dependencies
+  # This step uses a standard cloud builder for Node.js to install the project dependencies.
+  - name: 'gcr.io/cloud-builders/npm'
+    id: 'Install dependencies'
+    entrypoint: 'npm'
+    args: ['install']
+
+  # 2. Build the static assets with Vite
+  # This step runs the Vite build process. It injects the necessary environment
+  # variables (prefixed with VITE_) into the build, so they are available in the frontend code.
+  # These variables are passed into the build as substitutions (_VARIABLE_NAME).
+  - name: 'gcr.io/cloud-builders/npm'
+    id: 'Build static assets'
+    entrypoint: 'npm'
+    args: ['run', 'build']
+    env:
+      - 'VITE_WEBSOCKET_URL=$_VITE_WEBSOCKET_URL'
+      - 'VITE_FIREBASE_API_KEY=$_VITE_FIREBASE_API_KEY'
+      - 'VITE_FIREBASE_AUTH_DOMAIN=$_VITE_FIREBASE_AUTH_DOMAIN'
+      - 'VITE_FIREBASE_PROJECT_ID=$_VITE_FIREBASE_PROJECT_ID'
+      - 'VITE_FIREBASE_STORAGE_BUCKET=$_VITE_FIREBASE_STORAGE_BUCKET'
+      - 'VITE_FIREBASE_MESSAGING_SENDER_ID=$_VITE_FIREBASE_MESSAGING_SENDER_ID'
+      - 'VITE_FIREBASE_APP_ID=$_VITE_FIREBASE_APP_ID'
+
+  # 3. Build the Docker image
+  # This step builds the Docker image using the provided Dockerfile. The resulting static
+  # assets from the 'dist' directory are copied into the Nginx server image.
+  # The image is tagged with the commit SHA for easy version tracking.
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build Docker image'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:${COMMIT_SHA}'
+      - '.'
+
+  # 4. Push the Docker image to Google Artifact Registry
+  # The built image is pushed to Artifact Registry, Google's recommended container registry.
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push Docker image'
+    args: ['push', '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:${COMMIT_SHA}']
+
+  # 5. Deploy the image to Cloud Run
+  # This final step deploys the container image to Cloud Run, making the frontend live.
+  # It uses the service name and region provided as substitutions.
+  # --allow-unauthenticated makes the web app publicly accessible.
+  - name: 'gcr.io/google-cloud-sdk/gcloud'
+    id: 'Deploy to Cloud Run'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:${COMMIT_SHA}'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+
+# Store the final image in Artifact Registry.
+images:
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:${COMMIT_SHA}'
