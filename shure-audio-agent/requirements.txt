@@ -1,0 +1,14 @@
+# A2A Framework dependencies
+a2a-framework>=1.0.0
+
+# ADK dependencies
+google-adk>=1.0.0
+
+# Existing dependencies
+requests>=2.31.0
+python-dotenv>=1.0.0
+litellm>=1.0.0
+
+# Additional dependencies that might be needed
+asyncio
+typing-extensions>=4.0.0 
