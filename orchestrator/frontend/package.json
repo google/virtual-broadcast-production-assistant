@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@material/web": "^1.4.1",
-    "firebase": "^10.14.1",
+    "firebase": "^12.1.0",
     "firebaseui": "^6.1.0"
   }
 }
