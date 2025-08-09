@@ -8,6 +8,8 @@ steps:
     id: 'Install dependencies'
     entrypoint: 'npm'
     args: ['install']
+    dir: 'orchestrator/frontend'
+
 
   # 2. Build the static assets with Vite
   # This step runs the Vite build process. It injects the necessary environment
@@ -17,6 +19,7 @@ steps:
     id: 'Build static assets'
     entrypoint: 'npm'
     args: ['run', 'build']
+    dir: 'orchestrator/frontend'
     env:
       - 'VITE_WEBSOCKET_URL=$_VITE_WEBSOCKET_URL'
       - 'VITE_FIREBASE_API_KEY=$_VITE_FIREBASE_API_KEY'
@@ -32,6 +35,7 @@ steps:
   # The image is tagged with the commit SHA for easy version tracking.
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Build Docker image'
+    dir: 'orchestrator/frontend'
     args:
       - 'build'
       - '-t'
@@ -42,6 +46,7 @@ steps:
   # The built image is pushed to Artifact Registry, Google's recommended container registry.
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Push Docker image'
+    dir: 'orchestrator/frontend'
     args: ['push', '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:${COMMIT_SHA}']
 
   # 5. Deploy the image to Cloud Run
@@ -50,6 +55,7 @@ steps:
   # --allow-unauthenticated makes the web app publicly accessible.
   - name: 'gcr.io/google-cloud-sdk/gcloud'
     id: 'Deploy to Cloud Run'
+    dir: 'orchestrator/frontend'
     entrypoint: 'gcloud'
     args:
       - 'run'
