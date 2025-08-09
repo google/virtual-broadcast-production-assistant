@@ -66,3 +66,8 @@ steps:
 # Store the final image in Artifact Registry.
 images:
   - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:${COMMIT_SHA}'
+
+# Configure build options to resolve potential logging permission issues.
+# This instructs Cloud Build to send logs directly to Cloud Logging.
+options:
+  logging: CLOUD_LOGGING_ONLY
