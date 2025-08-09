@@ -6,6 +6,8 @@ https://google.github.io/adk-docs/streaming/custom-streaming-ws/
 import json
 import asyncio
 import base64
+import firebase_admin
+from firebase_admin import auth
 import warnings
 import logging
 
@@ -21,7 +23,7 @@ from google.adk.runners import InMemoryRunner
 from google.adk.agents import LiveRequestQueue
 from google.adk.agents.run_config import RunConfig
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, status
 
 from broadcast_orchestrator.agent import root_agent
 
@@ -41,6 +43,16 @@ logger = logging.getLogger(__name__)
 # Load Gemini API Key
 load_dotenv()
 
+# Initialize Firebase Admin SDK
+# This will automatically use the service account credentials from the
+# environment if you are running on Cloud Run with a service account.
+# For local development, you might need to set GOOGLE_APPLICATION_CREDENTIALS.
+try:
+    firebase_admin.initialize_app()
+    logger.info("Firebase Admin SDK initialized successfully.")
+except ValueError:
+    logger.info("Firebase Admin SDK already initialized.")
+
 APP_NAME = "ADK Streaming example"
 
 
@@ -54,10 +66,11 @@ async def start_agent_session(user_id, is_audio=False):
     )
 
     # Create a Session
+    # The user_id is required by the agent's `before_agent_callback` to
+    # fetch user-specific preferences. We pass it in the session's state
+    # so it's available in the callback context.
     session = await runner.session_service.create_session(
-        app_name=APP_NAME,
-        user_id=user_id,  # Replace with actual user ID
-    )
+        app_name=APP_NAME, user_id=user_id, state={"user_id": user_id})
 
     # Set response modality
     modality = "AUDIO" if is_audio else "TEXT"
@@ -68,6 +81,7 @@ async def start_agent_session(user_id, is_audio=False):
 
     # Start agent session
     live_events = runner.run_live(
+        user_id=user_id,
         session=session,
         live_request_queue=live_request_queue,
         run_config=run_config,
@@ -162,18 +176,48 @@ async def health_check():
 
 
 @app.websocket("/ws/{user_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: int,
-                             is_audio: str):
+async def websocket_endpoint(
+        websocket: WebSocket,
+        user_id: str,
+        is_audio: str,
+        token: str | None = Query(default=None),
+):
     """Client websocket endpoint"""
+    if not token:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION,
+                              reason="Missing token")
+        return
+
+    try:
+        # Verify the token
+        decoded_token = auth.verify_id_token(token)
+        token_user_id = decoded_token["uid"]
+
+        # Ensure the user_id in the path matches the one in the token
+        if user_id != token_user_id:
+            logger.warning("User ID in path does not match token UID.")
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION,
+                                  reason="User ID mismatch")
+            return
+    except auth.InvalidIdTokenError as e:
+        logger.error("Invalid Firebase ID token: %s", e)
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION,
+                              reason="Invalid token")
+        return
+    except Exception as e:
+        logger.error(
+            "An unexpected error occurred during token verification: %s", e)
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION,
+                              reason="Token verification failed")
+        return
 
     # Wait for client connection
     await websocket.accept()
-    logger.info("Client #%d connected, audio mode: %s", user_id, is_audio)
+    logger.info("Client #%s connected, audio mode: %s", user_id, is_audio)
 
     # Start agent session
-    user_id_str = str(user_id)
     live_events, live_request_queue = await start_agent_session(
-        user_id_str, is_audio == "true")
+        user_id, is_audio == "true")
 
     # Start tasks
     agent_to_client_task = asyncio.create_task(
@@ -182,11 +226,23 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int,
         client_to_agent_messaging(websocket, live_request_queue))
 
     # Wait until the websocket is disconnected or an error occurs
-    tasks = [agent_to_client_task, client_to_agent_task]
-    await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
+    done, pending = await asyncio.wait(
+        [agent_to_client_task, client_to_agent_task],
+        return_when=asyncio.FIRST_COMPLETED,
+    )
+
+    # If one task finishes, cancel the other one.
+    for task in pending:
+        task.cancel()
+
+    # Log any exceptions that might have caused a task to finish.
+    for task in done:
+        if task.exception():
+            logger.error("A websocket task finished with an exception:",
+                         exc_info=task.exception())
 
     # Close LiveRequestQueue
     live_request_queue.close()
 
     # Disconnected
-    logger.info("Client #%d disconnected", user_id)
+    logger.info("Client #%s disconnected", user_id)

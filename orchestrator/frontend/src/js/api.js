@@ -1,15 +1,14 @@
 let websocket;
 
-function initApi(callbacks, is_audio) {
-  const sessionId = Math.random().toString().substring(10);
-  // This placeholder is replaced by the entrypoint.sh script in the Docker container.
-  // It falls back to localhost for local development if the placeholder is not replaced.
-  const ws_base_url = '__WEBSOCKET_URL__';
-  const final_ws_base_url = ws_base_url.startsWith('__') ? 'ws://localhost:8000' : ws_base_url;
+function initApi(callbacks, is_audio, uid, getToken) {
+  // Vite replaces `import.meta.env.VITE_...` with the value at build time.
+  // It falls back to localhost for local development if the variable is not set.
+  const final_ws_base_url = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:8000';
 
-  const ws_url = `${final_ws_base_url}/ws/${sessionId}?is_audio=${is_audio}`;
+  async function connect() {
+    const token = await getToken();
+    const ws_url = `${final_ws_base_url}/ws/${uid}?is_audio=${is_audio}&token=${token}`;
 
-  function connect() {
     websocket = new WebSocket(ws_url);
 
     websocket.onopen = () => {
@@ -40,6 +39,7 @@ function initApi(callbacks, is_audio) {
   connect();
 
   return {
+    isAudio: is_audio,
     sendMessage(message) {
       if (websocket && websocket.readyState === WebSocket.OPEN) {
         websocket.send(JSON.stringify(message));
