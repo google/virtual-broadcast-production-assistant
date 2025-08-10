@@ -1,6 +1,7 @@
 
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { createPageUrl } from "@/utils";
 import {
   Radio,
@@ -34,6 +35,7 @@ const navigationItems = [
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
+  const { currentUser, signOut, setIsUpgrading } = useAuth();
   const [connectionStatus] = React.useState("connected"); // Mock for now
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -74,6 +76,21 @@ export default function Layout({ children, currentPageName }) {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            {currentUser && currentUser.isAnonymous && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsUpgrading(true);
+                  signOut();
+                }}
+              >
+                Login with Google
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => signOut()}>
+              Sign Out
+            </Button>
             {/* Connection Status - Responsive sizing */}
             <div className="hidden sm:flex items-center gap-2">
               {connectionStatus === "connected" ?
