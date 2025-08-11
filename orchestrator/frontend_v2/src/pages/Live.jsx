@@ -28,15 +28,7 @@ export default function Live() {
   const [onAirMode, setOnAirMode] = useState(true);
   const [micEnabled, setMicEnabled] = useState(false);
   const [currentMessage, setCurrentMessage] = useState("");
-  const [messages, setMessages] = useState([
-    {
-      id: "1",
-      role: "assistant",
-      text: "Control room connection established. All systems operational.",
-      timestamp: Date.now() - 30000,
-      partial: false,
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
   const { currentUser } = useAuth();
   const { rundownSystem } = useRundown();
   const apiRef = useRef(null);
@@ -109,7 +101,7 @@ export default function Live() {
           {
             id: "1",
             role: "assistant",
-            text: "Control room connection established. All systems operational.",
+            text: "Orchestrator Connected",
             timestamp: Date.now(),
             partial: false,
           },
