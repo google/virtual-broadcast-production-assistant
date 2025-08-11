@@ -42,12 +42,11 @@ WEBSITE_MCP_PATH = os.path.join(os.path.dirname(__file__), "../../../orchestrato
 
 root_agent = Agent(
    # A unique name for the agent.
-   name="basic_search_agent",
+   name="sofie_automation_agent",
    # The Large Language Model (LLM) that agent will use.
-   model="gemini-2.0-flash-exp",
-   # model="gemini-2.0-flash-live-001",  # New streaming model version as of Feb 2025
+   model="gemini-2.5-flash",
    # A short description of the agent's purpose.
-   description="Agent to answer questions using Google Search.",
+   description="Agent to assist with broadcast control using the Sofie Automation System.",
    # Instructions to set the agent's behavior.
    instruction=agent_instructions,
    # Add google_search tool to perform grounding with Google search.
