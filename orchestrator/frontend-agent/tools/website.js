@@ -1,4 +1,4 @@
-import { sharedActivityStore } from 'activity-store.js';
+import { sharedActivityStore } from './activity-store.js';
 
 class WebsiteTools {
   constructor() {
