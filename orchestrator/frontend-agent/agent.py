@@ -8,7 +8,7 @@ load_dotenv()
 
 
 root_agent = Agent(
-  name="tx_agent",
+  name="frontend_data_agent",
   model="gemini-2.5-flash",
   description=prompts.ROOT_PROMPT,
   instruction=prompts.INSTRUCTIONS,
