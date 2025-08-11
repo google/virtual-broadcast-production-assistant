@@ -9,4 +9,4 @@ build
 
 # Deployment scripts and env files
 deploy-cloud-run.sh
-.env
+.env*
