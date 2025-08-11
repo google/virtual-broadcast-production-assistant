@@ -1,0 +1,64 @@
+import uvicorn
+from agent import root_agent as frontend_data_agent
+
+from a2a.server.apps import A2AStarletteApplication
+from a2a.server.request_handlers import DefaultRequestHandler
+from a2a.server.tasks import InMemoryTaskStore
+from a2a.types import (
+    AgentCapabilities,
+    AgentCard,
+    AgentSkill,
+)
+
+from agent_executor import FrontendDataAgentExecutor
+
+def main(host='localhost', port=8020):
+  data_reformatting_skill = AgentSkill(
+    id="data_reformatting_skill",
+    name="Data Reformatting",
+    description=(
+      "Reformats incoming data into a structured format suitable for storage."
+    ),
+    tags=[
+      "data",
+      "reformatting",
+      "storage"
+    ],
+    examples=[
+      "Unstructured data"
+    ],
+  )
+
+  agent_card = AgentCard(
+    name="Frontend Data Agent - reformat and insert data",
+    description=(
+      "Agent that take in data from other agents and reformats it into a set pattern"
+      "which can then be inserted into a datastore."
+    ),
+    url=f"http://{host}:{port}/",
+    version='1.0.0',
+    defaultInputModes=['text'],
+    defaultOutputModes=['text'],
+    capabilities=AgentCapabilities(streaming=True),
+    skills=[
+      data_reformatting_skill,
+    ],
+  )
+
+  request_handler = DefaultRequestHandler(
+    task_store=InMemoryTaskStore(),
+    agent_executor=FrontendDataAgentExecutor(
+      agent=frontend_data_agent,
+    ),
+  )
+
+  server = A2AStarletteApplication(
+    agent_card=agent_card,
+    http_handler=request_handler
+  )
+
+  uvicorn.run(server.build(), host=host, port=port)
+
+
+if __name__ == "__main__":
+  main()
