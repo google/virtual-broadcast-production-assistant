@@ -357,9 +357,11 @@ class RoutingAgent:
         }
 
         client = None
-        if agent_name in rundown_agent_names:
+        # Case-insensitive check for rundown agents
+        if agent_name.lower() in [name.lower() for name in rundown_agent_names]:
             rundown_connection = state.get('rundown_agent_connection')
-            if rundown_connection and rundown_connection.card.name == agent_name:
+            # Case-insensitive comparison with the card name
+            if rundown_connection and rundown_connection.card.name.lower() == agent_name.lower():
                 client = rundown_connection
             else:
                 error_message = (
