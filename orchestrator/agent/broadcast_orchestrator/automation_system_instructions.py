@@ -7,7 +7,7 @@ CUEZ_CONFIG = {
     "config_name":
     "CUEZ_AGENT",
     "agent_name":
-    "CUEZ Rundown Agent",
+    "Cuez Rundown Agent",
     "instructions":
     """
 You are configured to interact with the CUEZ rundown system.
