@@ -41,7 +41,7 @@ The frontend requires a `.env.local` file for configuration, including Firebase 
 The frontend needs to know the URL of the agent's API. By default, it will try to connect to `http://localhost:8080`. This can be configured via an environment variable if your agent is running elsewhere. You can add this to your `.env.local` file:
 
 ```
-VITE_WEBSOCKET_URL="http://localhost:8080"
+VITE_AGENT_API_URL="http://localhost:8080"
 ```
 
 ### 4. Run the Development Server

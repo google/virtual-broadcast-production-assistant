@@ -44,7 +44,7 @@ export default function Console() {
   }, [currentUser]);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !currentUser.uid) return;
 
     function getToken() {
       return currentUser.getIdToken();

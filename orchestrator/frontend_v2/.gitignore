@@ -1,4 +1,4 @@
-npm # Node.js
+# Node.js
 node_modules
 npm-debug.log
 .npm
@@ -9,4 +9,4 @@ build
 
 # Deployment scripts and env files
 deploy-cloud-run.sh
-.env*
+.env
