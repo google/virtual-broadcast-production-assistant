@@ -63,7 +63,7 @@ def create_agent() -> LlmAgent:
     """Constructs the ADK agent."""
     return LlmAgent(
     name="sofie_agent",
-    model="gemini-2.0-flash-ext",
+    model="gemini-2.5-flash",
     description=(
         "An agent built to assist with the Sofie Rundown application"
     ),
