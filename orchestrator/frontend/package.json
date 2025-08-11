@@ -1,0 +1,19 @@
+{
+  "name": "orchestrator-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^7.0.6"
+  },
+  "dependencies": {
+    "@material/web": "^1.4.1",
+    "firebase": "^12.1.0",
+    "firebaseui": "^6.1.0"
+  }
+}

@@ -15,18 +15,29 @@
  """
 
 import os
+import yaml
+from typing import List, Dict, Any
 
 
-def load_system_instructions():
-  """Loads the system instructions from a text file using an absolute path."""
-  # Get the directory of the current script
-  script_dir = os.path.dirname(os.path.abspath(__file__))
+def load_system_instructions() -> str:
+    """Loads the system instructions from a text file using an absolute path."""
+    # Get the directory of the current script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
 
-  # Construct the absolute path to the file
-  file_path = os.path.join(script_dir, "system_instructions.txt")
+    # Construct the absolute path to the file
+    file_path = os.path.join(script_dir, "system_instructions.txt")
 
-  # Open the file using the absolute path
-  with open(file_path, "r", encoding="utf-8") as f:
-    system_instructions = f.read()
+    # Open the file using the absolute path
+    with open(file_path, "r", encoding="utf-8") as f:
+        system_instructions = f.read()
 
-  return system_instructions
+    return system_instructions
+
+
+def load_remote_agents_config() -> List[Dict[str, Any]]:
+    """Loads the remote agents configuration from a YAML file."""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(script_dir, "remote_agents_config.yaml")
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)

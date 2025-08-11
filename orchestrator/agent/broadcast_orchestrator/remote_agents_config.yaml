@@ -1,0 +1,24 @@
+- name: CUEZ_AGENT
+  url_env: CUEZ_AGENT_URL
+  key_env: CUEZ_AGENT_API_KEY
+  default_url: "http://localhost:8001"
+- name: POSTURE_AGENT
+  url_env: POSTURE_AGENT_URL
+  key_env: POSTURE_AGENT_API_KEY
+  default_url: "http://localhost:10002"
+- name: MOMENTSLAB_AGENT
+  url_env: MOMENTSLAB_AGENT_URL
+  key_env: MOMENTSLAB_AGENT_API_KEY
+  default_url: "http://localhost:10003"
+# - name: HIGHFIELD_AGENT
+#   url_env: HIGHFIELD_AGENT_URL
+#   key_env: HIGHFIELD_AGENT_API_KEY
+#   default_url: "http://localhost:10004"
+# - name: EVS_AGENT
+#   url_env: EVS_AGENT_URL
+#   key_env: EVS_AGENT_API_KEY
+#   default_url: "http://localhost:10010"
+- name: SOFIE_AGENT
+  url_env: SOFIE_AGENT_URL
+  key_env: SOFIE_AGENT_API_KEY
+  default_url: "http://localhost:10011"

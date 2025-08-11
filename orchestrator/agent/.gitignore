@@ -33,3 +33,5 @@ venv/**
 **/.vscode/
 
 */terraform.tfvars
+
+.env*
