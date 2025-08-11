@@ -61,7 +61,11 @@ function PagesContent() {
 }
 
 export default function Pages() {
-    const { currentUser } = useAuth();
+    const { currentUser, loading } = useAuth();
+
+    if (loading) {
+        return <div>Loading...</div>; // Or a spinner component
+    }
 
     return (
         <Router>

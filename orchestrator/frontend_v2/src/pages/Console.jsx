@@ -6,45 +6,32 @@ import ChatPanel from "../components/live/ChatPanel";
 import TelemetryPanel from "../components/live/TelemetryPanel";
 import MicControl from "../components/live/MicControl";
 import { useAuth } from "@/contexts/AuthContext";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { useRundown } from "@/contexts/RundownContext";
 import { initApi } from "@/api/webSocket";
 import { initAudio, stopAudioRecording, playAudio, stopAudioPlayback } from "@/lib/audio";
 
 export default function Console() {
   const { currentUser } = useAuth();
+  const { rundownSystem } = useRundown();
   const [currentMessage, setCurrentMessage] = useState("");
   const [micEnabled, setMicEnabled] = useState(false);
-  const [rundownSystem, setRundownSystem] = useState("cuez");
   const [messages, setMessages] = useState([]);
   const [api, setApi] = useState(null);
   const currentMessageIdRef = useRef(null);
 
   useEffect(() => {
-    if (!currentUser) return;
-
-    const userDocRef = doc(db, "user_preferences", currentUser.uid);
-
-    const getRundownSystem = async () => {
-      try {
-        const docSnap = await getDoc(userDocRef);
-        if (docSnap.exists()) {
-          setRundownSystem(docSnap.data().rundown_system);
-        } else {
-          await setDoc(userDocRef, { rundown_system: "cuez" });
-        }
-      } catch (error) {
-        console.error("Error getting rundown system preference:", error);
-      }
-    };
-
-    getRundownSystem();
-  }, [currentUser]);
-
-  useEffect(() => {
     if (!currentUser || !currentUser.uid) return;
+
+    // Clear messages and show a reconfiguring message when rundownSystem changes
+    setMessages([
+      {
+        id: 'reconfiguring-message',
+        role: 'assistant',
+        text: `Reconfiguring for ${rundownSystem.toUpperCase()}...`,
+        timestamp: Date.now(),
+        partial: false,
+      },
+    ]);
 
     function getToken() {
       return currentUser.getIdToken();
@@ -68,43 +55,49 @@ export default function Console() {
           console.log("WebSocket disconnected");
         },
         onMessage: (message) => {
-          if (message.turn_complete) {
-            currentMessageIdRef.current = null;
-            return;
-          }
-
-          if (message.interrupted) {
-            stopAudioPlayback();
-            return;
-          }
-
-          if (message.mime_type === 'audio/pcm') {
-            playAudio(message.data);
-          }
-
-          if (message.mime_type === 'text/plain') {
-            setMessages((prevMessages) => {
-              if (currentMessageIdRef.current === null) {
-                currentMessageIdRef.current = `agent-message-${Date.now()}`;
-                return [
-                  ...prevMessages,
-                  {
-                    id: currentMessageIdRef.current,
-                    role: 'agent',
-                    text: message.data,
-                    timestamp: Date.now(),
-                    partial: true,
-                  },
-                ];
-              } else {
-                return prevMessages.map((msg) =>
-                  msg.id === currentMessageIdRef.current
-                    ? { ...msg, text: msg.text + message.data }
-                    : msg
-                );
-              }
-            });
-          }
+            if (message.turn_complete) {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === currentMessageIdRef.current ? { ...msg, partial: false } : msg
+                )
+              );
+              currentMessageIdRef.current = null;
+              return;
+            }
+    
+            if (message.interrupted) {
+              stopAudioPlayback();
+              return;
+            }
+    
+            if (message.mime_type === 'audio/pcm') {
+              playAudio(message.data);
+            }
+    
+            if (message.mime_type === 'text/plain') {
+              setMessages((prevMessages) => {
+                const existingMsg = prevMessages.find(msg => msg.id === currentMessageIdRef.current);
+                if (existingMsg) {
+                  return prevMessages.map((msg) =>
+                    msg.id === currentMessageIdRef.current
+                      ? { ...msg, text: msg.text + message.data }
+                      : msg
+                  );
+                } else {
+                  currentMessageIdRef.current = `agent-message-${Date.now()}`;
+                  return [
+                    ...prevMessages,
+                    {
+                      id: currentMessageIdRef.current,
+                      role: 'assistant',
+                      text: message.data,
+                      timestamp: Date.now(),
+                      partial: true,
+                    },
+                  ];
+                }
+              });
+            }
         },
       },
       micEnabled,
@@ -118,18 +111,6 @@ export default function Console() {
       newApi.disconnect();
     };
   }, [currentUser, rundownSystem, micEnabled]);
-
-  const handleRundownChange = async (checked) => {
-    if (!currentUser) return;
-    const newRundownSystem = checked ? "sofie" : "cuez";
-    setRundownSystem(newRundownSystem);
-    const userDocRef = doc(db, "user_preferences", currentUser.uid);
-    try {
-      await setDoc(userDocRef, { rundown_system: newRundownSystem }, { merge: true });
-    } catch (error) {
-      console.error("Error setting rundown system preference:", error);
-    }
-  };
 
   const handleSendMessage = () => {
     if (!currentMessage.trim() || !api) return;
@@ -175,15 +156,6 @@ export default function Console() {
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#E6E1E5]">Assistant Console</h1>
             <p className="text-[#A6A0AA] mt-1 text-sm">Full conversation mode with streaming transcript</p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="rundown-system-toggle">CUEZ</Label>
-            <Switch
-              id="rundown-system-toggle"
-              checked={rundownSystem === "sofie"}
-              onCheckedChange={handleRundownChange}
-            />
-            <Label htmlFor="rundown-system-toggle">SOFIE</Label>
           </div>
         </div>
 

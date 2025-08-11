@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRundown } from "@/contexts/RundownContext";
 import { createPageUrl } from "@/utils";
 import {
   Radio,
@@ -20,6 +21,8 @@ import {
 "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const navigationItems = [
 { title: "Live", url: createPageUrl("Live"), icon: Radio, description: "Control Room" },
@@ -36,8 +39,14 @@ const navigationItems = [
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const { currentUser, signOut, setIsUpgrading } = useAuth();
+  const { rundownSystem, updateRundownSystem } = useRundown();
   const [connectionStatus] = React.useState("connected"); // Mock for now
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleRundownChange = (checked) => {
+    const newRundownSystem = checked ? "sofie" : "cuez";
+    updateRundownSystem(newRundownSystem);
+  };
 
   return (
     <div className="min-h-screen bg-[#0D0B12] text-[#E6E1E5]">
@@ -76,6 +85,16 @@ export default function Layout({ children, currentPageName }) {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            <div className="hidden sm:flex items-center space-x-2 mr-4">
+              <Label htmlFor="rundown-system-toggle" className={rundownSystem !== 'cuez' ? 'text-gray-400' : ''}>CUEZ</Label>
+              <Switch
+                id="rundown-system-toggle"
+                checked={rundownSystem === "sofie"}
+                onCheckedChange={handleRundownChange}
+              />
+              <Label htmlFor="rundown-system-toggle" className={rundownSystem !== 'sofie' ? 'text-gray-400' : ''}>SOFIE</Label>
+            </div>
+
             {currentUser && currentUser.isAnonymous && (
               <Button
                 variant="outline"
@@ -149,6 +168,18 @@ export default function Layout({ children, currentPageName }) {
                 </Link>
             )}
             </nav>
+
+            <div className="mt-4 pt-4 border-t border-white/8 flex justify-center">
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="rundown-system-toggle-mobile" className={rundownSystem !== 'cuez' ? 'text-gray-400' : ''}>CUEZ</Label>
+                <Switch
+                  id="rundown-system-toggle-mobile"
+                  checked={rundownSystem === "sofie"}
+                  onCheckedChange={handleRundownChange}
+                />
+                <Label htmlFor="rundown-system-toggle-mobile" className={rundownSystem !== 'sofie' ? 'text-gray-400' : ''}>SOFIE</Label>
+              </div>
+            </div>
 
             {/* Mobile Connection Status */}
             <div className="sm:hidden mt-4 pt-4 border-t border-white/8 flex items-center justify-center gap-2">
