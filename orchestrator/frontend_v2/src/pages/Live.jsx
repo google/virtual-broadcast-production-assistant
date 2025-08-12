@@ -29,6 +29,7 @@ export default function Live() {
   const [micEnabled, setMicEnabled] = useState(false);
   const [currentMessage, setCurrentMessage] = useState("");
   const [messages, setMessages] = useState([]);
+  const [isAgentReplying, setIsAgentReplying] = useState(false);
   const { currentUser } = useAuth();
   const { rundownSystem } = useRundown();
   const apiRef = useRef(null);
@@ -51,6 +52,7 @@ export default function Live() {
     const callbacks = {
       onMessage: (message) => {
         if (message.turn_complete) {
+          setIsAgentReplying(false);
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === currentMessageIdRef.current ? { ...msg, partial: false } : msg
@@ -70,6 +72,7 @@ export default function Live() {
         }
 
         if (message.mime_type === 'text/plain') {
+          setIsAgentReplying(false);
           setMessages((prevMessages) => {
             const existingMsg = prevMessages.find(msg => msg.id === currentMessageIdRef.current);
             if (existingMsg) {
@@ -135,6 +138,7 @@ export default function Live() {
 
     setMessages((prev) => [...prev, newMessage]);
     setCurrentMessage("");
+    setIsAgentReplying(true);
 
     if (apiRef.current) {
       apiRef.current.sendMessage({
@@ -191,7 +195,7 @@ export default function Live() {
 
         {/* Chat Panel - Responsive height */}
         <div className="flex-1 overflow-hidden min-h-[200px] lg:min-h-0">
-          <ChatPanel messages={messages} />
+          <ChatPanel messages={messages} isAgentReplying={isAgentReplying} />
         </div>
 
         {/* Input Controls */}
