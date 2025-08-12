@@ -1,5 +1,5 @@
 import uvicorn
-from agent import root_agent as frontend_data_agent
+from .agent import root_agent as frontend_data_agent
 
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
@@ -10,7 +10,7 @@ from a2a.types import (
     AgentSkill,
 )
 
-from agent_executor import ActivityAgentExecutor
+from .agent_executor import ActivityAgentExecutor
 
 def main(host='localhost', port=8020):
   data_reformatting_skill = AgentSkill(
@@ -30,9 +30,9 @@ def main(host='localhost', port=8020):
   )
 
   agent_card = AgentCard(
-    name="Frontend Data Agent - reformat and insert data",
+    name="Activity Agent",
     description=(
-      "Agent that take in data from other agents and reformats it into a set pattern"
+      "Agent that takes in data from other agents and reformats it into a set pattern "
       "which can then be inserted into a datastore."
     ),
     url=f"http://{host}:{port}/",
