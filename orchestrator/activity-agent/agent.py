@@ -1,12 +1,12 @@
 from google.adk.agents import Agent
-import prompts
+from . import prompts
 from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters
 import os
 
 from dotenv import load_dotenv
 
 load_dotenv()
-WEBSITE_MCP_PATH = "./tools/"
+WEBSITE_MCP_PATH = "./activity-agent/tools/"
 
 root_agent = Agent(
   name="activity_agent",
