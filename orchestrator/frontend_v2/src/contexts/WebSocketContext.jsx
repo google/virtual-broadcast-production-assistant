@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { initApi } from '@/api/webSocket';
+import { createWebSocketApi } from '@/api/webSocket';
 import { useAuth } from './AuthContext';
 
 const WebSocketContext = createContext(null);
@@ -13,49 +13,53 @@ export function WebSocketProvider({ children }) {
   const [retries, setRetries] = useState(0);
 
   const connect = useCallback(async () => {
-    if (!currentUser) {
-      console.log("WebSocketContext: no current user, not connecting");
+    if (!ws) {
+      console.log("WebSocketContext: ws not initialized, not connecting");
       return;
     }
     console.log("WebSocketContext: connecting...");
     setStatus('connecting');
-    const uid = currentUser.uid;
-
-    const callbacks = {
-      onConnect: () => {
-        setStatus('connected');
-        setLastError(null);
-        setRetries(0);
-      },
-      onDisconnect: () => {
-        setStatus('disconnected');
-        // Optional: implement retry logic here
-      },
-      onMessage: (message) => {
-        // Handle incoming messages
-        console.log('WebSocket message received:', message);
-      },
-      onError: (error) => {
-        console.error("WebSocketContext: connection error", error);
-        setLastError(error.message || 'WebSocket error');
-        setStatus('disconnected');
-      }
-    };
-
-    const wsInstance = initApi(callbacks, false, uid, getIdToken);
-    setWs(wsInstance);
-
-  }, [currentUser, getIdToken]);
+    await ws.connect();
+  }, [ws]);
 
   useEffect(() => {
-    if (currentUser && status === 'disconnected') {
+    if (currentUser && !ws) {
+      const uid = currentUser.uid;
+      const callbacks = {
+        onConnect: () => {
+          setStatus('connected');
+          setLastError(null);
+          setRetries(0);
+        },
+        onDisconnect: () => {
+          setStatus('disconnected');
+        },
+        onMessage: (message) => {
+          console.log('WebSocket message received:', message);
+        },
+        onError: (error) => {
+          console.error("WebSocketContext: connection error", error);
+          setLastError(error.message || 'WebSocket error');
+          setStatus('disconnected');
+        }
+      };
+      const wsInstance = createWebSocketApi(callbacks, false, uid, getIdToken);
+      setWs(wsInstance);
+    } else if (!currentUser && ws) {
+      ws.disconnect();
+      setWs(null);
+    }
+  }, [currentUser, getIdToken, ws]);
+
+  useEffect(() => {
+    if (ws && status === 'disconnected' && currentUser) {
       const timer = setTimeout(() => {
         setRetries(r => r + 1);
         connect();
       }, 3000); // 3-second delay before reconnecting
       return () => clearTimeout(timer);
     }
-  }, [currentUser, status, connect]);
+  }, [ws, status, connect, currentUser]);
 
   const sendMessage = (message) => {
     if (ws) {

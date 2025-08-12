@@ -1,6 +1,6 @@
 let websocket;
 
-export function initApi(callbacks, is_audio, uid, getToken) {
+export function createWebSocketApi(callbacks, is_audio, uid, getToken) {
   // Vite replaces `import.meta.env.VITE_...` with the value at build time.
   // It falls back to localhost for local development if the variable is not set.
   const final_ws_base_url = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:8080';
@@ -37,9 +37,8 @@ export function initApi(callbacks, is_audio, uid, getToken) {
     };
   }
 
-  connect();
-
   return {
+    connect,
     isAudio: is_audio,
     sendMessage(message) {
       if (websocket && websocket.readyState === WebSocket.OPEN) {
