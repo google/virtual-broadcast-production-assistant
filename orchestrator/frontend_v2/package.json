@@ -44,7 +44,7 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.5.2",
-    "firebase": "^12.1.0",
+    "firebase": "^10.1.0",
     "firebaseui": "^6.1.0",
     "framer-motion": "^12.4.7",
     "input-otp": "^1.4.2",
