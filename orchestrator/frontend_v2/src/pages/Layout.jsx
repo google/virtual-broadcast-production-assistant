@@ -1,8 +1,10 @@
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import PropTypes from 'prop-types';
 import { useAuth } from "@/contexts/AuthContext";
 import { useRundown } from "@/contexts/RundownContext";
+import { useWebSocket } from "@/contexts/WebSocketContext";
 import { createPageUrl } from "@/utils";
 import {
   Radio,
@@ -13,7 +15,6 @@ import {
   Settings,
   Wifi,
   WifiOff,
-  AlertCircle,
   CalendarDays,
   BookUser,
   Menu,
@@ -36,11 +37,11 @@ const navigationItems = [
 { title: "Settings", url: createPageUrl("Settings"), icon: Settings, description: "Config" }];
 
 
-export default function Layout({ children, currentPageName }) {
+export default function Layout({ children }) {
   const location = useLocation();
   const { currentUser, signOut, setIsUpgrading } = useAuth();
   const { rundownSystem, updateRundownSystem } = useRundown();
-  const [connectionStatus] = React.useState("connected"); // Mock for now
+  const { status: connectionStatus } = useWebSocket();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleRundownChange = (checked) => {
@@ -215,5 +216,8 @@ export default function Layout({ children, currentPageName }) {
         {children}
       </main>
     </div>);
-
 }
+
+Layout.propTypes = {
+  children: PropTypes.node.isRequired,
+};

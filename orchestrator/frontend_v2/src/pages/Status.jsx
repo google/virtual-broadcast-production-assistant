@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -12,42 +12,35 @@ import {
   Server,
   Database
 } from "lucide-react";
+import { useWebSocket } from "@/contexts/WebSocketContext";
 
-// Mock system status data
-const mockSystemStatus = {
-  websocket: {
-    status: "connected",
-    url: "ws://localhost:8000",
-    lastConnected: Date.now() - 30000,
-    retries: 0,
-    lastError: null
-  },
-  agents: [
+// Mock system status data for agents, as this is out of scope for the current task.
+const mockAgents = [
     { name: "CUEZ Agent", status: "online", lastSeen: Date.now() - 10000, responseTime: 120 },
     { name: "Sofie Agent", status: "online", lastSeen: Date.now() - 5000, responseTime: 85 },
     { name: "Content Agent", status: "busy", lastSeen: Date.now() - 2000, responseTime: 200 },
     { name: "Graphics Agent", status: "offline", lastSeen: Date.now() - 300000, responseTime: null }
-  ]
-};
+];
+
 
 export default function Status() {
-  const [systemStatus, setSystemStatus] = useState(mockSystemStatus);
+  const { status: wsStatus, lastError, retries, connect } = useWebSocket();
   const [isRetrying, setIsRetrying] = useState(false);
+  const [lastConnectedTime, setLastConnectedTime] = useState(null);
+
+  useEffect(() => {
+    if (wsStatus === 'connected') {
+      setLastConnectedTime(Date.now());
+    }
+  }, [wsStatus]);
 
   const handleRetryConnection = async () => {
     setIsRetrying(true);
-    // Simulate retry attempt
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setSystemStatus(prev => ({
-      ...prev,
-      websocket: {
-        ...prev.websocket,
-        retries: prev.websocket.retries + 1,
-        lastConnected: Date.now()
-      }
-    }));
-    setIsRetrying(false);
+    connect();
+    // The 'connecting' state will be managed by the context,
+    // but we can turn off the local isRetrying after a delay
+    // to re-enable the button if connection fails.
+    setTimeout(() => setIsRetrying(false), 3000);
   };
 
   const getStatusIcon = (status) => {
@@ -105,17 +98,17 @@ export default function Status() {
               </div>
               
               <div className="flex items-center gap-3">
-                <Badge variant="outline" className={getStatusColor(systemStatus.websocket.status)}>
-                  {systemStatus.websocket.status}
+                <Badge variant="outline" className={getStatusColor(wsStatus)}>
+                  {wsStatus}
                 </Badge>
                 <Button
                   variant="outline"
                   onClick={handleRetryConnection}
-                  disabled={isRetrying}
+                  disabled={isRetrying || wsStatus === 'connecting'}
                   className="gap-2"
                 >
-                  <RefreshCw className={`w-4 h-4 ${isRetrying ? 'animate-spin' : ''}`} />
-                  {isRetrying ? 'Retrying...' : 'Retry'}
+                  <RefreshCw className={`w-4 h-4 ${(isRetrying || wsStatus === 'connecting') ? 'animate-spin' : ''}`} />
+                  {wsStatus === 'connecting' ? 'Connecting...' : 'Retry'}
                 </Button>
               </div>
             </div>
@@ -126,7 +119,7 @@ export default function Status() {
                   <Server className="w-4 h-4 text-[#A6A0AA]" />
                   <span className="text-sm font-medium text-[#E6E1E5]">Endpoint</span>
                 </div>
-                <p className="text-xs text-[#A6A0AA] font-mono">{systemStatus.websocket.url}</p>
+                <p className="text-xs text-[#A6A0AA] font-mono">{import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:8000'}</p>
               </div>
               
               <div className="bg-white/5 rounded-lg p-4 border border-white/10">
@@ -134,7 +127,7 @@ export default function Status() {
                   <Activity className="w-4 h-4 text-[#A6A0AA]" />
                   <span className="text-sm font-medium text-[#E6E1E5]">Retries</span>
                 </div>
-                <p className="text-xl font-bold text-[#E6E1E5]">{systemStatus.websocket.retries}</p>
+                <p className="text-xl font-bold text-[#E6E1E5]">{retries}</p>
               </div>
               
               <div className="bg-white/5 rounded-lg p-4 border border-white/10">
@@ -143,18 +136,18 @@ export default function Status() {
                   <span className="text-sm font-medium text-[#E6E1E5]">Last Connected</span>
                 </div>
                 <p className="text-xs text-[#A6A0AA]">
-                  {new Date(systemStatus.websocket.lastConnected).toLocaleTimeString()}
+                  {lastConnectedTime ? new Date(lastConnectedTime).toLocaleTimeString() : 'N/A'}
                 </p>
               </div>
             </div>
 
-            {systemStatus.websocket.lastError && (
+            {lastError && (
               <div className="mt-4 p-3 bg-[#FF2D86]/10 border border-[#FF2D86]/30 rounded-lg">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-[#FF2D86]" />
                   <span className="text-sm font-medium text-[#FF2D86]">Last Error</span>
                 </div>
-                <p className="text-xs text-[#FF2D86] mt-1 font-mono">{systemStatus.websocket.lastError}</p>
+                <p className="text-xs text-[#FF2D86] mt-1 font-mono">{lastError}</p>
               </div>
             )}
           </div>
@@ -173,7 +166,7 @@ export default function Status() {
           </div>
 
           <div className="grid gap-4">
-            {systemStatus.agents.map((agent) => (
+            {mockAgents.map((agent) => (
               <div key={agent.name} className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
                 <div className="flex items-center gap-4">
                   {getStatusIcon(agent.status)}

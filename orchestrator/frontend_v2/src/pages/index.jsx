@@ -11,6 +11,7 @@ import Contacts from "./Contacts";
 import Auth from './Auth';
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { WebSocketProvider } from '@/contexts/WebSocketContext';
 
 const PAGES = {
     Live: Live,
@@ -43,20 +44,22 @@ function PagesContent() {
     const currentPage = _getCurrentPage(location.pathname);
 
     return (
-        <Layout currentPageName={currentPage}>
-            <Routes>
-                <Route path="/" element={<Live />} />
-                <Route path="/live" element={<Live />} />
-                <Route path="/console" element={<Console />} />
-                <Route path="/agents" element={<Agents />} />
-                <Route path="/tasks" element={<Tasks />} />
-                <Route path="/media" element={<Media />} />
-                <Route path="/status" element={<Status />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/schedule" element={<Schedule />} />
-                <Route path="/contacts" element={<Contacts />} />
-            </Routes>
-        </Layout>
+        <WebSocketProvider>
+            <Layout currentPageName={currentPage}>
+                <Routes>
+                    <Route path="/" element={<Live />} />
+                    <Route path="/live" element={<Live />} />
+                    <Route path="/console" element={<Console />} />
+                    <Route path="/agents" element={<Agents />} />
+                    <Route path="/tasks" element={<Tasks />} />
+                    <Route path="/media" element={<Media />} />
+                    <Route path="/status" element={<Status />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/schedule" element={<Schedule />} />
+                    <Route path="/contacts" element={<Contacts />} />
+                </Routes>
+            </Layout>
+        </WebSocketProvider>
     );
 }
 
