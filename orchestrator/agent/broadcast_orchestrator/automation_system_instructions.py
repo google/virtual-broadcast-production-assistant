@@ -7,12 +7,12 @@ CUEZ_CONFIG = {
     "config_name":
     "CUEZ_AGENT",
     "agent_name":
-    "CUEZ Rundown Agent",
+    "Cuez Rundown Agent",
     "instructions":
     """
-You are configured to interact with the CUEZ rundown system.
-- Use the `CUEZ Rundown Agent` for all rundown-related tasks.
-- All your responses should be tailored for an operator of CUEZ.
+You are configured to interact with the Cuez rundown system.
+- Use the `Cuez Rundown Agent` for all rundown-related tasks.
+- All your responses should be tailored for an operator of Cuez.
 """
 }
 

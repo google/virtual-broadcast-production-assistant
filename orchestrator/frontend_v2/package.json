@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@base44/sdk": "^0.1.2",
+    "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^4.1.2",
     "@radix-ui/react-accordion": "^1.2.3",
     "@radix-ui/react-alert-dialog": "^1.1.6",
@@ -43,6 +44,8 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.5.2",
+    "firebase": "^10.14.1",
+    "firebaseui": "^6.1.0",
     "framer-motion": "^12.4.7",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.475.0",

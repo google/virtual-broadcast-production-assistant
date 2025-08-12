@@ -21,7 +21,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir gunicorn
 
 # Copy the rest of the application's code.
-COPY . .
+COPY ./.env ./.env
+COPY ./broadcast_orchestrator ./broadcast_orchestrator
 
 # Cloud Run automatically sets the PORT environment variable.
 # Gunicorn will listen on the port specified by the PORT variable.

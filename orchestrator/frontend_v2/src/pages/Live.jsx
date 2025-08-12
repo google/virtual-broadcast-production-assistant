@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -19,20 +19,111 @@ import ChatPanel from "../components/live/ChatPanel";
 import TelemetryPanel from "../components/live/TelemetryPanel";
 import AgentStatusList from "../components/live/AgentStatusList";
 import MicControl from "../components/live/MicControl";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRundown } from "@/contexts/RundownContext";
+import { initApi } from "@/api/webSocket";
+import { initAudio, stopAudioRecording, playAudio, stopAudioPlayback } from "@/lib/audio";
 
 export default function Live() {
   const [onAirMode, setOnAirMode] = useState(true);
   const [micEnabled, setMicEnabled] = useState(false);
   const [currentMessage, setCurrentMessage] = useState("");
-  const [messages, setMessages] = useState([
-    {
-      id: "1",
-      role: "assistant",
-      text: "Control room connection established. All systems operational.",
-      timestamp: Date.now() - 30000,
-      partial: false,
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
+  const [isAgentReplying, setIsAgentReplying] = useState(false);
+  const { currentUser } = useAuth();
+  const { rundownSystem } = useRundown();
+  const apiRef = useRef(null);
+  const currentMessageIdRef = useRef(null);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // Clear messages and show a reconfiguring message when rundownSystem changes
+    setMessages([
+      {
+        id: 'reconfiguring-message',
+        role: 'assistant',
+        text: `Reconfiguring for ${rundownSystem.toUpperCase()}...`,
+        timestamp: Date.now(),
+        partial: false,
+      },
+    ]);
+
+    const callbacks = {
+      onMessage: (message) => {
+        if (message.turn_complete) {
+          setIsAgentReplying(false);
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === currentMessageIdRef.current ? { ...msg, partial: false } : msg
+            )
+          );
+          currentMessageIdRef.current = null;
+          return;
+        }
+
+        if (message.interrupted) {
+          stopAudioPlayback();
+          return;
+        }
+
+        if (message.mime_type === 'audio/pcm') {
+          playAudio(message.data);
+        }
+
+        if (message.mime_type === 'text/plain') {
+          setIsAgentReplying(false);
+          setMessages((prevMessages) => {
+            const existingMsg = prevMessages.find(msg => msg.id === currentMessageIdRef.current);
+            if (existingMsg) {
+              return prevMessages.map((msg) =>
+                msg.id === currentMessageIdRef.current
+                  ? { ...msg, text: msg.text + message.data }
+                  : msg
+              );
+            } else {
+              currentMessageIdRef.current = `agent-message-${Date.now()}`;
+              return [
+                ...prevMessages,
+                {
+                  id: currentMessageIdRef.current,
+                  role: 'assistant',
+                  text: message.data,
+                  timestamp: Date.now(),
+                  partial: true,
+                },
+              ];
+            }
+          });
+        }
+      },
+      onConnect: () => {
+        console.log("connected");
+        // Replace the reconfiguring message with the initial operational message
+        setMessages([
+          {
+            id: "1",
+            role: "assistant",
+            text: "Orchestrator Connected",
+            timestamp: Date.now(),
+            partial: false,
+          },
+        ]);
+      },
+      onDisconnect: () => {
+        console.log("disconnected");
+      }
+    };
+    apiRef.current = initApi(callbacks, micEnabled, currentUser.uid, () =>
+      currentUser.getIdToken()
+    );
+
+    return () => {
+      if (apiRef.current) {
+        apiRef.current.disconnect();
+      }
+    };
+  }, [currentUser, micEnabled, rundownSystem]);
 
   const handleSendMessage = () => {
     if (!currentMessage.trim()) return;
@@ -47,18 +138,30 @@ export default function Live() {
 
     setMessages((prev) => [...prev, newMessage]);
     setCurrentMessage("");
+    setIsAgentReplying(true);
 
-    // Simulate assistant response
-    setTimeout(() => {
-      const response = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        text: "Processing your request...",
-        timestamp: Date.now(),
-        partial: true,
-      };
-      setMessages((prev) => [...prev, response]);
-    }, 500);
+    if (apiRef.current) {
+      apiRef.current.sendMessage({
+        mime_type: 'text/plain',
+        data: currentMessage,
+      });
+    }
+  };
+
+  const handleMicToggle = (enabled) => {
+    setMicEnabled(enabled);
+    if (enabled) {
+      initAudio((pcmData) => {
+        if (apiRef.current) {
+          apiRef.current.sendMessage({
+            mime_type: 'audio/pcm',
+            data: pcmData,
+          });
+        }
+      });
+    } else {
+      stopAudioRecording();
+    }
   };
 
   return (
@@ -92,12 +195,12 @@ export default function Live() {
 
         {/* Chat Panel - Responsive height */}
         <div className="flex-1 overflow-hidden min-h-[200px] lg:min-h-0">
-          <ChatPanel messages={messages} />
+          <ChatPanel messages={messages} isAgentReplying={isAgentReplying} />
         </div>
 
         {/* Input Controls */}
         <div className="p-4 border-t border-white/8 space-y-4">
-          <MicControl enabled={micEnabled} onToggle={setMicEnabled} />
+          <MicControl enabled={micEnabled} onToggle={handleMicToggle} />
           
           <div className="flex gap-2">
             <Input

@@ -19,6 +19,5 @@ infrastructure/
 */terraform.tfvars
 
 # Local environment variables
-**/.env
 local-env-vars.txt
 .DS_Store

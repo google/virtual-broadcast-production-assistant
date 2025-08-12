@@ -299,7 +299,14 @@ class RoutingAgent:
         rundown_instructions = self._get_formatted_instructions(
             rundown_system_preference)
 
-        # Set the template variables in the state for the ADK to format.
+        # If the preferred agent failed to load, override the instructions
+        # to inform the model (and user) about the problem.
+        if not rundown_agent_connection and preferred_system_config:
+            agent_name = preferred_system_config.get('agent_name',
+                                                   rundown_system_preference)
+            rundown_instructions = (
+                "IMPORTANT: The preferred rundown system agent "
+                f
         callback_context.state[
             'rundown_system_instructions'] = rundown_instructions
         callback_context.state['available_agents_list'] = available_agents_list
@@ -357,9 +364,11 @@ class RoutingAgent:
         }
 
         client = None
-        if agent_name in rundown_agent_names:
+        # Case-insensitive check for rundown agents
+        if agent_name.lower() in [name.lower() for name in rundown_agent_names]:
             rundown_connection = state.get('rundown_agent_connection')
-            if rundown_connection and rundown_connection.card.name == agent_name:
+            # Case-insensitive comparison with the card name
+            if rundown_connection and rundown_connection.card.name.lower() == agent_name.lower():
                 client = rundown_connection
             else:
                 error_message = (
