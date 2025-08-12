@@ -304,14 +304,9 @@ class RoutingAgent:
         if not rundown_agent_connection and preferred_system_config:
             agent_name = preferred_system_config.get('agent_name',
                                                    rundown_system_preference)
-            logger.info("INSTRUCTIONS AGENT NAME: %s", agent_name)
             rundown_instructions = (
-                f"IMPORTANT: The preferred rundown system agent ('{agent_name}') "
-                "failed to load. Inform the user that you cannot connect to it "
-                "and that they should check the agent's status. Do not attempt to use it."
-            )
-
-        # Set the template variables in the state for the ADK to format.
+                "IMPORTANT: The preferred rundown system agent "
+                f
         callback_context.state[
             'rundown_system_instructions'] = rundown_instructions
         callback_context.state['available_agents_list'] = available_agents_list

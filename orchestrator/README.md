@@ -58,23 +58,6 @@ Before launching the services, you must create environment files for both the ag
 
 You can now open your browser to the frontend address and start using the orchestrator.
 
-## Automated Local Development
-
-For convenience, a script is provided to start both the agent and the v2 frontend with a single command.
-
-1.  **Ensure Prerequisites are Met:** Make sure you have completed the environment configuration steps for both the agent and the frontend as described in the "Quick Start" section (i.e., your `.env` and `.env.local` files are in place).
-
-2.  **Make the script executable:**
-    ```bash
-    chmod +x start-local-dev.sh
-    ```
-
-3.  **Run the script:**
-    ```bash
-    ./start-local-dev.sh
-    ```
-    This will launch both services in the background. To stop both services, simply press `Ctrl+C` in the terminal where the script is running.
-
 ## Alternative Setups
 
 ### Running with the Legacy Frontend

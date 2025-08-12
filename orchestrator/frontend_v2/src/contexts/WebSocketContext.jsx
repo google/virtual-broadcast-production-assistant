@@ -13,8 +13,11 @@ export function WebSocketProvider({ children }) {
   const [retries, setRetries] = useState(0);
 
   const connect = useCallback(async () => {
-    if (!currentUser) return;
-
+    if (!currentUser) {
+      console.log("WebSocketContext: no current user, not connecting");
+      return;
+    }
+    console.log("WebSocketContext: connecting...");
     setStatus('connecting');
     const uid = currentUser.uid;
 
@@ -33,6 +36,7 @@ export function WebSocketProvider({ children }) {
         console.log('WebSocket message received:', message);
       },
       onError: (error) => {
+        console.error("WebSocketContext: connection error", error);
         setLastError(error.message || 'WebSocket error');
         setStatus('disconnected');
       }
