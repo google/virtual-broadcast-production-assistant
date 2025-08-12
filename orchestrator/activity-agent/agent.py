@@ -9,7 +9,7 @@ load_dotenv()
 WEBSITE_MCP_PATH = "./tools/"
 
 root_agent = Agent(
-  name="frontend_data_agent",
+  name="activity_agent",
   model="gemini-2.5-flash",
   description=prompts.ROOT_PROMPT,
   instruction=prompts.INSTRUCTIONS,

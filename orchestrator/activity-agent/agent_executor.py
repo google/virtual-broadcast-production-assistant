@@ -10,7 +10,7 @@ from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
 from google.genai import types
 
 
-class FrontendDataAgentExecutor(AgentExecutor):
+class ActivityAgentExecutor(AgentExecutor):
     """Test AgentProxy Implementation."""
 
     def __init__(self, agent, status_message="Processing request..."):

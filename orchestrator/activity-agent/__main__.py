@@ -10,7 +10,7 @@ from a2a.types import (
     AgentSkill,
 )
 
-from agent_executor import FrontendDataAgentExecutor
+from agent_executor import ActivityAgentExecutor
 
 def main(host='localhost', port=8020):
   data_reformatting_skill = AgentSkill(
@@ -47,7 +47,7 @@ def main(host='localhost', port=8020):
 
   request_handler = DefaultRequestHandler(
     task_store=InMemoryTaskStore(),
-    agent_executor=FrontendDataAgentExecutor(
+    agent_executor=ActivityAgentExecutor(
       agent=frontend_data_agent,
     ),
   )
