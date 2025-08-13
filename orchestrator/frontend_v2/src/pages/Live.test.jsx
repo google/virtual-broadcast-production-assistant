@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { BrowserRouter as Router } from 'react-router-dom';
 import Live from './Live';
 import { useAuth } from '@/contexts/AuthContext';
@@ -77,5 +78,27 @@ describe('Live page', () => {
     });
 
     expect(screen.getByText('Agent connection disconnected')).toBeInTheDocument();
+  });
+
+  it('should toggle microphone on and off', async () => {
+    const user = userEvent.setup();
+    render(
+      <Router>
+        <Live />
+      </Router>
+    );
+
+    const micButton = screen.getByRole('button', { name: /mic off/i });
+    expect(micButton).toBeInTheDocument();
+
+    await user.click(micButton);
+
+    const recordingButton = screen.getByRole('button', { name: /recording/i });
+    expect(recordingButton).toBeInTheDocument();
+
+    await user.click(recordingButton);
+
+    const micOffButton = screen.getByRole('button', { name: /mic off/i });
+    expect(micOffButton).toBeInTheDocument();
   });
 });
