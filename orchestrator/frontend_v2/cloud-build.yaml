@@ -16,6 +16,13 @@ steps:
     entrypoint: 'npm'
     args: ['test']
     dir: 'orchestrator/frontend_v2'
+    env:
+      - 'VITE_FIREBASE_API_KEY=$_VITE_FIREBASE_API_KEY'
+      - 'VITE_FIREBASE_AUTH_DOMAIN=$_VITE_FIREBASE_AUTH_DOMAIN'
+      - 'VITE_FIREBASE_PROJECT_ID=$_VITE_FIREBASE_PROJECT_ID'
+      - 'VITE_FIREBASE_STORAGE_BUCKET=$_VITE_FIREBASE_STORAGE_BUCKET'
+      - 'VITE_FIREBASE_MESSAGING_SENDER_ID=$_VITE_FIREBASE_MESSAGING_SENDER_ID'
+      - 'VITE_FIREBASE_APP_ID=$_VITE_FIREBASE_APP_ID'
 
 
   # 2. Build the static assets with Vite
