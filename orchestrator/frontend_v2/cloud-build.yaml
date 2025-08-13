@@ -10,6 +10,13 @@ steps:
     args: ['install']
     dir: 'orchestrator/frontend_v2'
 
+  # 2. Run tests
+  - name: 'gcr.io/cloud-builders/npm'
+    id: 'Run tests'
+    entrypoint: 'npm'
+    args: ['test']
+    dir: 'orchestrator/frontend_v2'
+
 
   # 2. Build the static assets with Vite
   # This step runs the Vite build process. It injects the necessary environment
