@@ -9,6 +9,7 @@ from typing import Any
 from dotenv import load_dotenv
 import httpx
 from a2a.client import A2ACardResolver
+from a2a.client.errors import A2AClientTimeoutError
 from a2a.types import (AgentCard, MessageSendParams, Part, SendMessageRequest,
                        SendMessageResponse, SendMessageSuccessResponse, Task,
                        TextPart, Message)
@@ -428,6 +429,13 @@ class RoutingAgent:
                 "Network connection failed when trying to reach agent "
                 f"'{agent_name}'. Please ensure the agent is running and "
                 "accessible.")
+            logger.error("ERROR: %s Details: %s", error_message, e)
+            return [error_message]
+        except A2AClientTimeoutError as e:
+            error_message = (
+                f"Request to agent '{agent_name}' timed out. The agent might be "
+                "overloaded or unresponsive."
+            )
             logger.error("ERROR: %s Details: %s", error_message, e)
             return [error_message]
         logger.info("send_response %s", send_response)
