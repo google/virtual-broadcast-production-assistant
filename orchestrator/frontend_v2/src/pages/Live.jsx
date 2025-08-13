@@ -105,7 +105,20 @@ export default function Live() {
         {
           id: "1",
           role: "assistant",
-          text: "Orchestrator Connected",
+          text: "Connection established",
+          timestamp: Date.now(),
+          partial: false,
+        },
+      ]);
+    };
+
+    const onClose = () => {
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          id: `disconnect-message-${Date.now()}`,
+          role: 'assistant',
+          text: 'Agent connection disconnected',
           timestamp: Date.now(),
           partial: false,
         },
@@ -114,11 +127,13 @@ export default function Live() {
 
     const cleanupMessage = addEventListener('message', onMessage);
     const cleanupOpen = addEventListener('open', onOpen);
+    const cleanupClose = addEventListener('close', onClose);
 
 
     return () => {
       cleanupMessage();
       cleanupOpen();
+      cleanupClose();
     };
   }, [currentUser, rundownSystem, addEventListener]);
 
@@ -147,6 +162,7 @@ export default function Live() {
     setMicEnabled(enabled);
     if (enabled) {
       initAudio((pcmData) => {
+        setIsAgentReplying(true);
         sendMessage({
           mime_type: 'audio/pcm',
           data: pcmData,
