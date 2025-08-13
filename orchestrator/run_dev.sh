@@ -15,7 +15,7 @@ fi
 
 # Start the backend in the background using the venv's uvicorn
 echo "Starting backend..."
-(cd agent && ../"$AGENT_VENV_DIR/bin/uvicorn" main:app --reload --port 8080) > backend.log 2>&1 &
+(cd agent && ../"$AGENT_VENV_DIR/bin/uvicorn" broadcast_orchestrator.main:app --reload --port 8080) > backend.log 2>&1 &
 BACKEND_PID=$!
 
 LOG_MSG="Backend logs are being written to backend.log. You can view them with 'tail -f backend.log'"
