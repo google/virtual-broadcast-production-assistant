@@ -15,7 +15,7 @@ fi
 
 # Start the backend in the background using the venv's uvicorn
 echo "Starting backend..."
-(cd agent && ../"$AGENT_VENV_DIR/bin/uvicorn" main:app --reload --port 8080) > backend.log 2>&1 &
+(cd agent && ../"$AGENT_VENV_DIR/bin/uvicorn" broadcast_orchestrator.main:app --reload --port 8080) > backend.log 2>&1 &
 BACKEND_PID=$!
 
 LOG_MSG="Backend logs are being written to backend.log. You can view them with 'tail -f backend.log'"
@@ -33,11 +33,11 @@ echo "Installing frontend dependencies..."
 cleanup() {
     echo
     echo "--- Exiting ---"
-    echo "Stopping backend (PID: $BACKEND_PID)..."
-    if kill $BACKEND_PID; then
-        echo "Backend process killed."
+    echo "Stopping backend process group (PGID: $BACKEND_PID)..."
+    if kill -- -$BACKEND_PID; then
+        echo "Backend process group killed."
     else
-        echo "Backend process was not running."
+        echo "Backend process group was not running or could not be killed."
     fi
     echo "Removing log file..."
     rm backend.log
