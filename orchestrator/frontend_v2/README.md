@@ -63,3 +63,20 @@ npm run build
 ```
 
 The optimized static assets will be placed in the `dist` directory.
+
+## Testing
+
+This project uses [Vitest](https://vitest.dev/) for unit and component testing, along with [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) for rendering components.
+
+### Running Tests
+
+To run the tests, use the following commands from within the `frontend_v2` directory:
+
+-   **Run all tests in watch mode:**
+    ```bash
+    npm test
+    ```
+-   **Run all tests with a graphical UI:**
+    ```bash
+    npm run test:ui
+    ```
