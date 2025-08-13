@@ -7,7 +7,8 @@ import TelemetryPanel from "../components/live/TelemetryPanel";
 import MicControl from "../components/live/MicControl";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRundown } from "@/contexts/RundownContext";
-import { initApi } from "@/api/webSocket";
+import { useSocket } from "@/contexts/SocketContext";
+import { sendMessage } from "@/api/webSocket";
 import { initAudio, stopAudioRecording, playAudio, stopAudioPlayback } from "@/lib/audio";
 
 export default function Console() {
@@ -16,12 +17,10 @@ export default function Console() {
   const [currentMessage, setCurrentMessage] = useState("");
   const [micEnabled, setMicEnabled] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [api, setApi] = useState(null);
+  const { addEventListener } = useSocket();
   const currentMessageIdRef = useRef(null);
 
   useEffect(() => {
-    if (!currentUser || !currentUser.uid) return;
-
     // Clear messages and show a reconfiguring message when rundownSystem changes
     setMessages([
       {
@@ -33,87 +32,76 @@ export default function Console() {
       },
     ]);
 
-    function getToken() {
-      return currentUser.getIdToken();
-    }
+    const onOpen = () => {
+      console.log("WebSocket connected");
+      setMessages([
+        {
+          id: "1",
+          role: "assistant",
+          text: "Full console mode active. How can I assist with your broadcast?",
+          timestamp: Date.now(),
+          partial: false,
+        },
+      ]);
+    };
 
-    const newApi = initApi(
-      {
-        onConnect: () => {
-          console.log("WebSocket connected");
-          setMessages([
-            {
-              id: "1",
-              role: "assistant",
-              text: "Full console mode active. How can I assist with your broadcast?",
-              timestamp: Date.now(),
-              partial: false,
-            },
-          ]);
-        },
-        onDisconnect: () => {
-          console.log("WebSocket disconnected");
-        },
-        onMessage: (message) => {
-            if (message.turn_complete) {
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === currentMessageIdRef.current ? { ...msg, partial: false } : msg
-                )
-              );
-              currentMessageIdRef.current = null;
-              return;
-            }
-    
-            if (message.interrupted) {
-              stopAudioPlayback();
-              return;
-            }
-    
-            if (message.mime_type === 'audio/pcm') {
-              playAudio(message.data);
-            }
-    
-            if (message.mime_type === 'text/plain') {
-              setMessages((prevMessages) => {
-                const existingMsg = prevMessages.find(msg => msg.id === currentMessageIdRef.current);
-                if (existingMsg) {
-                  return prevMessages.map((msg) =>
-                    msg.id === currentMessageIdRef.current
-                      ? { ...msg, text: msg.text + message.data }
-                      : msg
-                  );
-                } else {
-                  currentMessageIdRef.current = `agent-message-${Date.now()}`;
-                  return [
-                    ...prevMessages,
-                    {
-                      id: currentMessageIdRef.current,
-                      role: 'assistant',
-                      text: message.data,
-                      timestamp: Date.now(),
-                      partial: true,
-                    },
-                  ];
-                }
-              });
-            }
-        },
-      },
-      micEnabled,
-      currentUser.uid,
-      getToken
-    );
+    const onMessage = (message) => {
+      if (message.turn_complete) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === currentMessageIdRef.current ? { ...msg, partial: false } : msg
+          )
+        );
+        currentMessageIdRef.current = null;
+        return;
+      }
 
-    setApi(newApi);
+      if (message.interrupted) {
+        stopAudioPlayback();
+        return;
+      }
+
+      if (message.mime_type === 'audio/pcm') {
+        playAudio(message.data);
+      }
+
+      if (message.mime_type === 'text/plain') {
+        setMessages((prevMessages) => {
+          const existingMsg = prevMessages.find(msg => msg.id === currentMessageIdRef.current);
+          if (existingMsg) {
+            return prevMessages.map((msg) =>
+              msg.id === currentMessageIdRef.current
+                ? { ...msg, text: msg.text + message.data }
+                : msg
+            );
+          } else {
+            currentMessageIdRef.current = `agent-message-${Date.now()}`;
+            return [
+              ...prevMessages,
+              {
+                id: currentMessageIdRef.current,
+                role: 'assistant',
+                text: message.data,
+                timestamp: Date.now(),
+                partial: true,
+              },
+            ];
+          }
+        });
+      }
+    };
+
+    const cleanupOpen = addEventListener('open', onOpen);
+    const cleanupMessage = addEventListener('message', onMessage);
 
     return () => {
-      newApi.disconnect();
+      cleanupOpen();
+      cleanupMessage();
     };
-  }, [currentUser, rundownSystem, micEnabled]);
+  }, [rundownSystem, addEventListener]);
 
   const handleSendMessage = () => {
-    if (!currentMessage.trim() || !api) return;
+    if (!currentMessage.trim()) return;
 
     const newMessage = {
       id: Date.now().toString(),
@@ -124,7 +112,7 @@ export default function Console() {
     };
 
     setMessages((prev) => [...prev, newMessage]);
-    api.sendMessage({
+    sendMessage({
       mime_type: 'text/plain',
       data: currentMessage,
     });
@@ -135,12 +123,10 @@ export default function Console() {
     setMicEnabled(enabled);
     if (enabled) {
       initAudio((pcmData) => {
-        if (api) {
-          api.sendMessage({
-            mime_type: 'audio/pcm',
-            data: pcmData,
-          });
-        }
+        sendMessage({
+          mime_type: 'audio/pcm',
+          data: pcmData,
+        });
       });
     } else {
       stopAudioRecording();
