@@ -9,7 +9,7 @@ export default function MicControl({ enabled, onToggle }) {
     <div className="space-y-3">
       {/* Mic Toggle */}
       <Button
-        onClick={onToggle}
+        onClick={() => onToggle(!enabled)}
         className={`w-full h-12 font-semibold transition-all duration-200 ${
           enabled
             ? "bg-[#FF2D86] hover:bg-[#FF2D86]/90 text-white"

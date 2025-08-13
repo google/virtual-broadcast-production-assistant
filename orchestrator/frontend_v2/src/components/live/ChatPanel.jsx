@@ -33,7 +33,7 @@ export default function ChatPanel({ messages, isAgentReplying }) {
           </div>
         ))}
         {isAgentReplying && (
-          <div className="flex justify-start">
+          <div className="flex justify-start" data-testid="agent-replying-indicator">
             <div className="max-w-[85%] rounded-xl p-3 bg-white/10 text-[#E6E1E5]">
               <div className="flex items-center gap-2 mt-2">
                 <div className="flex gap-1">
