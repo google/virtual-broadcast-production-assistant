@@ -3,6 +3,7 @@ import { render, act } from '@testing-library/react';
 import { RundownProvider, useRundown } from './RundownContext';
 import { SocketProvider } from './SocketContext';
 import { AuthProvider } from './AuthContext';
+import { doc, setDoc } from 'firebase/firestore';
 
 // Mock dependencies
 jest.mock('./SocketContext', () => ({
@@ -41,7 +42,7 @@ describe('RundownProvider', () => {
     require('./AuthContext').useAuth.mockReturnValue({ currentUser: { uid: 'test-user' } });
   });
 
-  it('calls reconnect when the rundown system is updated', async () => {
+  it('calls reconnect and saves to firestore when the rundown system is updated', async () => {
     const { getByText } = render(
       <AuthProvider>
         <SocketProvider>
@@ -64,5 +65,9 @@ describe('RundownProvider', () => {
     // Check that the state updated and reconnect was called
     expect(getByText('sofie')).toBeInTheDocument();
     expect(mockReconnect).toHaveBeenCalledTimes(1);
+
+    // Check that firestore was updated
+    expect(doc).toHaveBeenCalledWith(expect.anything(), 'user_preferences', 'test-user');
+    expect(setDoc).toHaveBeenCalledWith(expect.anything(), { rundown_system: 'sofie' }, { merge: true });
   });
 });
