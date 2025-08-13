@@ -86,19 +86,20 @@ export default function Layout({ children, currentPageName }) {
 
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="hidden sm:flex items-center space-x-2 mr-4">
-              <Label htmlFor="rundown-system-toggle" className={rundownSystem !== 'cuez' ? 'text-gray-400' : ''}>CUEZ</Label>
+              <Label htmlFor="rundown-system-toggle" className={rundownSystem === 'cuez' ? 'text-green-400 font-bold' : 'text-gray-400'}>CUEZ</Label>
               <Switch
                 id="rundown-system-toggle"
                 checked={rundownSystem === "sofie"}
                 onCheckedChange={handleRundownChange}
               />
-              <Label htmlFor="rundown-system-toggle" className={rundownSystem !== 'sofie' ? 'text-gray-400' : ''}>SOFIE</Label>
+              <Label htmlFor="rundown-system-toggle" className={rundownSystem === 'sofie' ? 'text-green-400 font-bold' : 'text-gray-400'}>SOFIE</Label>
             </div>
 
             {currentUser && currentUser.isAnonymous && (
               <Button
                 variant="outline"
                 size="sm"
+                className="text-foreground"
                 onClick={() => {
                   setIsUpgrading(true);
                   signOut();
@@ -107,7 +108,7 @@ export default function Layout({ children, currentPageName }) {
                 Login with Google
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => signOut()}>
+            <Button variant="outline" size="sm" className="text-foreground" onClick={() => signOut()}>
               Sign Out
             </Button>
             {/* Connection Status - Responsive sizing */}
@@ -171,13 +172,13 @@ export default function Layout({ children, currentPageName }) {
 
             <div className="mt-4 pt-4 border-t border-white/8 flex justify-center">
               <div className="flex items-center space-x-2">
-                <Label htmlFor="rundown-system-toggle-mobile" className={rundownSystem !== 'cuez' ? 'text-gray-400' : ''}>CUEZ</Label>
+                <Label htmlFor="rundown-system-toggle-mobile" className={rundownSystem === 'cuez' ? 'text-green-400 font-bold' : 'text-gray-400'}>CUEZ</Label>
                 <Switch
                   id="rundown-system-toggle-mobile"
                   checked={rundownSystem === "sofie"}
                   onCheckedChange={handleRundownChange}
                 />
-                <Label htmlFor="rundown-system-toggle-mobile" className={rundownSystem !== 'sofie' ? 'text-gray-400' : ''}>SOFIE</Label>
+                <Label htmlFor="rundown-system-toggle-mobile" className={rundownSystem === 'sofie' ? 'text-green-400 font-bold' : 'text-gray-400'}>SOFIE</Label>
               </div>
             </div>
 
