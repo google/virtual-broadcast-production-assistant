@@ -1,0 +1,10 @@
+project_id = "peerless-kit-450316-g1"
+region     = "europe-west1"
+
+# Orchestrator
+orchestrator_service_name  = "orchestrator-agent"
+orchestrator_custom_domain = "orchestrator.example.com"
+
+# DNS
+dns_zone_name = "example-com"
+root_domain   = "example.com"
