@@ -13,11 +13,6 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// For debugging purposes, log the config to the console.
-// This will show what values are being baked into the application at build time.
-// After deploying, check the browser's developer console to see this output.
-console.log("Firebase Config:", JSON.stringify(firebaseConfig, null, 2));
-
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
