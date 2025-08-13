@@ -147,6 +147,7 @@ export default function Live() {
     setMicEnabled(enabled);
     if (enabled) {
       initAudio((pcmData) => {
+        setIsAgentReplying(true);
         sendMessage({
           mime_type: 'audio/pcm',
           data: pcmData,
