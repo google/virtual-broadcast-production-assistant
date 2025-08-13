@@ -33,11 +33,11 @@ echo "Installing frontend dependencies..."
 cleanup() {
     echo
     echo "--- Exiting ---"
-    echo "Stopping backend (PID: $BACKEND_PID)..."
-    if kill $BACKEND_PID; then
-        echo "Backend process killed."
+    echo "Stopping backend process group (PGID: $BACKEND_PID)..."
+    if kill -- -$BACKEND_PID; then
+        echo "Backend process group killed."
     else
-        echo "Backend process was not running."
+        echo "Backend process group was not running or could not be killed."
     fi
     echo "Removing log file..."
     rm backend.log
