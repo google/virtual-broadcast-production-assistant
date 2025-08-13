@@ -160,9 +160,9 @@ export default function Live() {
 
   const handleMicToggle = (enabled) => {
     setMicEnabled(enabled);
+    setIsAgentReplying(enabled);
     if (enabled) {
       initAudio((pcmData) => {
-        setIsAgentReplying(true);
         sendMessage({
           mime_type: 'audio/pcm',
           data: pcmData,
@@ -170,6 +170,7 @@ export default function Live() {
       });
     } else {
       stopAudioRecording();
+      setIsAgentReplying(false);
     }
   };
 

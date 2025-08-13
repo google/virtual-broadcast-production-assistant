@@ -80,7 +80,7 @@ describe('Live page', () => {
     expect(screen.getByText('Agent connection disconnected')).toBeInTheDocument();
   });
 
-  it('should toggle microphone on and off', async () => {
+  it('should toggle microphone on and off and update agent replying status', async () => {
     const user = userEvent.setup();
     render(
       <Router>
@@ -88,17 +88,25 @@ describe('Live page', () => {
       </Router>
     );
 
+    // Initial state: Mic is off, no agent replying indicator
     const micButton = screen.getByRole('button', { name: /mic off/i });
     expect(micButton).toBeInTheDocument();
+    expect(screen.queryByTestId('agent-replying-indicator')).not.toBeInTheDocument();
 
+    // Turn mic on
     await user.click(micButton);
 
+    // Mic is on, agent replying indicator should be visible
     const recordingButton = screen.getByRole('button', { name: /recording/i });
     expect(recordingButton).toBeInTheDocument();
+    expect(screen.getByTestId('agent-replying-indicator')).toBeInTheDocument();
 
+    // Turn mic off
     await user.click(recordingButton);
 
+    // Mic is off, agent replying indicator should be gone
     const micOffButton = screen.getByRole('button', { name: /mic off/i });
     expect(micOffButton).toBeInTheDocument();
+    expect(screen.queryByTestId('agent-replying-indicator')).not.toBeInTheDocument();
   });
 });
