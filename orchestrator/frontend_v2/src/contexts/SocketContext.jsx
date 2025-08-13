@@ -52,8 +52,20 @@ export const SocketProvider = ({ children }) => {
     return () => {};
   }, [socket]);
 
+  const reconnect = useCallback(async () => {
+    disconnectSocket();
+    if (currentUser) {
+      try {
+        const socket_instance = await connectSocket(currentUser.uid, () => currentUser.getIdToken());
+        setSocket(socket_instance);
+      } catch (error) {
+        console.error("Failed to reconnect WebSocket:", error);
+      }
+    }
+  }, [currentUser]);
 
-  const value = { socket, addEventListener };
+
+  const value = { socket, addEventListener, reconnect };
 
   return (
     <SocketContext.Provider value={value}>{children}</SocketContext.Provider>
