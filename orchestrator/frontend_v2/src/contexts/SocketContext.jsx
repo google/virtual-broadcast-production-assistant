@@ -30,18 +30,24 @@ export const SocketProvider = ({ children }) => {
     }
   }, [currentUser]);
 
-  const addEventListener = useCallback((event, handler) => {
+  const addEventListener = useCallback((eventName, handler) => {
     if (socket) {
-      const messageHandler = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          handler(message);
-        } catch (error) {
-          console.error("Failed to parse WebSocket message:", error);
-        }
-      };
-      socket.addEventListener(event, messageHandler);
-      return () => socket.removeEventListener(event, messageHandler);
+      if (eventName === 'message') {
+        const messageHandler = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            handler(message);
+          } catch (error) {
+            console.error("Failed to parse WebSocket message:", error);
+          }
+        };
+        socket.addEventListener('message', messageHandler);
+        return () => socket.removeEventListener('message', messageHandler);
+      } else {
+        // For other events like 'open', 'close', 'error', just pass the event through
+        socket.addEventListener(eventName, handler);
+        return () => socket.removeEventListener(eventName, handler);
+      }
     }
     return () => {};
   }, [socket]);
