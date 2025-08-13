@@ -8,13 +8,13 @@ export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
-  const { currentUser, getIdToken } = useAuth();
+  const { currentUser } = useAuth();
 
   useEffect(() => {
     if (currentUser) {
       const establishConnection = async () => {
         try {
-          const socket_instance = await connectSocket(currentUser.uid, getIdToken);
+          const socket_instance = await connectSocket(currentUser.uid, () => currentUser.getIdToken());
           setSocket(socket_instance);
         } catch (error) {
           console.error("Failed to connect WebSocket:", error);
@@ -28,7 +28,7 @@ export const SocketProvider = ({ children }) => {
         setSocket(null);
       };
     }
-  }, [currentUser, getIdToken]);
+  }, [currentUser]);
 
   const addEventListener = useCallback((event, handler) => {
     if (socket) {
