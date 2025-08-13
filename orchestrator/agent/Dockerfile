@@ -21,11 +21,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir gunicorn
 
 # Copy the rest of the application's code.
-COPY ./.env ./.env
-COPY ./broadcast_orchestrator ./broadcast_orchestrator
+COPY . .
 
 # Cloud Run automatically sets the PORT environment variable.
 # Gunicorn will listen on the port specified by the PORT variable.
 # We use uvicorn.workers.UvicornWorker as the worker class for Gunicorn to run an ASGI application.
 # The `exec` command ensures that your application is the main process (PID 1).
-CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:$PORT --workers 4 --worker-class uvicorn.workers.UvicornWorker main:app"]
+CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:$PORT --workers 4 --worker-class uvicorn.workers.UvicornWorker broadcast_orchestrator.main:app"]

@@ -21,7 +21,8 @@ import AgentStatusList from "../components/live/AgentStatusList";
 import MicControl from "../components/live/MicControl";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRundown } from "@/contexts/RundownContext";
-import { initApi } from "@/api/webSocket";
+import { useSocket } from "@/contexts/SocketContext";
+import { sendMessage } from "@/api/webSocket";
 import { initAudio, stopAudioRecording, playAudio, stopAudioPlayback } from "@/lib/audio";
 
 export default function Live() {
@@ -32,7 +33,7 @@ export default function Live() {
   const [isAgentReplying, setIsAgentReplying] = useState(false);
   const { currentUser } = useAuth();
   const { rundownSystem } = useRundown();
-  const apiRef = useRef(null);
+  const { addEventListener } = useSocket();
   const currentMessageIdRef = useRef(null);
 
   useEffect(() => {
@@ -49,81 +50,92 @@ export default function Live() {
       },
     ]);
 
-    const callbacks = {
-      onMessage: (message) => {
-        if (message.turn_complete) {
-          setIsAgentReplying(false);
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === currentMessageIdRef.current ? { ...msg, partial: false } : msg
-            )
-          );
-          currentMessageIdRef.current = null;
-          return;
-        }
+    const onMessage = (message) => {
+      if (message.turn_complete) {
+        setIsAgentReplying(false);
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === currentMessageIdRef.current ? { ...msg, partial: false } : msg
+          )
+        );
+        currentMessageIdRef.current = null;
+        return;
+      }
 
-        if (message.interrupted) {
-          stopAudioPlayback();
-          return;
-        }
+      if (message.interrupted) {
+        stopAudioPlayback();
+        return;
+      }
 
-        if (message.mime_type === 'audio/pcm') {
-          playAudio(message.data);
-        }
+      if (message.mime_type === 'audio/pcm') {
+        playAudio(message.data);
+      }
 
-        if (message.mime_type === 'text/plain') {
-          setIsAgentReplying(false);
-          setMessages((prevMessages) => {
-            const existingMsg = prevMessages.find(msg => msg.id === currentMessageIdRef.current);
-            if (existingMsg) {
-              return prevMessages.map((msg) =>
-                msg.id === currentMessageIdRef.current
-                  ? { ...msg, text: msg.text + message.data }
-                  : msg
-              );
-            } else {
-              currentMessageIdRef.current = `agent-message-${Date.now()}`;
-              return [
-                ...prevMessages,
-                {
-                  id: currentMessageIdRef.current,
-                  role: 'assistant',
-                  text: message.data,
-                  timestamp: Date.now(),
-                  partial: true,
-                },
-              ];
-            }
-          });
-        }
-      },
-      onConnect: () => {
-        console.log("connected");
-        // Replace the reconfiguring message with the initial operational message
-        setMessages([
-          {
-            id: "1",
-            role: "assistant",
-            text: "Orchestrator Connected",
-            timestamp: Date.now(),
-            partial: false,
-          },
-        ]);
-      },
-      onDisconnect: () => {
-        console.log("disconnected");
+      if (message.mime_type === 'text/plain') {
+        setIsAgentReplying(false);
+        setMessages((prevMessages) => {
+          const existingMsg = prevMessages.find(msg => msg.id === currentMessageIdRef.current);
+          if (existingMsg) {
+            return prevMessages.map((msg) =>
+              msg.id === currentMessageIdRef.current
+                ? { ...msg, text: msg.text + message.data }
+                : msg
+            );
+          } else {
+            currentMessageIdRef.current = `agent-message-${Date.now()}`;
+            return [
+              ...prevMessages,
+              {
+                id: currentMessageIdRef.current,
+                role: 'assistant',
+                text: message.data,
+                timestamp: Date.now(),
+                partial: true,
+              },
+            ];
+          }
+        });
       }
     };
-    apiRef.current = initApi(callbacks, micEnabled, currentUser.uid, () =>
-      currentUser.getIdToken()
-    );
+
+    const onOpen = () => {
+      console.log("connected");
+      // Replace the reconfiguring message with the initial operational message
+      setMessages([
+        {
+          id: "1",
+          role: "assistant",
+          text: "Connection established",
+          timestamp: Date.now(),
+          partial: false,
+        },
+      ]);
+    };
+
+    const onClose = () => {
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          id: `disconnect-message-${Date.now()}`,
+          role: 'assistant',
+          text: 'Agent connection disconnected',
+          timestamp: Date.now(),
+          partial: false,
+        },
+      ]);
+    };
+
+    const cleanupMessage = addEventListener('message', onMessage);
+    const cleanupOpen = addEventListener('open', onOpen);
+    const cleanupClose = addEventListener('close', onClose);
+
 
     return () => {
-      if (apiRef.current) {
-        apiRef.current.disconnect();
-      }
+      cleanupMessage();
+      cleanupOpen();
+      cleanupClose();
     };
-  }, [currentUser, micEnabled, rundownSystem]);
+  }, [currentUser, rundownSystem, addEventListener]);
 
   const handleSendMessage = () => {
     if (!currentMessage.trim()) return;
@@ -140,27 +152,25 @@ export default function Live() {
     setCurrentMessage("");
     setIsAgentReplying(true);
 
-    if (apiRef.current) {
-      apiRef.current.sendMessage({
-        mime_type: 'text/plain',
-        data: currentMessage,
-      });
-    }
+    sendMessage({
+      mime_type: 'text/plain',
+      data: currentMessage,
+    });
   };
 
   const handleMicToggle = (enabled) => {
     setMicEnabled(enabled);
+    setIsAgentReplying(enabled);
     if (enabled) {
       initAudio((pcmData) => {
-        if (apiRef.current) {
-          apiRef.current.sendMessage({
-            mime_type: 'audio/pcm',
-            data: pcmData,
-          });
-        }
+        sendMessage({
+          mime_type: 'audio/pcm',
+          data: pcmData,
+        });
       });
     } else {
       stopAudioRecording();
+      setIsAgentReplying(false);
     }
   };
 

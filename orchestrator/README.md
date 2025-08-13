@@ -13,18 +13,38 @@ The orchestrator is composed of a central **agent** and multiple **frontends** f
 *   **`frontend/`**: A legacy web interface. This is the original UI and is kept for reference. For new development, please use `frontend_v2`. For more details, see the [Legacy Frontend README](./frontend/README.md).
 *   **`app.py`**: A simple, all-in-one Gradio application that runs both the agent and a basic UI in a single process. This is useful for quick tests and demonstrations.
 
-## Quick Start: Running the Agent and v2 Frontend
+## Development Script
 
-This is the recommended setup for local development. You will need to open two separate terminal windows.
+To simplify development, a script is provided to start both the agent and the v2 frontend with a single command.
 
-### Prerequisite: Environment Configuration
+**Usage:**
+```bash
+./run_dev.sh
+```
+This will start the agent in the background and the frontend in the foreground.
 
-Before launching the services, you must create environment files for both the agent and the frontend. These files contain sensitive information and are not stored in the repository.
+## Run Environment
 
-*   **For the Agent:** Create a `.env` file in the `orchestrator/agent` directory. See the [Agent README](./agent/README.MD) for detailed instructions.
-*   **For the Frontend:** Create a `.env.local` file in the `orchestrator/frontend_v2` directory. See the [Frontend v2 README](./frontend_v2/README.md) for detailed instructions.
+### Using the Dev Script
 
-### Terminal 1: Run the Agent
+This is the recommended setup for local development.
+
+1.  **Prerequisite: Environment Configuration**
+    Before launching the services, you must create environment files for both the agent and the frontend. These files contain sensitive information and are not stored in the repository.
+    *   **For the Agent:** Create a `.env` file in the `orchestrator/agent` directory. See the [Agent README](./agent/README.MD) for detailed instructions.
+    *   **For the Frontend:** Create a `.env.local` file in the `orchestrator/frontend_v2` directory. See the [Frontend v2 README](./frontend_v2/README.md) for detailed instructions.
+
+2.  **Run the script:**
+    ```bash
+    ./run_dev.sh
+    ```
+    *The agent API will now be running at `http://localhost:8000` and the frontend will be running at `http://localhost:5173`.*
+
+### Manual Setup
+
+If you prefer to run the services manually, you will need to open two separate terminal windows.
+
+#### Terminal 1: Run the Agent
 
 1.  **Navigate to the agent directory:**
     ```bash
@@ -40,7 +60,7 @@ Before launching the services, you must create environment files for both the ag
     ```
     *The agent API will now be running at `http://localhost:8080`.*
 
-### Terminal 2: Run the Frontend (v2)
+#### Terminal 2: Run the Frontend (v2)
 
 1.  **Navigate to the v2 frontend directory:**
     ```bash
@@ -54,9 +74,7 @@ Before launching the services, you must create environment files for both the ag
     ```bash
     npm run dev
     ```
-    *The frontend will now be running at `http://localhost:5173` (or another port if 5173 is busy).*
-
-You can now open your browser to the frontend address and start using the orchestrator.
+    *The frontend will now be running at `http://localhost:5173` (or another port if 5173 is busy).*.
 
 ## Alternative Setups
 
