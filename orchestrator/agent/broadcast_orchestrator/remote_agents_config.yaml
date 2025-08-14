@@ -22,3 +22,7 @@
   url_env: SOFIE_AGENT_URL
   key_env: SOFIE_AGENT_API_KEY
   default_url: "http://localhost:10011"
+- name: SHURE_AGENT
+  url_env: SHURE_AGENT_URL
+  key_env: SHURE_AGENT_API_KEY
+  default_url: "http://localhost:10012"

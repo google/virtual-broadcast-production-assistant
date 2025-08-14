@@ -10,9 +10,17 @@ from dotenv import load_dotenv
 import httpx
 from a2a.client import A2ACardResolver
 from a2a.client.errors import A2AClientTimeoutError
-from a2a.types import (AgentCard, MessageSendParams, Part, SendMessageRequest,
-                       SendMessageResponse, SendMessageSuccessResponse, Task,
-                       TextPart, Message)
+from a2a.types import (
+    AgentCard,
+    MessageSendParams,
+    Part,
+    SendMessageRequest,
+    SendMessageResponse,
+    SendMessageSuccessResponse,
+    Task,
+    TextPart,
+    Message,
+)
 from google.cloud import firestore
 from google.adk import Agent
 from google.adk.agents.callback_context import CallbackContext
@@ -20,9 +28,12 @@ from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools.tool_context import ToolContext
 
 
-from .automation_system_instructions import (AUTOMATION_SYSTEMS, CUEZ_CONFIG,
-                                             DEFAULT_INSTRUCTIONS,
-                                             SOFIE_CONFIG)
+from .automation_system_instructions import (
+    AUTOMATION_SYSTEMS,
+    CUEZ_CONFIG,
+    DEFAULT_INSTRUCTIONS,
+    SOFIE_CONFIG,
+)
 
 from .config import (load_remote_agents_config, load_system_instructions)
 from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
@@ -57,10 +68,12 @@ def create_send_message_payload(
     payload: dict[str, Any] = {
         "message": {
             "role": "user",
-            "parts": [{
-                "type": "text",
-                "text": text
-            }],
+            "parts": [
+                {
+                    "type": "text",
+                    "text": text
+                }
+            ],
             "messageId": uuid.uuid4().hex,
         },
     }
@@ -137,9 +150,10 @@ class RoutingAgent:
 
         return None
 
-    async def _async_init_components(self,
-                                     remote_agents_config: dict[str,
-                                                                str | None]):
+    async def _async_init_components(
+            self,
+            remote_agents_config: dict[str,
+                                     str | None]):
         """Asynchronously initializes components that require network I/O."""
         logger.info("Initializing remote agent connections...")
         for address, api_key in remote_agents_config.items():
@@ -149,6 +163,7 @@ class RoutingAgent:
                 self.remote_agent_connections[
                     connection.card.name] = connection
                 self.cards[connection.card.name] = connection.card
+        logger.info("Loaded %d remote agent cards.", len(self.cards))
         # Populate self.agents using the logic from original __init__ (via
         # list_remote_agents)
         agent_info = []
@@ -184,6 +199,7 @@ class RoutingAgent:
                 if url:
                     remote_agents_config[url] = api_key
 
+            logger.info("Remote agents to load: %s", remote_agents_config)
             await self._async_init_components(remote_agents_config)
             self._initialized = True
 
@@ -217,8 +233,9 @@ class RoutingAgent:
             return {"active_agent": f"{state['active_agent']}"}
         return {"active_agent": "None"}
 
-    def _get_formatted_instructions(self,
-                                    rundown_system_preference: str) -> str:
+    def _get_formatted_instructions(
+            self,
+            rundown_system_preference: str) -> str:
         """
         Formats the system instructions with all necessary placeholders based on
         the selected rundown system.
