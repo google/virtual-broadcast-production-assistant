@@ -27,3 +27,14 @@ variable "root_domain" {
   description = "The root domain for the DNS zone."
   type        = string
 }
+
+variable "orchestrator_container_image" {
+  description = "The container image for the orchestrator Cloud Run service."
+  type        = string
+}
+
+variable "orchestrator_service_account_email" {
+  description = "The email of the service account for the orchestrator Cloud Run service."
+  type        = string
+}
+

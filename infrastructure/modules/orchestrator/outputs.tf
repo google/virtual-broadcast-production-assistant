@@ -7,3 +7,8 @@ output "name_servers" {
   description = "The name servers for the managed zone."
   value       = google_dns_managed_zone.dns_zone.name_servers
 }
+
+output "nat_ip_address" {
+  description = "The static outbound IP address of the Cloud Run service."
+  value       = google_compute_address.nat_ip.address
+}

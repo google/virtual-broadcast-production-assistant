@@ -35,3 +35,26 @@ variable "root_domain" {
   # e.g. your-domain.com
   default     = ""
 }
+
+variable "container_image" {
+  description = "The container image for the Cloud Run service."
+  type        = string
+}
+
+variable "service_account_email" {
+  description = "The email of the service account for the Cloud Run service."
+  type        = string
+}
+
+variable "vpc_network_name" {
+  description = "The name of the VPC network."
+  type        = string
+  default     = "orchestrator-vpc"
+}
+
+variable "vpc_subnet_name" {
+  description = "The name of the VPC subnetwork."
+  type        = string
+  default     = "orchestrator-subnet"
+}
+
