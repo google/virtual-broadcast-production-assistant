@@ -29,9 +29,21 @@ You are configured to interact with the Sofie Automation system.
 """
 }
 
+CUEPILOT_CONFIG = {
+    "config_name":
+    "CUEPILOT_AGENT",
+    "agent_name":
+    "CuePilot OSC Agent",
+    "instructions":
+    """
+Picks a single CuePilot OSC command and returns it (POC).
+"""
+}
+
 AUTOMATION_SYSTEMS = {
     "cuez": CUEZ_CONFIG,
     "sofie": SOFIE_CONFIG,
+    "cuepilot": CUEPILOT_CONFIG,
 }
 
 DEFAULT_INSTRUCTIONS = "No specific rundown system is configured. You must ask the user to select one."

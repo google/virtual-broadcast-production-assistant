@@ -1,0 +1,29 @@
+{
+  "id": "cp",
+  "label": "CuePilot",
+  "description": "Schema for controlling an instance of CuePilot through OSC commands.",
+  "commands": [
+    { "id": "play",      "label": "Play",      "description": "Start Playback",       "address": "/cuepilot/transport/play",       "args": [] },
+    { "id": "pause",     "label": "Pause",     "description": "Pause Playback",      "address": "/cuepilot/transport/pause",      "args": [] },
+    { "id": "skip",      "label": "Skip",      "description": "Execution of the next shot is skipped while active, automatically toggles off after a shot has passed",          "address": "/cuepilot/transport/skip",       "args": [] },
+    { "id": "take",      "label": "Take",      "description": "Take next shot, timeline doesn't skip, just execution of the next camera switch on the main track",         "address": "/cuepilot/transport/take",       "args": [] },
+    { "id": "hold",      "label": "Hold",      "description": "Toggle Hold (while Hold is engaged, execution of vision track cues is paused)",          "address": "/cuepilot/transport/hold",       "args": [] },
+    { "id": "holdon",    "label": "Hold On",   "description": "Turn on Hold (while Hold is engaged, execution of vision track cues is paused)",      "address": "/cuepilot/transport/hold/on",    "args": [] },
+    { "id": "holdoff",   "label": "Hold Off",  "description": "Turn off Hold (while Hold is engaged, execution of vision track cues is paused)",    "address": "/cuepilot/transport/hold/off",   "args": [] },
+    { "id": "setspeed",  "label": "Set Speed", "description": "Set Speed /cuepilot/transport/setspeed {Speed}","address": "/cuepilot/transport/setspeed",   "args": [
+      { "id": "speed", "caption": "Speed", "type": "f", "edittype": "float", "default": 1, "range": [0.1, 3.0] }
+    ]},
+    { "id": "home",      "label": "Home",      "description": "Go to the Start of the timeline",          "address": "/cuepilot/transport/home",       "args": [] },
+    { "id": "jumpto",    "label": "Jump To",   "description": "Jump To Position /cuepilot/transport/jumpto {Position} {Speed}", "address": "/cuepilot/transport/jumpto", "args": [
+      { "id": "position", "caption": "Position", "type": "s", "edittype": "time", "default": 0, "format": 1, "range": [-300000, 3599000] },
+      { "id": "do",       "caption": "Action",   "type": "i", "edittype": "list", "default": 0, "options": ["No change", "Pause", "Play"] },
+      { "id": "speed",    "caption": "Speed",    "type": "f", "edittype": "float", "default": 0, "range": [0.0, 3.0] }
+    ]},
+    { "id": "syncoff",   "label": "Sync Off",  "description": "Set Sync to incoming timecode Off /cuepilot/sync/off",            "address": "/cuepilot/sync/off",             "args": [] },
+    { "id": "syncltc1",  "label": "Sync LTC 1","description": "Set Sync to LTC 1 /cuepilot/sync/ltc1",         "address": "/cuepilot/sync/ltc1",            "args": [] },
+    { "id": "syncltc2",  "label": "Sync LTC 2","description": "Set Sync to LTC 2 /cuepilot/sync/ltc2",         "address": "/cuepilot/sync/ltc2",            "args": [] },
+    { "id": "syncstep",  "label": "Sync Step", "description": "Set Sync to Step Mode (step allows manually skipping through the timeline from shot to shot and its execution",          "address": "/cuepilot/sync/step",            "args": [] },
+    { "id": "loadprevitem","label":"Load Prev Act","description":"Load previous item (act) in rundown - (item is a section of a rundown, like a song in a show)",     "address": "/cuepilot/item/load/prev",       "args": [] },
+    { "id": "loadnextitem","label":"Load Next Act","description":"Load previous item (act) in rundown - (item is a section of a rundown, like a song in a show)",     "address": "/cuepilot/item/load/next",       "args": [] }
+  ]
+}
