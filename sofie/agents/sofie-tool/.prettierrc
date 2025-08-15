@@ -1,0 +1,10 @@
+{
+	"arrowParens": "always",
+	"bracketSpacing": true,
+	"endOfLine": "auto",
+	"plugins": ["prettier-plugin-organize-imports"],
+	"printWidth": 120,
+	"semi": false,
+	"singleQuote": true,
+	"useTabs": true
+}
