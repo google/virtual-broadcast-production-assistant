@@ -15,7 +15,7 @@ export const loadConfig = (): Config => {
 	const logLevel: pino.LevelOrString = logLevels.includes(logLevelString) ? logLevelString : 'info'
 
 	logger.info(`Setting log level to: ${logLevel}`)
-	logger.level = 'debug'
+	logger.level = logLevel
 
 	const config: Config = {
 		port: process.env.PORT ? parseInt(process.env.PORT) : undefined,
