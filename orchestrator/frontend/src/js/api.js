@@ -1,10 +1,14 @@
 let websocket;
 
-function initApi(callbacks, is_audio) {
-  const sessionId = Math.random().toString().substring(10);
-  const ws_url = `ws://localhost:8000/ws/${sessionId}?is_audio=${is_audio}`;
+function initApi(callbacks, is_audio, uid, getToken) {
+  // Vite replaces `import.meta.env.VITE_...` with the value at build time.
+  // It falls back to localhost for local development if the variable is not set.
+  const final_ws_base_url = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:8000';
 
-  function connect() {
+  async function connect() {
+    const token = await getToken();
+    const ws_url = `${final_ws_base_url}/ws/${uid}?is_audio=${is_audio}&token=${token}`;
+
     websocket = new WebSocket(ws_url);
 
     websocket.onopen = () => {
@@ -35,6 +39,7 @@ function initApi(callbacks, is_audio) {
   connect();
 
   return {
+    isAudio: is_audio,
     sendMessage(message) {
       if (websocket && websocket.readyState === WebSocket.OPEN) {
         websocket.send(JSON.stringify(message));

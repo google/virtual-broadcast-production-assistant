@@ -14,13 +14,26 @@
       href="https://fonts.googleapis.com/icon?family=Material+Icons"
     />
     <link rel="stylesheet" href="src/css/style.css" />
+    <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/latest/firebase-ui-auth.css" />
   </head>
   <body>
     <div id="app">
       <header class="app-header">
         <h1>Broadcast Orchestrator</h1>
+        <div class="header-buttons">
+          <div class="rundown-slider-container">
+            <span id="rundown-cuez" class="rundown-label active">CUEZ</span>
+            <label class="switch">
+              <input type="checkbox" id="rundown-slider">
+              <span class="slider round"></span>
+            </label>
+            <span id="rundown-sofie" class="rundown-label">SOFIE</span>
+          </div>
+          <md-icon-button id="login-button" hidden><span class="material-icons">login</span></md-icon-button>
+          <md-icon-button id="sign-out-button" hidden><span class="material-icons">logout</span></md-icon-button>
+        </div>
       </header>
-      <main class="chat-container">
+      <main id="chat-container" class="chat-container" hidden>
         <div id="chat-messages" class="chat-messages"></div>
         <div class="chat-input-area">
           <div class="text-input-container">
@@ -39,6 +52,9 @@
           >
         </div>
       </main>
+      <div id="login-container">
+        <div id="firebaseui-auth-container"></div>
+      </div>
     </div>
     <script type="module" src="/src/js/main.js"></script>
   </body>

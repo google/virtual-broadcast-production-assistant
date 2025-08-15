@@ -1,0 +1,31 @@
+# This file defines the continuous integration pipeline for Pull Requests for the frontend application.
+# It is used by Google Cloud Build to automatically run tests.
+
+steps:
+  # 1. Install npm dependencies
+  # This step uses a standard cloud builder for Node.js to install the project dependencies.
+  - name: 'gcr.io/cloud-builders/npm'
+    id: 'Install dependencies'
+    entrypoint: 'npm'
+    args: ['install']
+    dir: 'orchestrator/frontend_v2'
+
+  # 2. Run tests
+  # This step runs the tests to ensure the PR is valid.
+  - name: 'gcr.io/cloud-builders/npm'
+    id: 'Run tests'
+    entrypoint: 'npm'
+    args: ['test']
+    dir: 'orchestrator/frontend_v2'
+    env:
+      - 'VITE_FIREBASE_API_KEY=$_VITE_FIREBASE_API_KEY'
+      - 'VITE_FIREBASE_AUTH_DOMAIN=$_VITE_FIREBASE_AUTH_DOMAIN'
+      - 'VITE_FIREBASE_PROJECT_ID=$_VITE_FIREBASE_PROJECT_ID'
+      - 'VITE_FIREBASE_STORAGE_BUCKET=$_VITE_FIREBASE_STORAGE_BUCKET'
+      - 'VITE_FIREBASE_MESSAGING_SENDER_ID=$_VITE_FIREBASE_MESSAGING_SENDER_ID'
+      - 'VITE_FIREBASE_APP_ID=$_VITE_FIREBASE_APP_ID'
+
+# Configure build options to resolve potential logging permission issues.
+# This instructs Cloud Build to send logs directly to Cloud Logging.
+options:
+  logging: CLOUD_LOGGING_ONLY

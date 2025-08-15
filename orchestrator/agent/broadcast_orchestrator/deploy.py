@@ -14,19 +14,21 @@
  limitations under the License.
  """
 import os
-import agent  # type: ignore
+
 import vertexai
 from vertexai import agent_engines
+
+import agent  # type: ignore
 
 project = os.environ.get('GOOGLE_CLOUD_PROJECT')
 
 if project is None:
-  raise Exception('No project set in environment')
+    raise Exception('No project set in environment')
 
 staging_buecket = os.environ.get('STORAGE_BUCKET')
 
 if staging_buecket is None:
-  raise Exception('No staging bucket set.')
+    raise Exception('No staging bucket set.')
 
 vertexai.init(staging_bucket=f'gs://{staging_buecket}')
 

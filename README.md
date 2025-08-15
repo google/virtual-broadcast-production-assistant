@@ -18,6 +18,24 @@ that a director will have time to type instructions, so they are likely to input
 via voice, however having an agent list 28 news items that currently have issues or aren't quite
 in a ready state for some reason equally is not going to be efficient.
 
+## Getting Started
+
+To get started with development, please see the README in the `orchestrator` directory: [orchestrator/README.md](./orchestrator/README.md).
+
+## Agents
+
+This repository contains a number of specialized agents that can be orchestrated to assist with broadcast production. Here is a summary of the agents currently available:
+
+*   **BBC Newsround Graphics**: Controls on-screen graphics such as name straps, locators, headlines, and info tabs.
+*   **Control Room Assistant**: An older proof-of-concept that provides a multimodal chat experience with a web UI and a websocket backend. It does not follow the current agentic architecture.
+*   **Cuez Rundown**: An agent that helps with the Cuez rundown and can list episodes in a project.
+*   **Cuez Stubzy**: An agent for interacting with the CUEZ rundown system and automator.
+*   **ITN Posture**: Provides "Stack Checking Services" for graphics, including checking sequence orders, factual information, and spelling.
+*   **Shure Audio Agent**: Manages Shure audio device settings, user presets, and microphone channel coverage.
+*   **Sofie Agent**: A simple agent that uses Google Search to answer questions.
+*   **TX Agent**: A two-part system with a "TX Worker" that logs live broadcast content and a "TX Agent" that provides a conversational interface to that content.
+*   **Orchestrator**: The central agent that orchestrates the other agents.
+
 ## NOTE on repo governance
 
 Each domain area or component should have a top level directory. This could include full working code or

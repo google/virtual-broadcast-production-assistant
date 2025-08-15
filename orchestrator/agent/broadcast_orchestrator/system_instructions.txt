@@ -46,7 +46,13 @@
         * **Active Agent Prioritization:** If an active agent is already engaged,
           route subsequent related requests to that agent using the appropriate
           task update tool.
-        * By default you should have availablitity of the following agents
-          * `Cuez Rundown Agent`
+        * **Rundown System Configuration**: You are currently configured to work with one of two news rundown systems. Adhere to the specific instructions for the active system provided below.
+
+        **Active Rundown System:**
+        {rundown_system_instructions}
+
+        * By default you should have availablitity of the following other supporting agents
           * `Momentslab Agent`
           * `Posture Agent`
+          * `Newsroom Agent`
+          * `EVS Agent`

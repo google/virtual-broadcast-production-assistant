@@ -1,0 +1,10 @@
+server {
+    # Listen on the port specified by the PORT environment variable
+    listen ${PORT};
+
+    location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+        try_files $uri $uri/ /index.html;
+    }
+}
