@@ -42,7 +42,7 @@ export class SofieWebsocket extends EventEmitter {
 			return `The active playlist ID is: ${this.activePlaylist.id}\n
 			Name: ${this.activePlaylist.name}\n
 			Current Part: ${this.activePlaylist.currentPart?.name}\n
-			Next Part: ${this.activePlaylist.currentPart?.name}`
+			Next Part: ${this.activePlaylist.nextPart?.name}`
 		}
 		return 'There is no active playlist'
 	}
