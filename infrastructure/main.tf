@@ -10,3 +10,10 @@ module "orchestrator" {
   container_image       = var.orchestrator_container_image
   service_account_email = var.orchestrator_service_account_email
 }
+
+module "activity_agent" {
+  source = "./modules/activity-agent"
+
+  project_id   = var.project_id
+  service_name = var.activity_agent_service_name
+}
