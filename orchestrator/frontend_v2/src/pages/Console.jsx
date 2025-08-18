@@ -1,18 +1,16 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send } from "lucide-react";
 import ChatPanel from "../components/live/ChatPanel";
 import TelemetryPanel from "../components/live/TelemetryPanel";
 import MicControl from "../components/live/MicControl";
-import { useAuth } from "@/contexts/AuthContext";
 import { useRundown } from "@/contexts/RundownContext";
 import { useSocket } from "@/contexts/SocketContext";
 import { sendMessage } from "@/api/webSocket";
 import { initAudio, stopAudioRecording, playAudio, stopAudioPlayback } from "@/lib/audio";
 
 export default function Console() {
-  const { currentUser } = useAuth();
   const { rundownSystem } = useRundown();
   const [currentMessage, setCurrentMessage] = useState("");
   const [micEnabled, setMicEnabled] = useState(false);

@@ -13,12 +13,11 @@ import {
   Settings,
   Wifi,
   WifiOff,
-  AlertCircle,
   CalendarDays,
   BookUser,
   Menu,
-  X } from
-"lucide-react";
+  X
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -36,7 +35,7 @@ const navigationItems = [
 { title: "Settings", url: createPageUrl("Settings"), icon: Settings, description: "Config" }];
 
 
-export default function Layout({ children, currentPageName }) {
+export default function Layout({ children }) {
   const location = useLocation();
   const { currentUser, signOut, setIsUpgrading } = useAuth();
   const { rundownSystem, updateRundownSystem } = useRundown();

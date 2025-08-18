@@ -1,14 +1,14 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Toaster, toast } from 'sonner';
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, Download } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import ContactsHeader from '../components/contacts/ContactsHeader';
 import ContactCard from '../components/contacts/ContactCard';
 import ContactForm from '../components/contacts/ContactForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-const API_ENDPOINT = "/api/contacts"; // Mock endpoint
+
 
 // A simple mock API for demonstration
 const mockApi = {
