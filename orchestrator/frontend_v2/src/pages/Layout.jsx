@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSocket } from "@/contexts/SocketContext";
 import { useRundown } from "@/contexts/RundownContext";
 import { createPageUrl } from "@/utils";
 import {
@@ -38,8 +39,8 @@ const navigationItems = [
 export default function Layout({ children }) {
   const location = useLocation();
   const { currentUser, signOut, setIsUpgrading } = useAuth();
+  const { connectionStatus } = useSocket();
   const { rundownSystem, updateRundownSystem } = useRundown();
-  const [connectionStatus] = React.useState("connected"); // Mock for now
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleRundownChange = (checked) => {
@@ -114,22 +115,22 @@ export default function Layout({ children }) {
             <div className="hidden sm:flex items-center gap-2">
               {connectionStatus === "connected" ?
               <>
-                  <Wifi className="w-4 h-4 text-[#14B8A6]" />
-                  <Badge variant="outline" className="border-[#14B8A6]/30 text-[#14B8A6] bg-[#14B8A6]/10 text-xs">
+                  <Wifi className="w-4 h-4 text-teal-500" />
+                  <Badge variant="outline" className="border-teal-500/30 text-teal-500 bg-teal-500/10 text-xs">
                     Connected
                   </Badge>
                 </> :
               connectionStatus === "connecting" ?
               <>
-                  <div className="w-4 h-4 border-2 border-[#FFC857] border-t-transparent rounded-full animate-spin" />
-                  <Badge variant="outline" className="border-[#FFC857]/30 text-[#FFC857] bg-[#FFC857]/10 text-xs">
+                  <div className="w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
+                  <Badge variant="outline" className="border-yellow-500/30 text-yellow-500 bg-yellow-500/10 text-xs">
                     Connecting
                   </Badge>
                 </> :
 
               <>
-                  <WifiOff className="w-4 h-4 text-[#FF2D86]" />
-                  <Badge variant="outline" className="border-[#FF2D86]/30 text-[#FF2D86] bg-[#FF2D86]/10 text-xs">
+                  <WifiOff className="w-4 h-4 text-destructive" />
+                  <Badge variant="outline" className="border-destructive/30 text-destructive bg-destructive/10 text-xs">
                     Disconnected
                   </Badge>
                 </>
@@ -185,22 +186,22 @@ export default function Layout({ children }) {
             <div className="sm:hidden mt-4 pt-4 border-t border-white/8 flex items-center justify-center gap-2">
               {connectionStatus === "connected" ?
             <>
-                  <Wifi className="w-4 h-4 text-[#14B8A6]" />
-                  <Badge variant="outline" className="border-[#14B8A6]/30 text-[#14B8A6] bg-[#14B8A6]/10 text-xs">
+                  <Wifi className="w-4 h-4 text-teal-500" />
+                  <Badge variant="outline" className="border-teal-500/30 text-teal-500 bg-teal-500/10 text-xs">
                     Connected
                   </Badge>
                 </> :
             connectionStatus === "connecting" ?
             <>
-                  <div className="w-4 h-4 border-2 border-[#FFC857] border-t-transparent rounded-full animate-spin" />
-                  <Badge variant="outline" className="border-[#FFC857]/30 text-[#FFC857] bg-[#FFC857]/10 text-xs">
+                  <div className="w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
+                  <Badge variant="outline" className="border-yellow-500/30 text-yellow-500 bg-yellow-500/10 text-xs">
                     Connecting
                   </Badge>
                 </> :
 
             <>
-                  <WifiOff className="w-4 h-4 text-[#FF2D86]" />
-                  <Badge variant="outline" className="border-[#FF2D86]/30 text-[#FF2D86] bg-[#FF2D86]/10 text-xs">
+                  <WifiOff className="w-4 h-4 text-destructive" />
+                  <Badge variant="outline" className="border-destructive/30 text-destructive bg-destructive/10 text-xs">
                     Disconnected
                   </Badge>
                 </>

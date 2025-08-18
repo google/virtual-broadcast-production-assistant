@@ -8,16 +8,19 @@ export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState("connecting");
   const { currentUser } = useAuth();
 
   useEffect(() => {
     if (currentUser) {
       const establishConnection = async () => {
+        setConnectionStatus("connecting");
         try {
           const socket_instance = await connectSocket(currentUser.uid, () => currentUser.getIdToken());
           setSocket(socket_instance);
         } catch (error) {
           console.error("Failed to connect WebSocket:", error);
+          setConnectionStatus("disconnected");
         }
       };
 
@@ -29,6 +32,24 @@ export const SocketProvider = ({ children }) => {
       };
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const onOpen = () => setConnectionStatus("connected");
+    const onClose = () => setConnectionStatus("disconnected");
+    const onError = () => setConnectionStatus("disconnected");
+
+    socket.addEventListener('open', onOpen);
+    socket.addEventListener('close', onClose);
+    socket.addEventListener('error', onError);
+
+    return () => {
+      socket.removeEventListener('open', onOpen);
+      socket.removeEventListener('close', onClose);
+      socket.removeEventListener('error', onError);
+    };
+  }, [socket]);
 
   const addEventListener = useCallback((eventName, handler) => {
     if (socket) {
@@ -55,17 +76,19 @@ export const SocketProvider = ({ children }) => {
   const reconnect = useCallback(async () => {
     disconnectSocket();
     if (currentUser) {
+      setConnectionStatus("connecting");
       try {
         const socket_instance = await connectSocket(currentUser.uid, () => currentUser.getIdToken());
         setSocket(socket_instance);
       } catch (error) {
         console.error("Failed to reconnect WebSocket:", error);
+        setConnectionStatus("disconnected");
       }
     }
   }, [currentUser]);
 
 
-  const value = { socket, addEventListener, reconnect };
+  const value = { socket, addEventListener, reconnect, connectionStatus };
 
   return (
     <SocketContext.Provider value={value}>{children}</SocketContext.Provider>
