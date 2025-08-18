@@ -12,18 +12,16 @@ module "orchestrator" {
 }
 
 
+module "agent_health_checker" {
+  source = "./modules/agent-health-checker"
+
+  project_id                          = var.project_id
+  region                              = var.region
+}
+
 module "activity_agent" {
   source = "./modules/activity-agent"
 
   project_id   = var.project_id
   service_name = var.activity_agent_service_name
-}
-
-module "agent_health_checker" {
-  source = "./modules/agent-health-checker"
-
-  project_id                         = var.project_id
-  region                             = var.region
-  cloud_run_job_service_account_email = var.orchestrator_service_account_email # Reusing the orchestrator service account for simplicity
-
 }
