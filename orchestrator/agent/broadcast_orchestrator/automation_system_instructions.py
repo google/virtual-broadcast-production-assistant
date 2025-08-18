@@ -36,7 +36,8 @@ CUEPILOT_CONFIG = {
     "CuePilot OSC Agent",
     "instructions":
     """
-Picks a single CuePilot OSC command and returns it (POC).
+You are configured to interact with the CuePilot Software:
+- Pick a single CuePilot OSC command and return it.
 """
 }
 

@@ -20,7 +20,7 @@ from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools.tool_context import ToolContext
 
 
-from .automation_system_instructions import (AUTOMATION_SYSTEMS, CUEZ_CONFIG,
+from .automation_system_instructions import (AUTOMATION_SYSTEMS, CUEZ_CONFIG, CUEPILOT_CONFIG,
                                              DEFAULT_INSTRUCTIONS,
                                              SOFIE_CONFIG)
 
@@ -197,7 +197,7 @@ class RoutingAgent:
         initial_instructions = load_system_instructions()
 
         self._agent = Agent(
-            model="gemini-live-2.5-flash",
+            model="gemini-2.0-flash-exp",
             name="Routing_agent",
             instruction=initial_instructions,
             before_agent_callback=self.before_agent_callback,
