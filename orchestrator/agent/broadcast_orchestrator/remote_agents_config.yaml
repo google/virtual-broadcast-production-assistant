@@ -26,3 +26,8 @@
   url_env: CUEPILOT_AGENT_URL
   key_env: CUEPILOT_AGENT_API_KEY
   default_url: "http://localhost:9999"
+- name: ACTIVITIES_AGENT
+  url_env: ACTIVITIES_AGENT_URL
+  key_env: ACTIVITIES_AGENT_API_KEY
+  default_url: "http://localhost:8020"
+

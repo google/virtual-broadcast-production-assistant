@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useCallback } from 'react';
+import { useEffect, useReducer, useCallback } from 'react';
 import { Toaster, toast } from 'sonner';
 import ScheduleActionBar from '../components/schedule/ScheduleActionBar';
 import RundownTree from '../components/schedule/RundownTree';

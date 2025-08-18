@@ -1,4 +1,4 @@
-import React from "react";
+
 import IssueCard from "./IssueCard";
 
 const timeSlots = [
