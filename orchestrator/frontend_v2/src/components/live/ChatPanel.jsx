@@ -1,5 +1,4 @@
-import React, { useRef, useEffect } from "react";
-import { Badge } from "@/components/ui/badge";
+import { useRef, useEffect } from "react";
 import { format } from "date-fns";
 
 export default function ChatPanel({ messages, isAgentReplying }) {

@@ -48,7 +48,7 @@ class PCMPlayerProcessor extends AudioWorkletProcessor {
 
   // The system calls `process()` ~128 samples at a time (depending on the browser).
   // We fill the output buffers from our ring buffer.
-  process(inputs, outputs, parameters) {
+  process(inputs, outputs) {
     // Write a frame to the output
     const output = outputs[0];
     const framesPerBlock = output[0].length;

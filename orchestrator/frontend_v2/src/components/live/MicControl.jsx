@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Volume2 } from "lucide-react";
 
 export default function MicControl({ enabled, onToggle }) {
-  const [volumeLevel, setVolumeLevel] = useState(0.3); // Mock VU meter
+  const [volumeLevel] = useState(0.3); // Mock VU meter
 
   return (
     <div className="space-y-3">
