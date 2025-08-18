@@ -39,7 +39,7 @@ CP_BY_ID: Dict[str, Dict] = {c["id"]: c for c in CP_SCHEMA["commands"]}
 # OSC defaults (can be overridden per-request via message.metadata)
 # --------------------------------------------------------------------------------------
 OSC_HOST_DEFAULT = os.getenv("OSC_HOST", "127.0.0.1")
-OSC_PORT_DEFAULT = int(os.getenv("OSC_PORT", "9090"))
+OSC_PORT_DEFAULT = int(os.getenv("OSC_PORT", "53311"))
 
 
 # --------------------------------------------------------------------------------------

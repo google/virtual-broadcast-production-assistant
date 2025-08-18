@@ -197,7 +197,7 @@ class RoutingAgent:
         initial_instructions = load_system_instructions()
 
         self._agent = Agent(
-            model="gemini-2.0-flash-exp",
+            model="gemini-live-2.5-flash",
             name="Routing_agent",
             instruction=initial_instructions,
             before_agent_callback=self.before_agent_callback,
