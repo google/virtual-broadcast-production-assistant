@@ -10,9 +10,9 @@ This agent will attempt to insert any messages it gets into a datastore. This is
 
 Currently the data gets inserted in a JSON file serving as an activity store but the server could be updated to integrate with any other store.
 
-The content of the activity store can be viewed in a simple local UI by running 
+The content of the activity store can be viewed in a simple local UI by running
 
 ```bash
 cd tools
-np run start
+npm run start
 ```
