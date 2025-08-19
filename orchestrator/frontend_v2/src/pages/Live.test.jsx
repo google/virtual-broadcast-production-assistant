@@ -19,9 +19,16 @@ vi.mock('firebase/auth', () => ({
   signOut: vi.fn(),
 }));
 
-vi.mock('firebase/firestore', () => ({
+vi.mock('firebase/firestore', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
     getFirestore: vi.fn(),
-}));
+    collection: vi.fn(),
+    onSnapshot: vi.fn(() => () => {}), // Return an unsubscribe function
+  };
+});
+
 
 // Mock the hooks
 vi.mock('@/contexts/useAuth');

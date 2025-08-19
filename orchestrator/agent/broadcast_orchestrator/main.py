@@ -59,14 +59,22 @@ def seed_agent_status():
         db = firestore.client()
         agents_ref = db.collection('agent_status')
 
-        for agent_id, agent_details in config.get('remote_agents', {}).items():
+        for agent_details in config:
+            agent_id = agent_details.get('name')
+            if not agent_id:
+                continue
+
             doc_ref = agents_ref.document(agent_id)
-            doc_ref.set({
+            doc_data = {
                 'name': agent_details.get('name'),
-                'url': agent_details.get('url'),
+                'url': os.getenv(agent_details.get('url_env'), agent_details.get('default_url')),
                 'status': 'offline',  # Default status
                 'last_checked': firestore.SERVER_TIMESTAMP
-            }, merge=True) # Merge true will create or update fields
+            }
+            if 'secret_id' in agent_details:
+                doc_data['api_key_secret'] = agent_details['secret_id']
+
+            doc_ref.set(doc_data, merge=True)
             logger.info(f"Seeded/updated agent '{agent_id}' in Firestore.")
 
     except FileNotFoundError:

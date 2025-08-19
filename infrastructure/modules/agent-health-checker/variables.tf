@@ -1,14 +1,15 @@
 variable "project_id" {
-  description = "The ID of the Google Cloud project."
+  description = "The project ID to deploy to."
   type        = string
 }
 
 variable "region" {
-  description = "The region where resources will be deployed."
+  description = "The region to deploy to."
   type        = string
 }
 
-variable "cloud_run_job_service_account_email" {
-  description = "The email of the service account for the Cloud Run Job."
+variable "image_tag" {
+  description = "The tag of the docker image to deploy."
   type        = string
+  default     = "latest"
 }

@@ -1,12 +1,48 @@
+resource "google_project_service" "cloudscheduler" {
+  project            = var.project_id
+  service            = "cloudscheduler.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_service_account" "agent_health_checker" {
+  account_id   = "agent-health-checker"
+  display_name = "Agent Health Checker Service Account"
+  project      = var.project_id
+}
+
+resource "google_project_iam_member" "agent_health_checker_invoker" {
+  project = var.project_id
+  role    = "roles/run.invoker"
+  member  = "serviceAccount:${google_service_account.agent_health_checker.email}"
+}
+
+resource "google_project_iam_member" "agent_health_checker_datastore_user" {
+  project = var.project_id
+  role    = "roles/datastore.user"
+  member  = "serviceAccount:${google_service_account.agent_health_checker.email}"
+}
+
+resource "google_project_iam_member" "agent_health_checker_secret_accessor" {
+  project = var.project_id
+  role    = "roles/secretmanager.secretAccessor"
+  member  = "serviceAccount:${google_service_account.agent_health_checker.email}"
+}
+
 resource "google_cloud_run_v2_job" "agent_health_checker" {
-  name     = "agent-health-checker"
-  location = var.region
-  project  = var.project_id
+  name                = "agent-health-checker"
+  location            = var.region
+  project             = var.project_id
+  deletion_protection = false
 
   template {
     template {
+      service_account = google_service_account.agent_health_checker.email
       containers {
-        image = "gcr.io/${var.project_id}/agent-health-checker"
+        image = format("%s-docker.pkg.dev/%s/cloud-run-source-deploy/agent-health-check:%s", var.region, var.project_id, var.image_tag)
+        env {
+          name  = "GOOGLE_CLOUD_PROJECT"
+          value = var.project_id
+        }
       }
     }
   }
@@ -15,14 +51,16 @@ resource "google_cloud_run_v2_job" "agent_health_checker" {
 resource "google_cloud_scheduler_job" "agent_health_check_scheduler" {
   name     = "agent-health-check-scheduler"
   schedule = "* * * * *" # Every minute
-  region   = var.region
+  region   = "europe-west1"
   project  = var.project_id
 
   http_target {
-    uri = "https://run.googleapis.com/v1/projects/${var.project_id}/locations/${var.region}/jobs/${google_cloud_run_v2_job.agent_health_checker.name}:run"
+    uri         = "https://${var.region}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${var.project_id}/jobs/agent-health-checker:run"
     http_method = "POST"
     oauth_token {
-      service_account_email = var.cloud_run_job_service_account_email
+      service_account_email = google_service_account.agent_health_checker.email
     }
   }
+
+  depends_on = [google_project_service.cloudscheduler]
 }

@@ -10,6 +10,7 @@
   url_env: MOMENTSLAB_AGENT_URL
   key_env: MOMENTSLAB_AGENT_API_KEY
   default_url: "http://localhost:10003"
+  secret_id: "moments-lab-agent-api-key"
 # - name: HIGHFIELD_AGENT
 #   url_env: HIGHFIELD_AGENT_URL
 #   key_env: HIGHFIELD_AGENT_API_KEY
@@ -22,7 +23,13 @@
   url_env: SOFIE_AGENT_URL
   key_env: SOFIE_AGENT_API_KEY
   default_url: "http://localhost:10011"
+  secret_id: "sofie-agent-api-key"
 - name: ACTIVITIES_AGENT
   url_env: ACTIVITIES_AGENT_URL
   key_env: ACTIVITIES_AGENT_API_KEY
+  default_url: "http://localhost:8020"
+- name: SHURE_AGENT
+  url_env: SHURE_AGENT_URL
+  key_env: SHURE_AGENT_API_KEY
+  secret_id: "shure-agent-api-key"
   default_url: "http://localhost:8020"

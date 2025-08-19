@@ -5,10 +5,10 @@ FROM python:3.11-slim
 WORKDIR /usr/src/app
 
 # Copy the requirements file into the container at /usr/src/app
-COPY requirements.txt ./
+COPY requirements-prod.txt ./
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Install any needed packages specified in requirements-prod.txt
+RUN pip install --no-cache-dir -r requirements-prod.txt
 
 # Copy the rest of the application's code from the host to the container at /usr/src/app
 COPY . .
