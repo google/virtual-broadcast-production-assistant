@@ -1,3 +1,9 @@
+
+sofie/agents/ibc-agents.json
+sofie/agents/sofie-tool/dist
+sofie/agents/sofie-tool/log
+sofie/agents/sofie-tool/node_modules
+
 cloudbuild-iam.sh
 
 infrastructure/.terraform/**

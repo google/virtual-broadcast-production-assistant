@@ -1,0 +1,150 @@
+name: Sofie
+services:
+  db:
+    container_name: db
+    hostname: mongo
+    image: mongo:8
+    restart: always
+    entrypoint: ['/usr/bin/mongod', '--replSet', 'rs0', '--bind_ip_all']
+    # the healthcheck avoids the need to initiate the replica set
+    healthcheck:
+      test: test $$(mongosh --quiet --eval "try {rs.initiate()} catch(e) {rs.status().ok}") -eq 1
+      interval: 10s
+      start_period: 30s
+    volumes:
+      - db-data:/data/db
+    networks:
+      - sofie
+
+  core:
+    container_name: core
+    hostname: core
+    image: sofietv/tv-automation-server-core:release53
+    restart: always
+    ports:
+      - '3000:3000' # Same port as meteor uses by default
+    environment:
+      PORT: '3000'
+      MONGO_URL: 'mongodb://db:27017/meteor'
+      MONGO_OPLOG_URL: 'mongodb://db:27017/local'
+      ROOT_URL: 'http://localhost:3000'
+      SOFIE_STORE_PATH: '/mnt/sofie-store'
+    networks:
+      - sofie
+    volumes:
+      - sofie-store:/mnt/sofie-store
+    depends_on:
+      - db
+
+  playout-gateway:
+    container_name: playout-gateway
+    image: sofietv/tv-automation-playout-gateway:release53
+    restart: always
+    environment:
+      DEVICE_ID: playoutGateway
+      CORE_HOST: core
+      CORE_PORT: "3000"
+    networks:
+      - sofie
+    depends_on:
+      - core
+
+  live-status-gateway:
+    container_name: live-status-gateway
+    hostname: live-status-gateway
+    image: sofietv/tv-automation-live-status-gateway:release53
+    restart: always
+    ports:
+      - '8080:8080'
+    environment:
+      DEVICE_ID: liveStatusGateway
+      CORE_HOST: core
+      CORE_PORT: "3000"
+    networks:
+      - sofie
+      - lan_access
+    depends_on:
+      - core
+
+  package-manager:
+    container_name: package-manager
+    image: sofietv/package-manager-package-manager:latest
+    restart: always
+    environment:
+      DEVICE_ID: packageManager
+      CORE_HOST: core
+      CORE_PORT: "3000"
+      PACKAGE_MANAGER_URL: ws://package-manager:8060
+      WORKFORCE_URL: ws://package-manager-workforce:8070
+    networks:
+      - sofie
+    depends_on:
+      - core
+      - package-manager-workforce
+
+  package-manager-http-server:
+    container_name: pm-http
+    image: sofietv/package-manager-http-server:latest
+    restart: always
+    ports:
+      - '8081:8080'
+    environment:
+      HTTP_SERVER_BASE_PATH: /mnt/package-manager-store
+    networks:
+      - sofie
+      - lan_access
+    volumes:
+      - package-manager-store:/mnt/package-manager-store
+
+  package-manager-workforce:
+    container_name: pm-workforce
+    image: sofietv/package-manager-workforce:latest
+    restart: always
+    ports:
+      - '8070:8070'
+    networks:
+      - sofie
+      - lan_access
+
+  sofie-tool:
+    container_name: tool
+    hostname: sofie-tool
+    image: sofie-tool:latest
+    restart: always
+    environment:
+     NODE_ENV: production
+     SOFIE_API_BASE: http://core:3000/api/v1.0
+     SOFIE_LIVE_STATUS_WS: ws://live-status-gateway:8080
+    networks:
+      - sofie
+    depends_on:
+      - core
+      - live-status-gateway
+
+  sofie-agent:
+    container_name: agent
+    image: sofie-agent:latest
+    restart: always
+    ports:
+      - '8001:8001'
+    environment:
+     GOOGLE_GENAI_USE_VERTEXAI: FALSE
+     GOOGLE_API_KEY:
+     HOST: http://sofie-tool:3000/mcp
+     EXTERNAL_HOST: http://localhost:8001
+    networks:
+      - sofie
+      - lan_access
+    depends_on:
+      - sofie-tool
+
+
+networks:
+  sofie:
+  lan_access:
+    driver: bridge
+
+volumes:
+  db-data:
+  sofie-store:
+  package-manager-store:
