@@ -150,7 +150,7 @@ export class SofieMCPServer {
 
 	private setupToolHandlers(server: Server, rundownTools: RundownTools) {
 		// Register list_tools handler
-		logger.info('ADK requested tools')
+		logger.info('MCP client requested tools')
 		server.setRequestHandler(ListToolsRequestSchema, async () => {
 			return {
 				tools: [

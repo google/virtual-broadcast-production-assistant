@@ -25,7 +25,7 @@ export class RundownTools {
 	constructor(config: Config) {
 		this.config = config
 		this.tools = this.getToolDefinitions()
-		if (!config.iapClientId || !config.serviceAccountPath) {
+		if (config.iapClientId && config.serviceAccountPath) {
 			this.auth = new GoogleAuth({
 				keyFile: this.config.serviceAccountPath,
 			})
