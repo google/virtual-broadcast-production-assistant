@@ -1,0 +1,5 @@
+google-cloud-firestore
+requests
+pytest
+pytest-mock
+pylint
