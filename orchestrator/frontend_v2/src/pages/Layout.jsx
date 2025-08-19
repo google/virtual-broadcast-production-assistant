@@ -1,9 +1,9 @@
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { useSocket } from "@/contexts/SocketContext";
-import { useRundown } from "@/contexts/RundownContext";
+import { useAuth } from "@/contexts/useAuth";
+import { useSocket } from "@/contexts/useSocket";
+import { useRundown } from "@/contexts/useRundown";
 import { createPageUrl } from "@/utils";
 import {
   Radio,
@@ -85,10 +85,11 @@ export default function Layout({ children }) {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            <div className="hidden sm:flex items-center space-x-2 mr-4">
+            <div className="sm:flex items-center space-x-2 mr-4">
               <Label htmlFor="rundown-system-toggle" className={rundownSystem === 'cuez' ? 'text-green-400 font-bold' : 'text-gray-400'}>CUEZ</Label>
               <Switch
                 id="rundown-system-toggle"
+                data-testid="rundown-system-toggle"
                 checked={rundownSystem === "sofie"}
                 onCheckedChange={handleRundownChange}
               />

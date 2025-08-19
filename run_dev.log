@@ -1,0 +1,2 @@
+Error: Python virtual environment for the agent not found at 'agent/venv'.
+Please set up the agent's environment first by following the instructions in 'agent/README.MD'.
