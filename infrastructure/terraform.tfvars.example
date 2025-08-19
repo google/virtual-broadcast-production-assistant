@@ -7,6 +7,9 @@ orchestrator_custom_domain = "orchestrator.example.com"
 orchestrator_container_image = "container-image-path"
 orchestrator_service_account_email = "orchestrator-service-account@project_id.iam.gserviceaccount.com"
 
+# Activity Agent
+activity_agent_service_name = "activity-agent"
+
 # DNS
 dns_zone_name = "example-com"
 root_domain   = "example.com"

@@ -38,3 +38,8 @@ variable "orchestrator_service_account_email" {
   type        = string
 }
 
+variable "activity_agent_service_name" {
+  description = "The name of the activity-agent Cloud Run service."
+  type        = string
+  default     = "activity-agent"
+}
