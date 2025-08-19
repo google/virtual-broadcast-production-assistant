@@ -1,34 +1,12 @@
-git # Dependencies
-/node_modules
-/web/node_modules
+# Node.js
+node_modules
+npm-debug.log
+.npm
 
-# Vite build output
-/dist
-/build
+# Build output
+dist
+build
 
-# Log files
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Local environment variables
+# Deployment scripts and env files
+deploy-cloud-run.sh
 .env
-.env.local
-.env.*.local
-
-# IDE and editor directories
-.vscode/
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Test runner reports
-/coverage
