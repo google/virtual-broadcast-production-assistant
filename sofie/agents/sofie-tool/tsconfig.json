@@ -1,0 +1,15 @@
+{
+	"extends": "@tsconfig/node22/tsconfig.json",
+	"include": ["src/**/*"],
+	"exclude": ["dist/**", "node_modules/**"],
+	"compilerOptions": {
+		"baseUrl": "./",
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitAny": true,
+		"noImplicitReturns": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"outDir": "./dist",
+		"sourceMap": true
+	}
+}
