@@ -1,9 +1,9 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import * as firebaseui from 'firebaseui';
 import 'firebaseui/dist/firebaseui.css';
 import { GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 
 export default function Auth() {
   const { isUpgrading, setIsUpgrading, signInAnonymously } = useAuth();
@@ -16,7 +16,7 @@ export default function Auth() {
           GoogleAuthProvider.PROVIDER_ID,
         ],
         callbacks: {
-          signInSuccessWithAuthResult: function (authResult, redirectUrl) {
+          signInSuccessWithAuthResult: function () {
             setIsUpgrading(false);
             return false;
           },

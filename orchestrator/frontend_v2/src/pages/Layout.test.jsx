@@ -1,14 +1,18 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import Layout from './Layout';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRundown } from '@/contexts/RundownContext';
+import { useAuth } from '@/contexts/useAuth';
+import { useRundown } from '@/contexts/useRundown';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 // Mock the hooks
-vi.mock('@/contexts/AuthContext');
-vi.mock('@/contexts/RundownContext');
+import { useSocket } from '@/contexts/useSocket';
+
+vi.mock('@/contexts/useAuth');
+vi.mock('@/contexts/useRundown');
+vi.mock('@/contexts/useSocket');
+
 
 describe('Layout', () => {
   let mockUpdateRundownSystem;
@@ -27,16 +31,23 @@ describe('Layout', () => {
       rundownSystem: 'cuez',
       updateRundownSystem: mockUpdateRundownSystem,
     });
+
+    useSocket.mockReturnValue({
+      connectionStatus: 'connected',
+    });
+
   });
 
-  it('toggles the rundown system', () => {
-    render(
-      <Router>
-        <Layout />
-      </Router>
-    );
+  it.only('toggles the rundown system', async () => {
+    await act(async () => {
+      render(
+        <Router>
+          <Layout />
+        </Router>
+      );
+    });
 
-    const switchElement = screen.getByRole('switch');
+    const switchElement = screen.getByTestId('rundown-system-toggle');
     fireEvent.click(switchElement);
 
     expect(mockUpdateRundownSystem).toHaveBeenCalledWith('sofie');

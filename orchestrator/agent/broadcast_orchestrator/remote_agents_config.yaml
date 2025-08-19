@@ -14,10 +14,10 @@
 #   url_env: HIGHFIELD_AGENT_URL
 #   key_env: HIGHFIELD_AGENT_API_KEY
 #   default_url: "http://localhost:10004"
-# - name: EVS_AGENT
-#   url_env: EVS_AGENT_URL
-#   key_env: EVS_AGENT_API_KEY
-#   default_url: "http://localhost:10010"
+- name: EVS_AGENT
+  url_env: EVS_AGENT_URL
+  key_env: EVS_AGENT_API_KEY
+  default_url: "http://localhost:10010"
 - name: SOFIE_AGENT
   url_env: SOFIE_AGENT_URL
   key_env: SOFIE_AGENT_API_KEY
@@ -26,3 +26,8 @@
   url_env: SHURE_AGENT_URL
   key_env: SHURE_AGENT_API_KEY
   default_url: "http://localhost:10012"
+- name: ACTIVITIES_AGENT
+  url_env: ACTIVITIES_AGENT_URL
+  key_env: ACTIVITIES_AGENT_API_KEY
+  default_url: "http://localhost:8020"
+

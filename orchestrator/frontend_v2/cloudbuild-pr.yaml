@@ -10,7 +10,14 @@ steps:
     args: ['install']
     dir: 'orchestrator/frontend_v2'
 
-  # 2. Run tests
+  # 2. Run linting
+  - name: 'gcr.io/cloud-builders/npm'
+    id: 'Run linting'
+    entrypoint: 'npm'
+    args: ['run', 'lint']
+    dir: 'orchestrator/frontend_v2'
+
+  # 3. Run tests
   # This step runs the tests to ensure the PR is valid.
   - name: 'gcr.io/cloud-builders/npm'
     id: 'Run tests'

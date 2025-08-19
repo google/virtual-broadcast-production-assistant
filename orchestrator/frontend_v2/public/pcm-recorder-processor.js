@@ -3,7 +3,7 @@ class PCMProcessor extends AudioWorkletProcessor {
     super();
   }
 
-  process(inputs, outputs, parameters) {
+  process(inputs) {
     if (inputs.length > 0 && inputs[0].length > 0) {
       // Use the first channel
       const inputChannel = inputs[0][0];

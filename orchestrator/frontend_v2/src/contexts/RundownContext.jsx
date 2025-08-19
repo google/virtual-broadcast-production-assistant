@@ -1,18 +1,14 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useEffect, useState } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { useAuth } from './AuthContext';
-import { useSocket } from './SocketContext';
+import { useAuth } from './useAuth';
 import { db } from '@/lib/firebase';
 
-const RundownContext = createContext();
+export const RundownContext = createContext();
 
-export function useRundown() {
-  return useContext(RundownContext);
-}
+
 
 export function RundownProvider({ children }) {
   const { currentUser } = useAuth();
-  const { reconnect } = useSocket();
   const [rundownSystem, setRundownSystem] = useState('cuez');
   const [loading, setLoading] = useState(true);
 
@@ -51,9 +47,6 @@ export function RundownProvider({ children }) {
     const userDocRef = doc(db, 'user_preferences', currentUser.uid);
     try {
       await setDoc(userDocRef, { rundown_system: system }, { merge: true });
-      if (reconnect) {
-        reconnect();
-      }
     } catch (error) {
       console.error('Error setting rundown system preference:', error);
     }

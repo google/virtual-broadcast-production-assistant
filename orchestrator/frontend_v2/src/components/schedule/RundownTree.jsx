@@ -42,7 +42,9 @@ const RundownItem = React.forwardRef(({ item, selectedItemId, onSelectItem, onUp
   >
     <GripVertical className="w-5 h-5 text-[#A6A0AA] flex-shrink-0" />
     <div className="flex-1 min-w-0">
-      <p className={`font-medium truncate ${item.skipped ? 'line-through text-[#A6A0AA]' : 'text-[#E6E1E5]'}`}>
+      <p className={`font-medium truncate ${
+        item.skipped ? 'line-through text-[#A6A0AA]' : 'text-[#E6E1E5]'
+      }`}>
         {item.title}
       </p>
       <div className="flex items-center gap-2 text-xs text-[#A6A0AA]">
@@ -59,6 +61,7 @@ const RundownItem = React.forwardRef(({ item, selectedItemId, onSelectItem, onUp
     />
   </div>
 ));
+RundownItem.displayName = 'RundownItem';
 
 export default function RundownTree({ episode, selectedItemId, onSelectItem, onReorderItems, onUpdateItem }) {
   const handleDragEnd = (result) => {

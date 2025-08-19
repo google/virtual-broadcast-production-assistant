@@ -35,4 +35,4 @@ const Toggle = React.forwardRef(({ className, variant, size, ...props }, ref) =>
 
 Toggle.displayName = TogglePrimitive.Root.displayName
 
-export { Toggle, toggleVariants }
+export { Toggle }

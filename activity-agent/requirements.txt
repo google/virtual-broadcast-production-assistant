@@ -1,0 +1,6 @@
+uvicorn
+a2a-sdk
+google-adk
+python-dotenv
+httpx
+gunicorn

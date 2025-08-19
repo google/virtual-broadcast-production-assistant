@@ -1,17 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  Mic,
-  MicOff,
   Send,
   ChevronDown,
-  MoreHorizontal,
-  Play,
-  Pause,
-  Volume2,
-  VolumeX
 } from "lucide-react";
 
 import TimelineView from "../components/live/TimelineView";
@@ -19,9 +12,9 @@ import ChatPanel from "../components/live/ChatPanel";
 import TelemetryPanel from "../components/live/TelemetryPanel";
 import AgentStatusList from "../components/live/AgentStatusList";
 import MicControl from "../components/live/MicControl";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRundown } from "@/contexts/RundownContext";
-import { useSocket } from "@/contexts/SocketContext";
+import { useAuth } from "@/contexts/useAuth";
+import { useRundown } from "@/contexts/useRundown";
+import { useSocket } from "@/contexts/useSocket";
 import { sendMessage } from "@/api/webSocket";
 import { initAudio, stopAudioRecording, playAudio, stopAudioPlayback } from "@/lib/audio";
 
