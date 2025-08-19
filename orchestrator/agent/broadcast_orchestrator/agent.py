@@ -20,7 +20,7 @@ from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools.tool_context import ToolContext
 
 
-from .automation_system_instructions import (AUTOMATION_SYSTEMS, CUEZ_CONFIG,
+from .automation_system_instructions import (AUTOMATION_SYSTEMS, CUEZ_CONFIG, CUEPILOT_CONFIG,
                                              DEFAULT_INSTRUCTIONS,
                                              SOFIE_CONFIG)
 
