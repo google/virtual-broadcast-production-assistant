@@ -3,9 +3,9 @@ import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter as Router } from 'react-router-dom';
 import Live from './Live';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRundown } from '@/contexts/RundownContext';
-import { useSocket } from '@/contexts/SocketContext';
+import { useAuth } from '@/contexts/useAuth';
+import { useRundown } from '@/contexts/useRundown';
+import { useSocket } from '@/contexts/useSocket';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 vi.mock('firebase/app', () => ({
@@ -14,6 +14,9 @@ vi.mock('firebase/app', () => ({
 
 vi.mock('firebase/auth', () => ({
   getAuth: vi.fn(),
+  onAuthStateChanged: vi.fn(),
+  signInAnonymously: vi.fn(),
+  signOut: vi.fn(),
 }));
 
 vi.mock('firebase/firestore', () => ({
@@ -21,9 +24,10 @@ vi.mock('firebase/firestore', () => ({
 }));
 
 // Mock the hooks
-vi.mock('@/contexts/AuthContext');
-vi.mock('@/contexts/RundownContext');
-vi.mock('@/contexts/SocketContext');
+vi.mock('@/contexts/useAuth');
+vi.mock('@/contexts/useRundown');
+vi.mock('@/contexts/useSocket');
+
 
 describe('Live page', () => {
   let mockAddEventListener;

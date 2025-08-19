@@ -10,7 +10,7 @@ import Schedule from "./Schedule";
 import Contacts from "./Contacts";
 import Auth from './Auth';
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 
 const PAGES = {
     Live: Live,

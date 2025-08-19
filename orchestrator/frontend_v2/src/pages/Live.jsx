@@ -12,9 +12,9 @@ import ChatPanel from "../components/live/ChatPanel";
 import TelemetryPanel from "../components/live/TelemetryPanel";
 import AgentStatusList from "../components/live/AgentStatusList";
 import MicControl from "../components/live/MicControl";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRundown } from "@/contexts/RundownContext";
-import { useSocket } from "@/contexts/SocketContext";
+import { useAuth } from "@/contexts/useAuth";
+import { useRundown } from "@/contexts/useRundown";
+import { useSocket } from "@/contexts/useSocket";
 import { sendMessage } from "@/api/webSocket";
 import { initAudio, stopAudioRecording, playAudio, stopAudioPlayback } from "@/lib/audio";
 

@@ -5,8 +5,8 @@ import { Send } from "lucide-react";
 import ChatPanel from "../components/live/ChatPanel";
 import TelemetryPanel from "../components/live/TelemetryPanel";
 import MicControl from "../components/live/MicControl";
-import { useRundown } from "@/contexts/RundownContext";
-import { useSocket } from "@/contexts/SocketContext";
+import { useRundown } from "@/contexts/useRundown";
+import { useSocket } from "@/contexts/useSocket";
 import { sendMessage } from "@/api/webSocket";
 import { initAudio, stopAudioRecording, playAudio, stopAudioPlayback } from "@/lib/audio";
 
@@ -15,8 +15,44 @@ export default function Console() {
   const [currentMessage, setCurrentMessage] = useState("");
   const [micEnabled, setMicEnabled] = useState(false);
   const [messages, setMessages] = useState([]);
-  const { addEventListener } = useSocket();
+  const { addEventListener, connectionStatus } = useSocket();
   const currentMessageIdRef = useRef(null);
+
+  useEffect(() => {
+    if (connectionStatus === 'connected') {
+        setMessages([
+            {
+              id: "welcome-message",
+              role: "assistant",
+              text: "Full console mode active. How can I assist with your broadcast?",
+              timestamp: Date.now(),
+              partial: false,
+            },
+          ]);
+    } else if (connectionStatus === 'connecting') {
+        setMessages(prev => {
+            if (prev.length > 0 && prev[prev.length - 1].id === 'connecting-message') return prev;
+            return [...prev, {
+                id: 'connecting-message',
+                role: 'assistant',
+                text: 'Connecting...',
+                timestamp: Date.now(),
+                partial: false,
+            }];
+        });
+    } else if (connectionStatus === 'disconnected') {
+        setMessages(prev => {
+            if (prev.length > 0 && prev[prev.length - 1].id === 'disconnected-message') return prev;
+            return [...prev, {
+                id: 'disconnected-message',
+                role: 'assistant',
+                text: 'Connection lost. Attempting to reconnect...',
+                timestamp: Date.now(),
+                partial: false,
+            }];
+        });
+    }
+  }, [connectionStatus]);
 
   useEffect(() => {
     // Clear messages and show a reconfiguring message when rundownSystem changes
@@ -29,19 +65,6 @@ export default function Console() {
         partial: false,
       },
     ]);
-
-    const onOpen = () => {
-      console.log("WebSocket connected");
-      setMessages([
-        {
-          id: "1",
-          role: "assistant",
-          text: "Full console mode active. How can I assist with your broadcast?",
-          timestamp: Date.now(),
-          partial: false,
-        },
-      ]);
-    };
 
     const onMessage = (message) => {
       if (message.turn_complete) {
@@ -89,11 +112,9 @@ export default function Console() {
       }
     };
 
-    const cleanupOpen = addEventListener('open', onOpen);
     const cleanupMessage = addEventListener('message', onMessage);
 
     return () => {
-      cleanupOpen();
       cleanupMessage();
     };
   }, [rundownSystem, addEventListener]);
