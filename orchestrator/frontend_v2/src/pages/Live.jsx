@@ -9,7 +9,7 @@ import {
 
 import TimelineView from "../components/live/TimelineView";
 import ChatPanel from "../components/live/ChatPanel";
-import TelemetryPanel from "../components/live/TelemetryPanel";
+
 import AgentStatusList from "../components/live/AgentStatusList";
 import MicControl from "../components/live/MicControl";
 import { useAuth } from "@/contexts/useAuth";

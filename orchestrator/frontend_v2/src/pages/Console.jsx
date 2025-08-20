@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send } from "lucide-react";
 import ChatPanel from "../components/live/ChatPanel";
-import TelemetryPanel from "../components/live/TelemetryPanel";
+
 import MicControl from "../components/live/MicControl";
 import { useRundown } from "@/contexts/useRundown";
 import { useSocket } from "@/contexts/useSocket";
