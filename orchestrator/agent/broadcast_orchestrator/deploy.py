@@ -14,40 +14,54 @@
  limitations under the License.
  """
 import os
+import logging
+import sys
 
 import vertexai
 from vertexai import agent_engines
 
 import agent  # type: ignore
 
-project = os.environ.get('GOOGLE_CLOUD_PROJECT')
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+logger = logging.getLogger(__name__)
 
-if project is None:
-    raise Exception('No project set in environment')
+try:
+    project = os.environ.get('GOOGLE_CLOUD_PROJECT')
+    if project is None:
+        raise Exception('No project set in environment')
+    logger.info(f"Project: {project}")
 
-staging_buecket = os.environ.get('STORAGE_BUCKET')
+    staging_buecket = os.environ.get('STORAGE_BUCKET')
+    if staging_buecket is None:
+        raise Exception('No staging bucket set.')
+    logger.info(f"Staging bucket: {staging_buecket}")
 
-if staging_buecket is None:
-    raise Exception('No staging bucket set.')
+    vertexai.init(project=project, staging_bucket=f'gs://{staging_buecket}')
+    logger.info("Vertex AI initialized.")
 
-vertexai.init(staging_bucket=f'gs://{staging_buecket}')
+    root_agent = agent.root_agent
+    logger.info(f"Root agent name: {root_agent.name}")
 
-root_agent = agent.root_agent
+    display_name = 'Orchestrater Agent'
+    description = '''
+        This is the agent responsible for choosing which remote agents to send
+        tasks to and coordinate their work on helping user in the live broadcast
+        control room
+    '''
 
-display_name = 'Orchestrater Agent'
+    logger.info("Creating agent engine...")
+    remote_agent = agent_engines.create(
+        root_agent,
+        display_name=display_name,
+        description=description,
+        gcs_dir_name=staging_buecket,
+        requirements='../requirements.txt',
+    )
+    logger.info("Agent engine created.")
 
-description = '''
-    This is the agent responsible for choosing which remote agents to send
-    tasks to and coordinate their work on helping user in the live broadcast
-    control room
-'''
+    print(f'AGENT_ENGINE_RESOURCE_NAME={remote_agent.resource_name}')
+    logger.info(f"Agent engine resource name: {remote_agent.resource_name}")
 
-remote_agent = agent_engines.create(
-    root_agent,
-    display_name=display_name,
-    description=description,
-    gcs_dir_name=staging_buecket,
-    requirements='../requirements.txt',
-)
-
-print(f'AGENT_ENGINE_RESOURCE_NAME={remote_agent.resource_name}')
+except Exception as e:
+    logger.error(f"An error occurred: {e}")
+    sys.exit(1)

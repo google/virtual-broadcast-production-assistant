@@ -59,9 +59,12 @@ steps:
   # 6. Deploy to Agent Engine and get the resource name
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: deploy-agent-engine
-    entrypoint: 'python'
+    entrypoint: 'sh'
     args:
-      - 'broadcast_orchestrator/deploy.py'
+      - '-c'
+      - |
+        set -x
+        python broadcast_orchestrator/deploy.py 2>&1
     dir: 'orchestrator/agent'
 
   # 7. Store the Agent Engine resource name in Secret Manager
