@@ -2,13 +2,13 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Users, Filter, Circle, ExternalLink } from "lucide-react";
+import { Search, Users, Filter, Circle } from "lucide-react";
 
 // Mock agents and skills data
 const mockAgents = [
   {
     name: "CUEZ Agent",
-    description: "Broadcast automation and playlist management", 
+    description: "Broadcast automation and playlist management",
     status: "online",
     skills: [
       { id: "1", name: "playlist_control", description: "Manage broadcast playlists", tags: ["automation", "scheduling"] },
@@ -17,7 +17,7 @@ const mockAgents = [
     ]
   },
   {
-    name: "Sofie Agent", 
+    name: "Sofie Agent",
     description: "Studio control and live production",
     status: "online",
     skills: [
@@ -29,7 +29,7 @@ const mockAgents = [
   {
     name: "Content Agent",
     description: "Asset management and content discovery",
-    status: "busy", 
+    status: "busy",
     skills: [
       { id: "7", name: "clip_search", description: "Find and retrieve video clips", tags: ["search", "content"] },
       { id: "8", name: "media_analysis", description: "Analyze media content", tags: ["ai", "analysis"] },
@@ -41,25 +41,25 @@ const mockAgents = [
 export default function Agents() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState(new Set());
-  
+
   // Get all unique tags
   const allTags = [...new Set(
-    mockAgents.flatMap(agent => 
+    mockAgents.flatMap(agent =>
       agent.skills.flatMap(skill => skill.tags || [])
     )
   )];
 
   const filteredAgents = mockAgents.filter(agent => {
-    const matchesSearch = searchQuery === "" || 
+    const matchesSearch = searchQuery === "" ||
       agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       agent.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      agent.skills.some(skill => 
+      agent.skills.some(skill =>
         skill.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         skill.description.toLowerCase().includes(searchQuery.toLowerCase())
       );
 
     const matchesTags = selectedTags.size === 0 ||
-      agent.skills.some(skill => 
+      agent.skills.some(skill =>
         skill.tags && skill.tags.some(tag => selectedTags.has(tag))
       );
 
@@ -153,18 +153,28 @@ export default function Agents() {
                     <Circle className={`w-3 h-3 fill-current ${getStatusColor(agent.status)}`} />
                     <h3 className="text-xl font-bold text-[#E6E1E5]">{agent.name}</h3>
                   </div>
-                  <p className="text-[#A6A0AA] text-sm">{agent.description}</p>
+                  <p className="text-[#A6A0AA] text-sm mb-3">{agent.description}</p>
+
+                  {/* Agent-level tags */}
+                  <div className="flex flex-wrap gap-2">
+                    {[...new Set(agent.skills.flatMap(skill => skill.tags || []))].slice(0, 3).map(tag => (
+                      <Badge
+                        key={tag}
+                        variant="outline"
+                        className="text-xs text-[#A6A0AA] border-white/20"
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-                <Button variant="ghost" size="sm" className="text-[#A6A0AA] hover:text-[#E6E1E5]">
-                  <ExternalLink className="w-4 h-4" />
-                </Button>
               </div>
 
               {/* Status Badge */}
-              <Badge 
-                variant="outline" 
+              <Badge
+                variant="outline"
                 className={`mb-4 capitalize ${
-                  agent.status === 'online' 
+                  agent.status === 'online'
                     ? 'border-[#14B8A6]/30 text-[#14B8A6] bg-[#14B8A6]/10'
                     : agent.status === 'busy'
                     ? 'border-[#FFC857]/30 text-[#FFC857] bg-[#FFC857]/10'
@@ -180,7 +190,7 @@ export default function Agents() {
                   <Users className="w-4 h-4" />
                   Skills ({agent.skills.length})
                 </h4>
-                
+
                 <div className="space-y-2">
                   {agent.skills.map((skill) => (
                     <div key={skill.id} className="p-3 bg-white/5 rounded-lg border border-white/10">
@@ -188,12 +198,12 @@ export default function Agents() {
                         <h5 className="font-medium text-[#E6E1E5] text-sm">{skill.name}</h5>
                       </div>
                       <p className="text-xs text-[#A6A0AA] mb-2">{skill.description}</p>
-                      
+
                       <div className="flex flex-wrap gap-1">
                         {skill.tags?.map((tag) => (
-                          <Badge 
-                            key={tag} 
-                            variant="outline" 
+                          <Badge
+                            key={tag}
+                            variant="outline"
                             className="text-xs text-[#A6A0AA] border-white/20"
                           >
                             {tag}
