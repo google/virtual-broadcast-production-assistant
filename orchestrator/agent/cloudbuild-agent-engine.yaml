@@ -65,7 +65,7 @@ steps:
       - |
         set -x
         pip install --no-cache-dir -r requirements.txt
-        python broadcast_orchestrator/deploy.py 2>&1
+        python -m broadcast_orchestrator.deploy 2>&1
     dir: 'orchestrator/agent'
 
   # 7. Store the Agent Engine resource name in Secret Manager
