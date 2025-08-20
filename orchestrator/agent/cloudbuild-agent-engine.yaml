@@ -9,20 +9,20 @@ steps:
     dir: 'orchestrator/agent'
 
   # 1. Terraform Apply
-  - name: 'hashicorp/terraform:1.2.8'
-    entrypoint: 'sh'
-    args:
-      - '-c'
-      - |
-        terraform init
-        terraform apply -auto-approve \
-          -var="project_id=$PROJECT_ID" \
-          -var="region=${_REGION}" \
-          -var="orchestrator_container_image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA" \
-          -var="orchestrator_service_account_email=websocket-service-account@$PROJECT_ID.iam.gserviceaccount.com" \
-          -var="reverse_proxy_container_image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/reverse-proxy:$COMMIT_SHA" \
-          -var="agent_engine_url_secret_name=${_AGENT_ENGINE_URL_SECRET_NAME}"
-    dir: 'infrastructure'
+  # - name: 'hashicorp/terraform:1.2.8'
+  #   entrypoint: 'sh'
+  #   args:
+  #     - '-c'
+  #     - |
+  #       terraform init
+  #       terraform apply -auto-approve \
+  #         -var="project_id=$PROJECT_ID" \
+  #         -var="region=${_REGION}" \
+  #         -var="orchestrator_container_image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA" \
+  #         -var="orchestrator_service_account_email=websocket-service-account@$PROJECT_ID.iam.gserviceaccount.com" \
+  #         -var="reverse_proxy_container_image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/reverse-proxy:$COMMIT_SHA" \
+  #         -var="agent_engine_url_secret_name=${_AGENT_ENGINE_URL_SECRET_NAME}"
+  #   dir: 'infrastructure'
 
   # 2. Build the orchestrator Docker image
   - name: 'gcr.io/cloud-builders/docker'
