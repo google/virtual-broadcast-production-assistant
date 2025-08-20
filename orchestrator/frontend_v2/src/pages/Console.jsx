@@ -207,9 +207,9 @@ export default function Console() {
       </div>
 
       {/* Right Sidebar - Telemetry - Hidden on mobile */}
-      <div className="hidden lg:block w-80 bg-[#1C1A22] border-l border-white/8">
+      {/* <div className="hidden lg:block w-80 bg-[#1C1A22] border-l border-white/8">
         <TelemetryPanel />
-      </div>
+      </div> */}
     </div>
   );
 }
