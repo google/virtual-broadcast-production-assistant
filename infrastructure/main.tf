@@ -11,6 +11,14 @@ module "orchestrator" {
   service_account_email = var.orchestrator_service_account_email
 }
 
+
+module "agent_health_checker" {
+  source = "./modules/agent-health-checker"
+
+  project_id                          = var.project_id
+  region                              = var.region
+}
+
 module "activity_agent" {
   source = "./modules/activity-agent"
 

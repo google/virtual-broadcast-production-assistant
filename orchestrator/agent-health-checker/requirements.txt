@@ -1,0 +1,8 @@
+google-cloud-firestore
+requests
+google-cloud-secret-manager
+a2a-sdk
+pytest
+pytest-mock
+pylint
+pytest-asyncio

@@ -1,0 +1,64 @@
+steps:
+  # 1. Setup virtual environment and install dependencies
+  - name: 'python:3.11'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        python3 -m venv /workspace/venv
+        source /workspace/venv/bin/activate
+        pip install -r orchestrator/agent-health-checker/requirements.txt
+    id: 'Setup Env'
+
+  # 2. Lint with pylint
+  - name: 'python:3.11'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        source /workspace/venv/bin/activate
+        pylint --rcfile=orchestrator/agent-health-checker/.pylintrc orchestrator/agent-health-checker/main.py orchestrator/agent-health-checker/test_main.py
+    id: 'Run Pylint'
+
+  # 3. Run unit tests
+  - name: 'python:3.11'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        source /workspace/venv/bin/activate
+        pytest orchestrator/agent-health-checker/test_main.py
+    id: 'Run Pytest'
+
+  # 4. Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:latest'
+      - '.'
+    dir: 'orchestrator/agent-health-checker'
+
+  # 5. Push the Docker image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push'
+    args:
+      - 'push'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA'
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:latest'
+
+
+# Define images to be pushed to Artifact Registry
+images:
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:latest'
+
+# Cloud Build options
+options:
+  logging: CLOUD_LOGGING_ONLY

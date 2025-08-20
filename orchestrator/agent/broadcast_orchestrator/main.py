@@ -7,9 +7,11 @@ import json
 import asyncio
 import base64
 import firebase_admin
-from firebase_admin import auth
+from firebase_admin import auth, firestore
 import warnings
 import logging
+import yaml
+import os
 
 from dotenv import load_dotenv
 
@@ -43,15 +45,65 @@ logger = logging.getLogger(__name__)
 # Load Gemini API Key
 load_dotenv()
 
-# Initialize Firebase Admin SDK
-# This will automatically use the service account credentials from the
-# environment if you are running on Cloud Run with a service account.
-# For local development, you might need to set GOOGLE_APPLICATION_CREDENTIALS.
-try:
-    firebase_admin.initialize_app()
-    logger.info("Firebase Admin SDK initialized successfully.")
-except ValueError:
-    logger.info("Firebase Admin SDK already initialized.")
+def seed_agent_status():
+    """
+    Reads agent configuration from a YAML file and seeds it into Firestore.
+    This function is intended to be called on application startup.
+    """
+    try:
+        # Construct the path to the config file relative to this script
+        config_path = os.path.join(os.path.dirname(__file__), 'remote_agents_config.yaml')
+        with open(config_path, 'r') as file:
+            config = yaml.safe_load(file)
+
+        db = firestore.client()
+        agents_ref = db.collection('agent_status')
+
+        for agent_details in config:
+            agent_id = agent_details.get('name')
+            if not agent_id:
+                continue
+
+            doc_ref = agents_ref.document(agent_id)
+            doc_data = {
+                'name': agent_details.get('name'),
+                'url': os.getenv(agent_details.get('url_env'), agent_details.get('default_url')),
+                'status': 'offline',  # Default status
+                'last_checked': firestore.SERVER_TIMESTAMP
+            }
+            if 'secret_id' in agent_details:
+                doc_data['api_key_secret'] = agent_details['secret_id']
+
+            doc_ref.set(doc_data, merge=True)
+            logger.info(f"Seeded/updated agent '{agent_id}' in Firestore.")
+
+    except FileNotFoundError:
+        logger.error("remote_agents_config.yaml not found. Skipping agent status seeding.")
+    except Exception as e:
+        logger.error(f"An error occurred during agent status seeding: {e}")
+
+#
+# FastAPI web app
+#
+
+app = FastAPI()
+
+@app.on_event("startup")
+async def startup_event():
+    """
+    This function is called when the application starts.
+    It's a good place to initialize resources like the Firebase Admin SDK.
+    """
+    try:
+        # Check if the app is already initialized to avoid errors.
+        if not firebase_admin._apps:
+            firebase_admin.initialize_app()
+            logger.info("Firebase Admin SDK initialized successfully.")
+            # Seed the agent status data into Firestore
+            seed_agent_status()
+    except Exception as e:
+        logger.error(f"Error initializing Firebase Admin SDK: {e}")
+
 
 APP_NAME = "ADK Streaming example"
 
@@ -162,11 +214,6 @@ async def client_to_agent_messaging(websocket, live_request_queue):
         logger.info("Client disconnected, closing client->agent messaging.")
 
 
-#
-# FastAPI web app
-#
-
-app = FastAPI()
 
 
 @app.get("/")
