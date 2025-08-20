@@ -57,13 +57,14 @@ steps:
     dir: 'orchestrator/agent/reverse_proxy'
 
   # 6. Deploy to Agent Engine and get the resource name
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  - name: 'python:3.11-slim'
     id: deploy-agent-engine
     entrypoint: 'sh'
     args:
       - '-c'
       - |
         set -x
+        pip install --no-cache-dir -r requirements.txt
         python broadcast_orchestrator/deploy.py 2>&1
     dir: 'orchestrator/agent'
 
