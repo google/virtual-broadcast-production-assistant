@@ -53,7 +53,17 @@ export default function AgentStatusList() {
                   <Circle className={`w-2 h-2 fill-current ${getStatusColor(agent.status)}`} />
                   <h4 className="font-medium text-[#E6E1E5] text-sm">{agent.name}</h4>
                 </div>
-                <p className="text-xs text-[#A6A0AA] truncate">{agent.url}</p>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {agent.tags && agent.tags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="outline"
+                      className="text-xs text-[#A6A0AA] border-white/20"
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
