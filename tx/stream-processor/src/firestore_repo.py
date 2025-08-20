@@ -1,21 +1,44 @@
 import datetime
-import config as config
+import os
 from logger import logger
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
-
 from google.cloud.firestore_v1.vector import Vector
 from google.cloud.firestore_v1.base_vector_query import DistanceMeasure
 
-cred = credentials.Certificate(config.GOOGLE_APPLICATION_CREDENTIALS)
-firebase_admin.initialize_app(cred)
+_DB = None
+
+def _init_firebase_if_needed():
+    """Initialize Firebase Admin + Firestore client lazily.
+    - Uses FIRESTORE_PROJECT_ID or GOOGLE_CLOUD_PROJECT for project scoping.
+    - Uses GOOGLE_APPLICATION_CREDENTIALS if present (local); otherwise ADC (Cloud Run).
+    """
+    global _DB
+    if _DB is not None:
+        return
+
+    project_id = os.getenv("FIRESTORE_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT")
+    key_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    options = {"projectId": project_id} if project_id else None
+
+    if not firebase_admin._apps:
+        if key_path and os.path.exists(key_path):
+            cred = credentials.Certificate(key_path)
+            firebase_admin.initialize_app(cred, options=options)
+        else:
+            # In Cloud Run, use ADC without a key file.
+            firebase_admin.initialize_app(options=options)
+
+    _DB = firestore.client()
+
 
 class FirestoreRepo:
     def __init__(self, collection_name: str):
         """Initialize repository with a specific collection."""
-        self._client = firestore.client()
+        _init_firebase_if_needed()
+        self._client = _DB
         self._collection = self._client.collection(collection_name)
 
     

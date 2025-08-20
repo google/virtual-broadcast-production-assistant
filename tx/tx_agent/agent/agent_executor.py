@@ -28,23 +28,22 @@ class TxAgentExecutor(AgentExecutor):
     
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         query = context.get_user_input()
-        print(query)
         task = context.current_task or new_task(context.message)
         await event_queue.enqueue_event(task)
 
-        updater = TaskUpdater(event_queue, task.id, task.contextId)
+        updater = TaskUpdater(event_queue, task.id, task.context_id)
         user_id = context.call_context.user.user_name if context.call_context else "a2a_user"
         try:
             await updater.update_status(
                 TaskState.working,
-                new_agent_text_message(self.status_message, task.contextId, task.id)
+                new_agent_text_message(self.status_message, task.context_id, task.id)
             )
 
             session = await self.runner.session_service.create_session(
                 app_name=self.agent.name,
                 user_id=user_id,
                 state={},
-                session_id=task.contextId,
+                session_id=task.context_id,
             )
 
             content = types.Content(
@@ -71,7 +70,7 @@ class TxAgentExecutor(AgentExecutor):
         except Exception as e:
             await updater.update_status(
                 TaskState.failed,
-                new_agent_text_message(f"Error: {e!s}", task.contextId, task.id),
+                new_agent_text_message(f"Error: {e!s}", task.context_id, task.id),
                 final=True,
             )
 
