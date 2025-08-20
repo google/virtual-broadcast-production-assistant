@@ -58,6 +58,10 @@ export const SocketProvider = ({ children }) => {
     socket.addEventListener('close', onClose);
     socket.addEventListener('error', onError);
 
+    if (socket.readyState === WebSocket.OPEN) {
+      onOpen();
+    }
+
     // Heartbeat to detect dead connections
     const heartbeatInterval = setInterval(() => {
       if (socket.readyState !== WebSocket.OPEN && socket.readyState !== WebSocket.CONNECTING) {
