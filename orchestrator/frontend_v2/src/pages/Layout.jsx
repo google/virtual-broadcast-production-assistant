@@ -66,7 +66,7 @@ export default function Layout({ children }) {
             </div>
 
             {/* Desktop Navigation - Hidden on screens < 1044px */}
-            <nav className="hidden xl:flex items-center gap-1 ml-8">
+            <nav className="hidden 2xl:flex items-center gap-1 ml-8">
               {navigationItems.map((item) =>
               <Link
                 key={item.title}
@@ -141,7 +141,7 @@ export default function Layout({ children }) {
             {/* Mobile menu button - Visible on screens < 1044px */}
             <Button
               variant="ghost"
-              size="sm" className="bg-fuchsia-600 text-[#ffffff] px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent h-9 rounded-md xl:hidden hover:text-[#1a1a1a]"
+              size="sm" className="bg-fuchsia-600 text-[#ffffff] px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent h-9 rounded-md 2xl:hidden hover:text-[#1a1a1a]"
 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
 
@@ -152,7 +152,7 @@ export default function Layout({ children }) {
 
         {/* Mobile/Tablet Navigation Dropdown */}
         {mobileMenuOpen &&
-        <div className="xl:hidden mt-4 pb-4 border-t border-white/8 pt-4">
+        <div className="2xl:hidden mt-4 pb-4 border-t border-white/8 pt-4">
             <nav className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
               {navigationItems.map((item) =>
             <Link
