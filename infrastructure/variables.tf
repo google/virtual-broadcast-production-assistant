@@ -43,3 +43,45 @@ variable "activity_agent_service_name" {
   type        = string
   default     = "activity-agent"
 }
+
+variable "agent_engine_service_name" {
+  description = "The name of the Agent Engine service."
+  type        = string
+  default     = "agent-engine-service"
+}
+
+variable "agent_engine_vpc_network_name" {
+  description = "The name of the VPC network for the Agent Engine."
+  type        = string
+  default     = "agent-engine-vpc"
+}
+
+variable "agent_engine_vpc_subnet_name" {
+  description = "The name of the VPC subnetwork for the Agent Engine."
+  type        = string
+  default     = "agent-engine-subnet"
+}
+
+variable "reverse_proxy_service_name" {
+  description = "The name of the Cloud Run reverse proxy service."
+  type        = string
+  default     = "reverse-proxy"
+}
+
+variable "reverse_proxy_container_image" {
+  description = "The container image for the Cloud Run reverse proxy service."
+  type        = string
+  default     = "gcr.io/cloudrun/hello"
+}
+
+variable "agent_engine_url" {
+  description = "The URL of the Agent Engine service."
+  type        = string
+  default     = ""
+}
+
+variable "agent_engine_url_secret_name" {
+  description = "The name of the secret to store the Agent Engine URL."
+  type        = string
+  default     = "agent-engine-url"
+}

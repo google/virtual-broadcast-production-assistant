@@ -49,3 +49,5 @@ remote_agent = agent_engines.create(
     gcs_dir_name=staging_buecket,
     requirements='../requirements.txt',
 )
+
+print(f'AGENT_ENGINE_RESOURCE_NAME={remote_agent.resource_name}')

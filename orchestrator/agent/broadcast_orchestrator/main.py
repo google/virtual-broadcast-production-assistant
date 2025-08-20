@@ -10,7 +10,6 @@ import firebase_admin
 from firebase_admin import auth, firestore
 import warnings
 import logging
-import yaml
 import os
 
 from dotenv import load_dotenv
@@ -21,7 +20,8 @@ from google.genai.types import (
     Blob,
 )
 
-from google.adk.runners import InMemoryRunner
+from google.adk.runners import Runner
+from google.adk.sessions import VertexAiSessionService
 from google.adk.agents import LiveRequestQueue
 from google.adk.agents.run_config import RunConfig
 
@@ -45,48 +45,13 @@ logger = logging.getLogger(__name__)
 # Load Gemini API Key
 load_dotenv()
 
-def seed_agent_status():
-    """
-    Reads agent configuration from a YAML file and seeds it into Firestore.
-    This function is intended to be called on application startup.
-    """
-    try:
-        # Construct the path to the config file relative to this script
-        config_path = os.path.join(os.path.dirname(__file__), 'remote_agents_config.yaml')
-        with open(config_path, 'r') as file:
-            config = yaml.safe_load(file)
-
-        db = firestore.client()
-        agents_ref = db.collection('agent_status')
-
-        for agent_details in config:
-            agent_id = agent_details.get('name')
-            if not agent_id:
-                continue
-
-            doc_ref = agents_ref.document(agent_id)
-            doc_data = {
-                'name': agent_details.get('name'),
-                'url': os.getenv(agent_details.get('url_env'), agent_details.get('default_url')),
-                'status': 'offline',  # Default status
-                'last_checked': firestore.SERVER_TIMESTAMP
-            }
-            if 'secret_id' in agent_details:
-                doc_data['api_key_secret'] = agent_details['secret_id']
-
-            doc_ref.set(doc_data, merge=True)
-            logger.info(f"Seeded/updated agent '{agent_id}' in Firestore.")
-
-    except FileNotFoundError:
-        logger.error("remote_agents_config.yaml not found. Skipping agent status seeding.")
-    except Exception as e:
-        logger.error(f"An error occurred during agent status seeding: {e}")
-
 #
 # FastAPI web app
 #
 
 app = FastAPI()
+session_service: VertexAiSessionService | None = None
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -99,10 +64,24 @@ async def startup_event():
         if not firebase_admin._apps:
             firebase_admin.initialize_app()
             logger.info("Firebase Admin SDK initialized successfully.")
-            # Seed the agent status data into Firestore
-            seed_agent_status()
+        
+        global session_service
+        project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
+        location = os.environ.get("GOOGLE_CLOUD_LOCATION")
+        agent_engine_resource_name = os.environ.get("AGENT_ENGINE_RESOURCE_NAME")
+
+        if project_id and location and agent_engine_resource_name:
+            session_service = VertexAiSessionService(
+                project=project_id,
+                location=location,
+                agent_engine_id=agent_engine_resource_name,
+            )
+            logger.info("Vertex AI Session Service initialized.")
+        else:
+            logger.warning("Could not initialize Vertex AI Session Service due to missing environment variables.")
+
     except Exception as e:
-        logger.error(f"Error initializing Firebase Admin SDK: {e}")
+        logger.error(f"Error initializing Firebase Admin SDK or Vertex AI Session Service: {e}")
 
 
 APP_NAME = "ADK Streaming example"
@@ -112,9 +91,10 @@ async def start_agent_session(user_id, is_audio=False):
     """Starts an agent session"""
 
     # Create a Runner
-    runner = InMemoryRunner(
+    runner = Runner(
         app_name=APP_NAME,
         agent=root_agent,
+        session_service=session_service,
     )
 
     # Create a Session

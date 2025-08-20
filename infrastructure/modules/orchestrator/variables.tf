@@ -58,3 +58,10 @@ variable "vpc_subnet_name" {
   default     = "orchestrator-subnet"
 }
 
+
+
+variable "reverse_proxy_neg_id" {
+  description = "The ID of the Network Endpoint Group for the reverse proxy."
+  type        = string
+}
+

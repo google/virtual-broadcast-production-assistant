@@ -36,6 +36,18 @@ resource "google_compute_backend_service" "backend_service" {
   }
 }
 
+resource "google_compute_backend_service" "agent_engine_backend_service" {
+  project = var.project_id
+  name    = "${var.service_name}-agent-engine-backend-service"
+  protocol = "HTTP"
+  port_name = "http"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+
+  backend {
+    group = var.reverse_proxy_neg_id
+  }
+}
+
 resource "google_compute_region_network_endpoint_group" "serverless_neg" {
   project               = var.project_id
   name                  = "${var.service_name}-neg"
@@ -50,6 +62,16 @@ resource "google_compute_url_map" "url_map" {
   project = var.project_id
   name    = "${var.service_name}-url-map"
   default_service = google_compute_backend_service.backend_service.id
+
+  path_matcher {
+    name = "agent-engine-matcher"
+    default_service = google_compute_backend_service.backend_service.id
+
+    path_rule {
+      paths   = ["/agent-engine/*"]
+      service = google_compute_backend_service.agent_engine_backend_service.id
+    }
+  }
 }
 
 resource "google_compute_target_https_proxy" "https_proxy" {

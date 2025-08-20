@@ -1,0 +1,102 @@
+
+steps:
+  # 0. Download environment file from GCS
+  - name: 'gcr.io/cloud-builders/gsutil'
+    args:
+      - 'cp'
+      - 'gs://${_GCS_ENV_BUCKET}/agent/.env.prod'
+      - '.env'
+    dir: 'orchestrator/agent'
+
+  # 1. Terraform Apply
+  - name: 'hashicorp/terraform:1.2.8'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        terraform init
+        terraform apply -auto-approve \
+          -var="project_id=$PROJECT_ID" \
+          -var="region=${_REGION}" \
+          -var="orchestrator_container_image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA" \
+          -var="orchestrator_service_account_email=websocket-service-account@$PROJECT_ID.iam.gserviceaccount.com" \
+          -var="reverse_proxy_container_image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/reverse-proxy:$COMMIT_SHA" \
+          -var="agent_engine_url_secret_name=${_AGENT_ENGINE_URL_SECRET_NAME}"
+    dir: 'infrastructure'
+
+  # 2. Build the orchestrator Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA'
+      - '.'
+    dir: 'orchestrator/agent'
+
+  # 3. Push the orchestrator Docker image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA'
+    dir: 'orchestrator/agent'
+
+  # 4. Build the reverse proxy Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/reverse-proxy:$COMMIT_SHA'
+      - '.'
+    dir: 'orchestrator/agent/reverse_proxy'
+
+  # 5. Push the reverse proxy Docker image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/reverse-proxy:$COMMIT_SHA'
+    dir: 'orchestrator/agent/reverse_proxy'
+
+  # 6. Deploy to Agent Engine and get the resource name
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: deploy-agent-engine
+    entrypoint: 'python'
+    args:
+      - 'broadcast_orchestrator/deploy.py'
+    dir: 'orchestrator/agent'
+
+  # 7. Store the Agent Engine resource name in Secret Manager
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        echo "${steps.deploy-agent-engine.outputs.resource_name}" | gcloud secrets versions add ${_AGENT_ENGINE_URL_SECRET_NAME} --data-file=-
+
+  # 8. Deploy the reverse proxy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'reverse-proxy'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/reverse-proxy:$COMMIT_SHA'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--min-instances=1'
+      - '--session-affinity'
+      - '--service-account=websocket-service-account@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--allow-unauthenticated'
+      - '--update-secrets=AGENT_ENGINE_URL=${_AGENT_ENGINE_URL_SECRET_NAME}:latest'
+
+# Define images to be pushed to Artifact Registry
+images:
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/reverse-proxy:$COMMIT_SHA'
+
+
+# Cloud Build options
+options:
+  logging: CLOUD_LOGGING_ONLY
