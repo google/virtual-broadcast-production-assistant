@@ -22,12 +22,20 @@ def firestore_mock():
 @pytest.mark.asyncio
 @patch('main.get_secret', return_value='test-api-key')
 @patch('main.A2AClient')
-async def test_main_agent_online_with_api_key(mock_a2a_client,
-                                                mock_get_secret,
-                                                firestore_mock):
-    """Test when an agent with an API key is online."""
-    mock_a2a_client.return_value.send_message = AsyncMock(
-        return_value={'status': 'ok'})
+async def test_main_agent_online_with_api_key_and_tags(mock_a2a_client,
+                                                        mock_get_secret,
+                                                        firestore_mock):
+    """Test when an agent with an API key is online and returns tags."""
+    # Mock the response to simulate an agent card with skills and tags
+    mock_response = MagicMock()
+    mock_card = MagicMock()
+    mock_skill1 = MagicMock()
+    mock_skill1.tags = ['tag1', 'tag2']
+    mock_skill2 = MagicMock()
+    mock_skill2.tags = ['tag3', 'tag1']
+    mock_card.skills = [mock_skill1, mock_skill2]
+    mock_response.agent_card = mock_card
+    mock_a2a_client.return_value.send_message = AsyncMock(return_value=mock_response)
 
     mock_agent = MagicMock()
     mock_agent.id = 'agent-1'
@@ -48,7 +56,8 @@ async def test_main_agent_online_with_api_key(mock_a2a_client,
     mock_a2a_client.return_value.send_message.assert_called_once()
     firestore_mock.document('agent-1').update.assert_called_with({
         'status': 'online',
-        'last_checked': main.firestore.SERVER_TIMESTAMP
+        'last_checked': main.firestore.SERVER_TIMESTAMP,
+        'tags': ['tag1', 'tag2', 'tag3']
     })
 
 
@@ -76,7 +85,8 @@ async def test_main_agent_secret_failure(mock_a2a_client, mock_get_secret,
     mock_a2a_client.assert_not_called()
     firestore_mock.document('agent-1').update.assert_called_with({
         'status': 'error',
-        'last_checked': main.firestore.SERVER_TIMESTAMP
+        'last_checked': main.firestore.SERVER_TIMESTAMP,
+        'tags': []
     })
 
 
@@ -100,7 +110,8 @@ async def test_main_agent_offline(mock_a2a_client, firestore_mock):
 
     firestore_mock.document('agent-1').update.assert_called_with({
         'status': 'offline',
-        'last_checked': main.firestore.SERVER_TIMESTAMP
+        'last_checked': main.firestore.SERVER_TIMESTAMP,
+        'tags': []
     })
 
 
@@ -120,5 +131,6 @@ async def test_main_agent_no_url(firestore_mock):
 
     firestore_mock.document('agent-1').update.assert_called_with({
         'status': 'offline',
-        'last_checked': main.firestore.SERVER_TIMESTAMP
+        'last_checked': main.firestore.SERVER_TIMESTAMP,
+        'tags': []
     })
