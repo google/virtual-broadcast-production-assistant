@@ -20,7 +20,7 @@ import sys
 import vertexai
 from vertexai import agent_engines
 
-from broadcast_orchestrator import agent  # type: ignore
+import agent  # type: ignore
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ try:
         root_agent,
         display_name=display_name,
         description=description,
-        gcs_dir_name=staging_buecket,
+        gcs_dir_name='broadcast_orchestrator',
         requirements='./requirements.txt',
     )
     logger.info("Agent engine created.")

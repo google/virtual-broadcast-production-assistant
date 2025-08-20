@@ -100,3 +100,9 @@ resource "google_project_iam_member" "cloud_build_runner_vpcaccess_admin" {
   role    = "roles/vpcaccess.admin"
   member  = "serviceAccount:${var.cloud_build_runner_service_account_email}"
 }
+
+resource "google_project_iam_member" "cloud_build_runner_aiplatform_admin" {
+  project = var.project_id
+  role    = "roles/aiplatform.admin"
+  member  = "serviceAccount:${var.cloud_build_runner_service_account_email}"
+}
