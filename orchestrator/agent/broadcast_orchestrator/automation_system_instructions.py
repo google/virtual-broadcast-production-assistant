@@ -20,7 +20,7 @@ SOFIE_CONFIG = {
     "config_name":
     "SOFIE_AGENT",
     "agent_name":
-    "Sofie Rundown Agent",
+    "Sofie Agent",
     "instructions":
     """
 You are configured to interact with the Sofie Automation system.
