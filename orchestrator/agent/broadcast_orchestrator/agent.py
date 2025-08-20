@@ -28,18 +28,18 @@ from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools.tool_context import ToolContext
 
 
-from .automation_system_instructions import (
+from broadcast_orchestrator.automation_system_instructions import (
     AUTOMATION_SYSTEMS,
     CUEZ_CONFIG,
     DEFAULT_INSTRUCTIONS,
     SOFIE_CONFIG,
 )
 
-from .config import (
+from broadcast_orchestrator.config import (
     load_remote_agents_config,
     load_system_instructions,
 )
-from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
+from broadcast_orchestrator.remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
 
 load_dotenv()
 

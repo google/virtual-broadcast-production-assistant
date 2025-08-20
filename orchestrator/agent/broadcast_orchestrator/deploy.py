@@ -20,7 +20,7 @@ import sys
 import vertexai
 from vertexai import agent_engines
 
-import agent  # type: ignore
+from broadcast_orchestrator import agent  # type: ignore
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
