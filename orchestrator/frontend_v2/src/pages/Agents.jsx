@@ -153,11 +153,21 @@ export default function Agents() {
                     <Circle className={`w-3 h-3 fill-current ${getStatusColor(agent.status)}`} />
                     <h3 className="text-xl font-bold text-[#E6E1E5]">{agent.name}</h3>
                   </div>
-                  <p className="text-[#A6A0AA] text-sm">{agent.description}</p>
+                  <p className="text-[#A6A0AA] text-sm mb-3">{agent.description}</p>
+
+                  {/* Agent-level tags */}
+                  <div className="flex flex-wrap gap-2">
+                    {[...new Set(agent.skills.flatMap(skill => skill.tags || []))].slice(0, 3).map(tag => (
+                      <Badge
+                        key={tag}
+                        variant="outline"
+                        className="text-xs text-[#A6A0AA] border-white/20"
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-                <Button variant="ghost" size="sm" className="text-[#A6A0AA] hover:text-[#E6E1E5]">
-                  <ExternalLink className="w-4 h-4" />
-                </Button>
               </div>
 
               {/* Status Badge */}
