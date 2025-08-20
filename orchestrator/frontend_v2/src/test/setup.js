@@ -39,3 +39,16 @@ global.navigator.mediaDevices = {
     }]),
   }),
 };
+
+vi.mock('firebase/app', () => ({
+  initializeApp: vi.fn().mockReturnValue({}),
+}));
+
+vi.mock('firebase/auth', () => ({
+  getAuth: vi.fn().mockReturnValue({}),
+  onAuthStateChanged: vi.fn(),
+}));
+
+vi.mock('firebase/firestore', () => ({
+  getFirestore: vi.fn().mockReturnValue({}),
+}));
