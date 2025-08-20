@@ -55,7 +55,7 @@ try:
         display_name=display_name,
         description=description,
         gcs_dir_name=staging_buecket,
-        requirements='../requirements.txt',
+        requirements='../../requirements.txt',
     )
     logger.info("Agent engine created.")
 
