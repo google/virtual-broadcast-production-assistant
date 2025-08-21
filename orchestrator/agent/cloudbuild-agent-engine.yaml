@@ -49,7 +49,7 @@ steps:
       - |
         set -x
         pip install --no-cache-dir -r requirements.txt
-        python deploy.py > /workspace/resource_name.txt
+        python deploy.py 2>&1
     env:
       - 'STORAGE_BUCKET=${_STAGING_BUCKET}'
       - 'GOOGLE_CLOUD_LOCATION=${_REGION}'
