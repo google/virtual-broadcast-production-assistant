@@ -13,9 +13,9 @@ steps:
   #   entrypoint: 'sh'
   #   args:
   #     - '-c'
-  #     - |
+  #     - | 
   #       terraform init
-  #       terraform apply -auto-approve \
+  #       terraform apply -auto-approve \ 
   #         -var="project_id=$PROJECT_ID" \
   #         -var="region=${_REGION}" \
   #         -var="orchestrator_container_image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA" \
@@ -62,12 +62,13 @@ steps:
     entrypoint: 'sh'
     args:
       - '-c'
-      - |
+      - | 
         set -x
         pip install --no-cache-dir -r requirements.txt
         python deploy.py > /workspace/resource_name.txt
     env:
       - 'STORAGE_BUCKET=${_STAGING_BUCKET}'
+      - 'GOOGLE_CLOUD_LOCATION=${_REGION}'
     dir: 'orchestrator/agent/'
 
   # 7. Store the Agent Engine resource name in Secret Manager
@@ -75,7 +76,7 @@ steps:
     entrypoint: 'sh'
     args:
       - '-c'
-      - |
+      - | 
         gcloud secrets versions add ${_AGENT_ENGINE_URL_SECRET_NAME} --data-file=/workspace/resource_name.txt
 
   # 8. Deploy the reverse proxy to Cloud Run
@@ -95,6 +96,7 @@ steps:
       - '--session-affinity'
       - '--service-account=websocket-service-account@$PROJECT_ID.iam.gserviceaccount.com'
       - '--allow-unauthenticated'
+      - '--clear-env-vars'
       - '--set-secrets=AGENT_ENGINE_URL=${_AGENT_ENGINE_URL_SECRET_NAME}:latest'
 
 # Define images to be pushed to Artifact Registry
