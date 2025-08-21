@@ -8,6 +8,7 @@ def set_env_var():
     with patch.dict(os.environ, {"AGENT_ENGINE_URL": "projects/proj/locations/loc/reasoningEngines/123"}):
         yield
 
+
 def test_import_app():
     """
     A simple smoke test that tries to import the FastAPI app.
