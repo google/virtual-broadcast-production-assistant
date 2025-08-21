@@ -59,6 +59,7 @@ try:
         description=description,
         gcs_dir_name=staging_buecket,
         requirements='./requirements.txt',
+        extra_packages=['broadcast_orchestrator'],
     )
     logger.info("Agent engine created.")
 
