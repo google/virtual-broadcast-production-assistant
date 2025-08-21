@@ -27,7 +27,7 @@ from google.adk.agents.run_config import RunConfig
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, status
 
-from broadcast_orchestrator.agent import root_agent
+from .agent import root_agent
 
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
@@ -64,7 +64,7 @@ async def startup_event():
         if not firebase_admin._apps:
             firebase_admin.initialize_app()
             logger.info("Firebase Admin SDK initialized successfully.")
-        
+
         global session_service
         project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
         location = os.environ.get("GOOGLE_CLOUD_LOCATION")
