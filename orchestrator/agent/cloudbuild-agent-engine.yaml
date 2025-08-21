@@ -65,6 +65,7 @@ steps:
       - |
         set -x
         pip install --no-cache-dir -r ../requirements.txt
+        ls
         python deploy.py 2>&1
     env:
       - 'STORAGE_BUCKET=${_STAGING_BUCKET}'
