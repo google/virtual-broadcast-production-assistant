@@ -31,6 +31,7 @@ steps:
       - '-c'
       - |
         pip install -r requirements.txt
+        export PYTHONPATH=.
         pytest
     dir: 'orchestrator/agent/reverse_proxy'
 
