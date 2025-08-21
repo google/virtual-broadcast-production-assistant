@@ -5,8 +5,7 @@ import re
 import httpx
 from urllib.parse import urlencode
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from google.auth import default as google_auth_default
-from google.auth.transport.requests import Request as GoogleAuthRequest
+from google.auth.transport.httpx import AuthorizedClient
 
 app = FastAPI()
 
@@ -22,14 +21,6 @@ def get_location_from_resource_name(resource_name):
 
 LOCATION = get_location_from_resource_name(AGENT_ENGINE_RESOURCE_NAME)
 
-# Global Auth object
-creds, project = google_auth_default()
-
-def get_auth_token():
-    if creds.token is None or creds.expired:
-        creds.refresh(GoogleAuthRequest())
-    return creds.token
-
 @app.websocket("/{path:path}")
 async def websocket_proxy(websocket: WebSocket, path: str):
     await websocket.accept()
@@ -44,14 +35,10 @@ async def websocket_proxy(websocket: WebSocket, path: str):
     if query_string:
         backend_ws_url += f"?{query_string}"
     
-    # Add the auth header
-    headers = {
-        "Authorization": f"Bearer {get_auth_token()}"
-    }
-
-    async with httpx.AsyncClient() as client:
+    # Use an authorized httpx client that handles auth automatically
+    async with AuthorizedClient() as client:
         try:
-            async with client.websocket_connect(backend_ws_url, extra_headers=headers) as backend_ws:
+            async with client.websocket_connect(backend_ws_url) as backend_ws:
                 # Coroutine to forward messages from client to backend
                 async def forward_to_backend():
                     while True:

@@ -24,6 +24,16 @@ steps:
       - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA'
     dir: 'orchestrator/agent'
 
+  # Run smoke tests for the reverse proxy
+  - name: 'python:3.11-slim'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        pip install -r requirements.txt
+        pytest
+    dir: 'orchestrator/agent/reverse_proxy'
+
   # 3. Build the reverse proxy Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args:

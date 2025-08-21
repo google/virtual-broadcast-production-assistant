@@ -1,5 +1,6 @@
 fastapi
 httpx
 uvicorn
-google-auth
+google-cloud-aiplatform
+pytest
 requests
