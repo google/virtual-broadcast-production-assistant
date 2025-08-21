@@ -63,13 +63,6 @@ try:
     )
     logger.info("Agent engine created.")
 
-    # Let's inspect the remote_agent object to find the URL
-    logger.info("--- Inspecting remote_agent object for URL ---")
-    for attr in ['url', 'uri', 'endpoint', 'host', 'hostname', 'endpoints']:
-        if hasattr(remote_agent, attr):
-            logger.info(f"Found attribute '{attr}': {getattr(remote_agent, attr)}")
-    logger.info("---------------------------------------------")
-
     with open("/workspace/resource_name.txt", "w") as f:
         f.write(remote_agent.resource_name)
 

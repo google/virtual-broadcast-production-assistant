@@ -1,52 +1,57 @@
 
 import asyncio
 import os
+import re
 import httpx
-from fastapi import FastAPI, Request, Response, WebSocket
+from urllib.parse import urlencode
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from google.auth import default as google_auth_default
+from google.auth.transport.requests import Request as GoogleAuthRequest
 
 app = FastAPI()
 
-# We expect this to be the base URL of the agent engine's websocket endpoint.
-# We are still trying to find out what this URL is.
-AGENT_ENGINE_URL = os.environ.get("AGENT_ENGINE_URL")
+AGENT_ENGINE_RESOURCE_NAME = os.environ.get("AGENT_ENGINE_URL")
 
-@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
-async def http_proxy(request: Request, path: str):
-    # This proxy is likely incorrect and needs to be fixed once we know the agent's URL.
-    # For now, we focus on the websocket part.
-    if not AGENT_ENGINE_URL:
-        return Response(status_code=500, content="AGENT_ENGINE_URL not configured")
+def get_location_from_resource_name(resource_name):
+    if not resource_name:
+        return None
+    match = re.search(r"locations/([^/]+)", resource_name)
+    if match:
+        return match.group(1)
+    return None
 
-    async with httpx.AsyncClient() as client:
-        url = f"{AGENT_ENGINE_URL}/{path}"
-        headers = dict(request.headers)
-        headers.pop("host", None)
-        response = await client.request(
-            method=request.method,
-            url=url,
-            headers=headers,
-            content=await request.body(),
-        )
-        return Response(content=response.content, status_code=response.status_code, headers=response.headers)
+LOCATION = get_location_from_resource_name(AGENT_ENGINE_RESOURCE_NAME)
+
+# Global Auth object
+creds, project = google_auth_default()
+
+def get_auth_token():
+    if creds.token is None or creds.expired:
+        creds.refresh(GoogleAuthRequest())
+    return creds.token
 
 @app.websocket("/{path:path}")
 async def websocket_proxy(websocket: WebSocket, path: str):
     await websocket.accept()
 
-    if not AGENT_ENGINE_URL:
-        await websocket.close(code=1011, reason="AGENT_ENGINE_URL not configured")
+    if not LOCATION or not AGENT_ENGINE_RESOURCE_NAME:
+        await websocket.close(code=1011, reason="AGENT_ENGINE_URL not configured correctly.")
         return
 
-    # The agent has a /ws/{user_id} endpoint. The path from the incoming request
-    # should be forwarded.
-    # We need to construct the correct ws/wss URL.
-    # Let's assume AGENT_ENGINE_URL is a http/https URL.
-    ws_url = AGENT_ENGINE_URL.replace("http", "ws", 1)
-    full_ws_url = f"{ws_url}{path}" # The path should be /ws/{user_id}
+    # Construct the backend WebSocket URL, including query parameters
+    query_string = urlencode(websocket.query_params.multi_items())
+    backend_ws_url = f"wss://{LOCATION}-aiplatform.googleapis.com/v1/{AGENT_ENGINE_RESOURCE_NAME}{path}"
+    if query_string:
+        backend_ws_url += f"?{query_string}"
+    
+    # Add the auth header
+    headers = {
+        "Authorization": f"Bearer {get_auth_token()}"
+    }
 
     async with httpx.AsyncClient() as client:
         try:
-            async with client.websocket_connect(full_ws_url) as backend_ws:
+            async with client.websocket_connect(backend_ws_url, extra_headers=headers) as backend_ws:
                 # Coroutine to forward messages from client to backend
                 async def forward_to_backend():
                     while True:
