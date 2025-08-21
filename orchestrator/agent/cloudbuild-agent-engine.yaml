@@ -95,7 +95,7 @@ steps:
       - '--session-affinity'
       - '--service-account=websocket-service-account@$PROJECT_ID.iam.gserviceaccount.com'
       - '--allow-unauthenticated'
-      - '--update-secrets=AGENT_ENGINE_URL=${_AGENT_ENGINE_URL_SECRET_NAME}:latest'
+      - '--set-secrets=AGENT_ENGINE_URL=${_AGENT_ENGINE_URL_SECRET_NAME}:latest'
 
 # Define images to be pushed to Artifact Registry
 images:
