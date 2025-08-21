@@ -9,7 +9,7 @@ module "orchestrator" {
   root_domain           = var.root_domain
   container_image       = var.orchestrator_container_image
   service_account_email = var.orchestrator_service_account_email
-  
+
   reverse_proxy_neg_id  = module.cloud_run_reverse_proxy.reverse_proxy_neg_id
 }
 
@@ -51,4 +51,11 @@ module "cloud_run_reverse_proxy" {
   vpc_network_name          = "${var.reverse_proxy_service_name}-vpc"
   vpc_subnet_name           = "${var.reverse_proxy_service_name}-subnet"
   agent_engine_url          = var.agent_engine_url
+}
+
+resource "google_secret_manager_secret_iam_member" "websocket_proxy_secret_accessor" {
+  project   = var.project_id
+  secret_id = module.agent_engine.agent_engine_url_secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${var.websocket_proxy_service_account_email}"
 }
