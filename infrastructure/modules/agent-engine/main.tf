@@ -26,18 +26,19 @@ resource "google_secret_manager_secret" "agent_engine_url" {
   }
 }
 
-resource "google_secret_manager_secret_iam_member" "cloud_build_secret_accessor" {
+
+resource "google_secret_manager_secret_iam_member" "custom_cloud_build_secret_accessor" {
   project   = google_secret_manager_secret.agent_engine_url.project
   secret_id = google_secret_manager_secret.agent_engine_url.secret_id
   role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
+  member    = "serviceAccount:${var.cloud_build_runner_service_account_email}"
 }
 
-resource "google_secret_manager_secret_iam_member" "cloud_build_secret_version_adder" {
+resource "google_secret_manager_secret_iam_member" "custom_cloud_build_secret_version_adder" {
   project   = google_secret_manager_secret.agent_engine_url.project
   secret_id = google_secret_manager_secret.agent_engine_url.secret_id
   role      = "roles/secretmanager.secretVersionAdder"
-  member    = "serviceAccount:${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
+  member    = "serviceAccount:${var.cloud_build_runner_service_account_email}"
 }
 
 resource "google_compute_network" "vpc_network" {

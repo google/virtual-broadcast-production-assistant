@@ -85,3 +85,8 @@ variable "agent_engine_url_secret_name" {
   type        = string
   default     = "agent-engine-url"
 }
+
+variable "cloud_build_runner_service_account_email" {
+  description = "The email of the service account for the Cloud Build runner."
+  type        = string
+}

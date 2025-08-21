@@ -31,12 +31,13 @@ module "activity_agent" {
 module "agent_engine" {
   source = "./modules/agent-engine"
 
-  project_id                   = var.project_id
-  region                       = var.region
-  agent_engine_service_name    = var.agent_engine_service_name
-  vpc_network_name             = var.agent_engine_vpc_network_name
-  vpc_subnet_name              = var.agent_engine_vpc_subnet_name
-  agent_engine_url_secret_name = var.agent_engine_url_secret_name
+  project_id                               = var.project_id
+  region                                   = var.region
+  agent_engine_service_name                = var.agent_engine_service_name
+  vpc_network_name                         = var.agent_engine_vpc_network_name
+  vpc_subnet_name                          = var.agent_engine_vpc_subnet_name
+  agent_engine_url_secret_name             = var.agent_engine_url_secret_name
+  cloud_build_runner_service_account_email = var.cloud_build_runner_service_account_email
 }
 
 module "cloud_run_reverse_proxy" {

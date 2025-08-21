@@ -13,3 +13,6 @@ activity_agent_service_name = "activity-agent"
 # DNS
 dns_zone_name = "example-com"
 root_domain   = "example.com"
+
+# CLOUD BUILD
+cloud_build_runner_service_account_email = "cloud-build-runner-service-account@project_id.iam.gserviceaccount.com"

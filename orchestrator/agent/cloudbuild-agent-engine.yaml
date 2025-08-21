@@ -65,7 +65,7 @@ steps:
       - |
         set -x
         pip install --no-cache-dir -r requirements.txt
-        python deploy.py 2>&1
+        python deploy.py > /workspace/resource_name.txt
     env:
       - 'STORAGE_BUCKET=${_STAGING_BUCKET}'
     dir: 'orchestrator/agent/'
@@ -76,7 +76,7 @@ steps:
     args:
       - '-c'
       - |
-        echo "${steps.deploy-agent-engine.outputs.resource_name}" | gcloud secrets versions add ${_AGENT_ENGINE_URL_SECRET_NAME} --data-file=-
+        gcloud secrets versions add ${_AGENT_ENGINE_URL_SECRET_NAME} --data-file=/workspace/resource_name.txt
 
   # 8. Deploy the reverse proxy to Cloud Run
   - name: 'gcr.io/cloud-builders/gcloud'

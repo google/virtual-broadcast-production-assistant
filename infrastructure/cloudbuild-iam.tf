@@ -1,10 +1,4 @@
 
-variable "cloud_build_runner_service_account_email" {
-  description = "The email of the service account for the Cloud Build runner."
-  type        = string
-  default     = "cloud-build-runner@peerless-kit-450316-g1.iam.gserviceaccount.com"
-}
-
 resource "google_project_iam_member" "cloud_build_runner_artifactregistry_admin" {
   project = var.project_id
   role    = "roles/artifactregistry.admin"
