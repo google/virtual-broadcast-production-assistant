@@ -1,4 +1,3 @@
 fastapi
 httpx
 uvicorn
-google-auth-httpx
