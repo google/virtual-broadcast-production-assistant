@@ -64,12 +64,11 @@ steps:
       - '-c'
       - |
         set -x
-        pip install --no-cache-dir -r ../requirements.txt
-        ls
+        pip install --no-cache-dir -r requirements.txt
         python deploy.py 2>&1
     env:
       - 'STORAGE_BUCKET=${_STAGING_BUCKET}'
-    dir: 'orchestrator/agent/broadcast_orchestrator'
+    dir: 'orchestrator/agent/'
 
   # 7. Store the Agent Engine resource name in Secret Manager
   - name: 'gcr.io/cloud-builders/gcloud'
