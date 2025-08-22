@@ -80,9 +80,12 @@ async def websocket_proxy(websocket: WebSocket, path: str):
     """
     Proxies WebSocket connections to the Agent Engine.
     """
+    print(f"AGENT_ENGINE_URL from env: {AGENT_ENGINE_RESOURCE_NAME}")
+    print(f"Extracted LOCATION: {LOCATION}")
     await websocket.accept()
 
     if not LOCATION or not AGENT_ENGINE_RESOURCE_NAME:
+        print("AGENT_ENGINE_URL not configured correctly, closing connection.")
         await websocket.close(
             code=1011, reason="AGENT_ENGINE_URL not configured correctly."
         )

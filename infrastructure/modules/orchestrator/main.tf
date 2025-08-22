@@ -63,6 +63,11 @@ resource "google_compute_url_map" "url_map" {
   name    = "${var.service_name}-url-map"
   default_service = google_compute_backend_service.backend_service.id
 
+  host_rule {
+    hosts        = [var.custom_domain]
+    path_matcher = "agent-engine-matcher"
+  }
+
   path_matcher {
     name = "agent-engine-matcher"
     default_service = google_compute_backend_service.backend_service.id
@@ -141,6 +146,12 @@ resource "google_cloud_run_v2_service" "orchestrator_agent" {
   traffic {
     type     = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
     percent  = 100
+  }
+
+  lifecycle {
+    ignore_changes = [
+      template[0].containers[0].image,
+    ]
   }
 
   depends_on = [google_vpc_access_connector.connector]
