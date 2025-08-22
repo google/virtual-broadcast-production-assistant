@@ -23,7 +23,8 @@ def firestore_mock():
 @patch('httpx.AsyncClient')
 @patch('main.get_secret', return_value='test-api-key')
 @patch('main.A2AClient')
-async def test_main_agent_online_with_tags(mock_a2a_client, mock_get_secret, mock_http_client, firestore_mock):
+async def test_main_agent_online_with_tags(mock_a2a_client, mock_get_secret,
+                                           mock_http_client, firestore_mock):
     """Test an online agent that returns tags from its .well-known URL."""
     # Mock A2A response for online status
     mock_a2a_client.return_value.send_message = AsyncMock(return_value=True)
@@ -32,15 +33,18 @@ async def test_main_agent_online_with_tags(mock_a2a_client, mock_get_secret, moc
     mock_well_known_response = MagicMock()
     mock_well_known_response.status_code = 200
     mock_well_known_response.json.return_value = {
-        "skills": [
-            {"tags": ["tag1", "tag2"]},
-            {"tags": ["tag3", "tag1"]}
-        ]
+        'url': 'http://a2a.example.com',
+        'skills': [{
+            'tags': ['tag1', 'tag2']
+        }, {
+            'tags': ['tag3', 'tag1']
+        }]
     }
 
     # Configure the mock httpx client
-    async_client_instance = mock_http_client.return_value.__aenter__.return_value
-    async_client_instance.get = AsyncMock(return_value=mock_well_known_response)
+    async_client_instance = (
+        mock_http_client.return_value.__aenter__.return_value)
+    async_client_instance.get.return_value = mock_well_known_response
 
     mock_agent = MagicMock()
     mock_agent.id = 'agent-1'
@@ -51,16 +55,26 @@ async def test_main_agent_online_with_tags(mock_a2a_client, mock_get_secret, moc
 
     async def mock_stream():
         yield mock_agent
+
     firestore_mock.stream.return_value = mock_stream()
 
     await main.main()
 
     mock_get_secret.assert_called_once_with('my-secret')
-    async_client_instance.get.assert_called_once_with('http://agent1.example.com/.well-known/agent.json', timeout=5)
+
+    # Verify A2AClient was called with the correct endpoint
+    mock_a2a_client.assert_called_once()
+    _, a2a_card = mock_a2a_client.call_args[0]
+    assert a2a_card.url == 'http://a2a.example.com'
+
     firestore_mock.document('agent-1').update.assert_called_with({
-        'status': 'online',
-        'last_checked': main.firestore.SERVER_TIMESTAMP,
-        'tags': ['tag1', 'tag2', 'tag3']
+        'status':
+        'online',
+        'last_checked':
+        main.firestore.SERVER_TIMESTAMP,
+        'tags': ['tag1', 'tag2', 'tag3'],
+        'a2a_endpoint':
+        'http://a2a.example.com'
     })
 
 
@@ -79,24 +93,41 @@ async def test_main_agent_secret_failure(mock_a2a_client, mock_get_secret,
 
     async def mock_stream():
         yield mock_agent
+
     firestore_mock.stream.return_value = mock_stream()
 
     await main.main()
 
     mock_get_secret.assert_called_once_with('my-secret')
     mock_a2a_client.assert_not_called()
-    firestore_mock.document('agent-1').update.assert_called_with({
-        'status': 'error',
-        'last_checked': main.firestore.SERVER_TIMESTAMP,
-        'tags': []
-    })
+    firestore_mock.document('agent-1').update.assert_called_with(  # pylint: disable=line-too-long
+        {
+            'status': 'error',
+            'last_checked': main.firestore.SERVER_TIMESTAMP,
+            'tags': [],
+        }
+    )
 
 
 @pytest.mark.asyncio
+@patch('httpx.AsyncClient')
 @patch('main.A2AClient')
-async def test_main_agent_offline(mock_a2a_client, firestore_mock):
+async def test_main_agent_offline(mock_a2a_client, mock_http_client,
+                                  firestore_mock):
     """Test when agent is offline (A2A check fails)."""
-    mock_a2a_client.return_value.send_message = AsyncMock(side_effect=Exception('Connection failed'))
+    # Mock response for .well-known/agent.json
+    mock_well_known_response = MagicMock()
+    mock_well_known_response.status_code = 200
+    mock_well_known_response.json.return_value = {
+        'url': 'http://agent1.example.com',
+        'skills': []
+    }
+    async_client_instance = (
+        mock_http_client.return_value.__aenter__.return_value)
+    async_client_instance.get.return_value = mock_well_known_response
+
+    mock_a2a_client.return_value.send_message = AsyncMock(
+        side_effect=Exception('Connection failed'))
 
     mock_agent = MagicMock()
     mock_agent.id = 'agent-1'
@@ -104,14 +135,19 @@ async def test_main_agent_offline(mock_a2a_client, firestore_mock):
 
     async def mock_stream():
         yield mock_agent
+
     firestore_mock.stream.return_value = mock_stream()
 
     await main.main()
 
     firestore_mock.document('agent-1').update.assert_called_with({
-        'status': 'offline',
-        'last_checked': main.firestore.SERVER_TIMESTAMP,
-        'tags': []
+        'status':
+        'offline',
+        'last_checked':
+        main.firestore.SERVER_TIMESTAMP,
+        'tags': [],
+        'a2a_endpoint':
+        'http://agent1.example.com'
     })
 
 
@@ -124,12 +160,15 @@ async def test_main_agent_no_url(firestore_mock):
 
     async def mock_stream():
         yield mock_agent
+
     firestore_mock.stream.return_value = mock_stream()
 
     await main.main()
 
     firestore_mock.document('agent-1').update.assert_called_with({
-        'status': 'offline',
-        'last_checked': main.firestore.SERVER_TIMESTAMP,
+        'status':
+        'offline',
+        'last_checked':
+        main.firestore.SERVER_TIMESTAMP,
         'tags': []
     })

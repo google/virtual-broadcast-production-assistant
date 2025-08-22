@@ -23,7 +23,8 @@ This project is a Google Cloud Run Job written in Python. Its primary purpose is
 
 ## Coding Style & Conventions
 
-*   Please adhere to the Google Python Style Guide, as enforced by the `.pylintrc` file in the repository.
+*   Please adhere to the Google Python Style Guide, as enforced by the `.pylintrc` file in the repository. This is IMPORTANT, as it means
+that reduces lint errors.
 *   All new functions should have clear docstrings explaining their purpose, arguments, and what they return.
 *   Asynchronous functions (`async def`) should be used for all I/O-bound operations (HTTP requests, database interactions).
 *   Ensure that any changes you make don't break existing functionality and tests.

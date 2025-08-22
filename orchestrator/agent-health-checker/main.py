@@ -50,16 +50,16 @@ async def get_agent_tags(client, base_url):
     tags = []
     try:
         # Construct the .well-known URL by removing any trailing slashes
-        well_known_url = f"{base_url.rstrip('/')}/.well-known/agent.json"
+        well_known_url = base_url.rstrip("/") + "/.well-known/agent.json"
         response = await client.get(well_known_url, timeout=5)
         response.raise_for_status()
         agent_card = response.json()
 
-        if 'skills' in agent_card and agent_card['skills']:
+        if "skills" in agent_card and agent_card["skills"]:
             all_tags = []
-            for skill in agent_card['skills']:
-                if 'tags' in skill and skill['tags']:
-                    all_tags.extend(skill['tags'])
+            for skill in agent_card["skills"]:
+                if "tags" in skill and skill["tags"]:
+                    all_tags.extend(skill["tags"])
             unique_tags = list(dict.fromkeys(all_tags))
             tags = unique_tags[:3]
     except httpx.RequestError as e:
@@ -67,7 +67,10 @@ async def get_agent_tags(client, base_url):
     except json.JSONDecodeError as e:
         print(f"Error decoding agent.json for {base_url}: {e}")
     except Exception as e:
-        print(f"An unexpected error occurred while fetching tags for {base_url}: {e}")
+        print(
+            "An unexpected error occurred while fetching tags for "
+            f"{base_url}: {e}"
+        )
     return tags
 
 
@@ -178,7 +181,9 @@ async def main():
         update_tasks.append(
             agents_ref.document(agent_id).update(update_data)
         )
-        print(f"Updated status for {agent_id}: {result['status']}, Tags: {result.get('tags', [])}")
+        status = result["status"]
+        tags = result.get("tags", [])
+        print(f"Updated status for {agent_id}: {status}, Tags: {tags}")
 
     await asyncio.gather(*update_tasks)
     print("Firestore updates complete.")
