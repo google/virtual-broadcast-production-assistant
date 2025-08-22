@@ -108,6 +108,7 @@ async def websocket_proxy(websocket: WebSocket, path: str):
     backend_ws_url = (
         f"wss://{LOCATION}-aiplatform.googleapis.com/v1/{AGENT_ENGINE_RESOURCE_NAME}"
         f"{path}")
+    logging.info("Connecting to backend websocket: %s", backend_ws_url)
     if query_string:
         backend_ws_url += f"?{query_string}"
 
