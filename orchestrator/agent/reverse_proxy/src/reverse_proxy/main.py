@@ -117,7 +117,7 @@ async def websocket_proxy(websocket: WebSocket, path: str):
         headers = {"Authorization": f"Bearer {id_token}"}
 
         async with websockets.connect(backend_ws_url,
-                                      extra_headers=headers) as backend_ws:
+                                      additional_headers=headers) as backend_ws:
             await asyncio.gather(
                 forward_to_backend(websocket, backend_ws),
                 forward_to_client(websocket, backend_ws),
@@ -126,7 +126,7 @@ async def websocket_proxy(websocket: WebSocket, path: str):
     except google.auth.exceptions.DefaultCredentialsError as e:
         logging.error("Authentication error: %s", e)
         await websocket.close(code=1011, reason="Authentication error")
-    except httpx.HTTPStatusError as e:
+    except websockets.exceptions.WebSocketException as e:
         logging.error("An error occurred in websocket proxy: %s", e)
         await websocket.close(code=1011)
 
