@@ -129,6 +129,8 @@ async def websocket_proxy(websocket: WebSocket, path: str):
         await websocket.close(code=1011, reason="Authentication error")
     except websockets.exceptions.WebSocketException as e:
         logging.error("An error occurred in websocket proxy: %s", e)
+        logging.info("Websocket URL %s", backend_ws_url)
+        await websocket.close(code=1011, reason="An error occurred")
         await websocket.close(code=1011)
 
 
