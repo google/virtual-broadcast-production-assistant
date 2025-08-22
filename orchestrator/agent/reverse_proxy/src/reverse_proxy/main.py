@@ -13,6 +13,7 @@ from urllib.parse import urlencode
 
 import google.auth
 import httpx
+import websockets
 from fastapi import (FastAPI, Request, Response, WebSocket)
 from google.auth.transport.requests import Request as GoogleAuthRequest
 from google.oauth2 import id_token as id_token_lib
@@ -73,6 +74,20 @@ async def get_id_token(target_audience):
     return await asyncio.to_thread(_get_id_token_sync, target_audience)
 
 
+async def forward_to_backend(client_ws, backend_ws):
+    """Forwards messages from the client to the backend websocket."""
+    while True:
+        data = await client_ws.receive_text()
+        await backend_ws.send(data)
+
+
+async def forward_to_client(client_ws, backend_ws):
+    """Forwards messages from the backend to the client websocket."""
+    while True:
+        data = await backend_ws.recv()
+        await client_ws.send_text(data)
+
+
 @app.websocket("/{path:path}")
 async def websocket_proxy(websocket: WebSocket, path: str):
     """
@@ -101,28 +116,17 @@ async def websocket_proxy(websocket: WebSocket, path: str):
             f"https://{LOCATION}-aiplatform.googleapis.com")
         headers = {"Authorization": f"Bearer {id_token}"}
 
-        async with httpx.AsyncClient() as client:
-            async with client.websocket_connect(
-                    backend_ws_url, extra_headers=headers) as backend_ws:
+        async with websockets.connect(backend_ws_url,
+                                      extra_headers=headers) as backend_ws:
+            await asyncio.gather(
+                forward_to_backend(websocket, backend_ws),
+                forward_to_client(websocket, backend_ws),
+            )
 
-                async def forward_to_backend():
-                    while True:
-                        data = await websocket.receive_text()
-                        await backend_ws.send_text(data)
-
-                async def forward_to_client():
-                    while True:
-                        data = await backend_ws.receive_text()
-                        await websocket.send_text(data)
-
-                await asyncio.gather(
-                    forward_to_backend(),
-                    forward_to_client(),
-                )
     except google.auth.exceptions.DefaultCredentialsError as e:
         logging.error("Authentication error: %s", e)
         await websocket.close(code=1011, reason="Authentication error")
-    except httpx.HTTPError as e:
+    except httpx.HTTPStatusError as e:
         logging.error("An error occurred in websocket proxy: %s", e)
         await websocket.close(code=1011)
 
