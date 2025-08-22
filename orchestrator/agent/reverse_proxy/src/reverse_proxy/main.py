@@ -6,6 +6,7 @@ HTTP and WebSocket traffic, adding Google Cloud authentication to the requests.
 """
 
 import asyncio
+import logging
 import os
 import re
 from urllib.parse import urlencode
@@ -14,6 +15,7 @@ import google.auth
 import httpx
 from fastapi import (FastAPI, Request, Response, WebSocket)
 from google.auth.transport.requests import Request as GoogleAuthRequest
+from google.oauth2 import id_token as id_token_lib
 from starlette.background import BackgroundTask
 from starlette.responses import StreamingResponse
 
@@ -53,13 +55,9 @@ def _get_id_token_sync(target_audience):
     Returns:
         The identity token.
     """
-    creds, _ = google.auth.default(
-        scopes=["https://www.googleapis.com/auth/cloud-platform"]
-    )
     auth_req = GoogleAuthRequest()
-    creds.with_target_audience(target_audience)
-    creds.refresh(auth_req)
-    return creds.id_token
+    id_token = id_token_lib.fetch_id_token(auth_req, target_audience)
+    return id_token
 
 
 async def get_id_token(target_audience):
@@ -80,33 +78,32 @@ async def websocket_proxy(websocket: WebSocket, path: str):
     """
     Proxies WebSocket connections to the Agent Engine.
     """
-    print(f"AGENT_ENGINE_URL from env: {AGENT_ENGINE_RESOURCE_NAME}")
-    print(f"Extracted LOCATION: {LOCATION}")
+    logging.info("AGENT_ENGINE_URL from env: %s", AGENT_ENGINE_RESOURCE_NAME)
+    logging.info("Extracted LOCATION: %s", LOCATION)
     await websocket.accept()
 
     if not LOCATION or not AGENT_ENGINE_RESOURCE_NAME:
-        print("AGENT_ENGINE_URL not configured correctly, closing connection.")
+        logging.warning(
+            "AGENT_ENGINE_URL not configured correctly, closing connection.")
         await websocket.close(
-            code=1011, reason="AGENT_ENGINE_URL not configured correctly."
-        )
+            code=1011, reason="AGENT_ENGINE_URL not configured correctly.")
         return
 
     query_string = urlencode(websocket.query_params.multi_items())
     backend_ws_url = (
         f"wss://{LOCATION}-aiplatform.googleapis.com/v1/{AGENT_ENGINE_RESOURCE_NAME}"
-        f"{path}"
-    )
+        f"{path}")
     if query_string:
         backend_ws_url += f"?{query_string}"
 
     try:
-        id_token = await get_id_token(f"https://{LOCATION}-aiplatform.googleapis.com")
+        id_token = await get_id_token(
+            f"https://{LOCATION}-aiplatform.googleapis.com")
         headers = {"Authorization": f"Bearer {id_token}"}
 
         async with httpx.AsyncClient() as client:
             async with client.websocket_connect(
-                backend_ws_url, extra_headers=headers
-            ) as backend_ws:
+                    backend_ws_url, extra_headers=headers) as backend_ws:
 
                 async def forward_to_backend():
                     while True:
@@ -123,33 +120,32 @@ async def websocket_proxy(websocket: WebSocket, path: str):
                     forward_to_client(),
                 )
     except google.auth.exceptions.DefaultCredentialsError as e:
-        print(f"Authentication error: {e}")
+        logging.error("Authentication error: %s", e)
         await websocket.close(code=1011, reason="Authentication error")
     except httpx.HTTPError as e:
-        print(f"An error occurred in websocket proxy: {e}")
+        logging.error("An error occurred in websocket proxy: %s", e)
         await websocket.close(code=1011)
 
 
-@app.api_route(
-    "/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
-)
+@app.api_route("/{path:path}",
+               methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
 async def http_proxy(path: str, request: Request):
     """
     Proxies HTTP requests to the Agent Engine.
     """
     if not AGENT_ENGINE_RESOURCE_NAME:
-        return Response(status_code=500, content="AGENT_ENGINE_URL is not set.")
+        return Response(status_code=500,
+                        content="AGENT_ENGINE_URL is not set.")
 
     try:
-        id_token = await get_id_token(f"https://{LOCATION}-aiplatform.googleapis.com")
+        id_token = await get_id_token(
+            f"https://{LOCATION}-aiplatform.googleapis.com")
         headers = dict(request.headers)
         headers["Authorization"] = f"Bearer {id_token}"
 
         async with httpx.AsyncClient() as client:
-            backend_url = (
-                f"https://{LOCATION}-aiplatform.googleapis.com/v1/"
-                f"{AGENT_ENGINE_RESOURCE_NAME}{path}"
-            )
+            backend_url = (f"https://{LOCATION}-aiplatform.googleapis.com/v1/"
+                           f"{AGENT_ENGINE_RESOURCE_NAME}{path}")
 
             backend_request = client.build_request(
                 method=request.method,
@@ -169,4 +165,5 @@ async def http_proxy(path: str, request: Request):
     except google.auth.exceptions.DefaultCredentialsError as e:
         return Response(status_code=401, content=f"Authentication error: {e}")
     except httpx.HTTPError as e:
-        return Response(status_code=500, content=f"An error occurred in http proxy: {e}")
+        return Response(status_code=500,
+                        content=f"An error occurred in http proxy: {e}")
