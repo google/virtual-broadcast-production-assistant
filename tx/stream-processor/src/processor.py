@@ -2,6 +2,7 @@ import asyncio
 import config
 import ffmpeg, cv2
 import threading, time, queue, subprocess
+from config import GEMINI_MODEL_FOR_AGENT
 from logger import logger
 from google.adk.runners import InMemoryRunner
 from google.adk.agents import LiveRequestQueue
@@ -27,7 +28,7 @@ async def start_agent_session(user_id: str):
 
     root_agent = Agent(
       name="live_cast_analyst_agent",
-      model="gemini-2.0-flash-exp",
+      model=GEMINI_MODEL_FOR_AGENT,
       description=ROOT_PROMPT,
       instruction=INSTRUCTIONS,
     )

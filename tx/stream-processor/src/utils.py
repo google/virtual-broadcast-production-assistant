@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from dateutil.parser import isoparse
 from PIL import Image
 from logger import logger
-from config import VALID_TAGS
+from config import VALID_TAGS, STREAM_SSL_VERIFY
 
 
 def fetch_program_start(playlist_url):
@@ -13,7 +13,7 @@ def fetch_program_start(playlist_url):
     Fetch the HLS playlist and extract the first PROGRAM-DATE-TIME tag,
     parsing it into a datetime with proper timezone handling.
     """
-    r = requests.get(playlist_url)
+    r = requests.get(playlist_url, timeout=10, verify=STREAM_SSL_VERIFY)
     logger.debug(f"Playlist content:\n{r.text}")
     for line in r.text.splitlines():
         if line.startswith("#EXT-X-PROGRAM-DATE-TIME:"):
@@ -38,7 +38,6 @@ def fetch_program_start(playlist_url):
 def get_delta_timecode(program_start):
   now = datetime.now(timezone.utc)
   if program_start is None:
-    logger.warning("program_start is None; cannot compute delta—returning 00:00:00")
     return "00:00:00"
   delta = now - program_start
   total = int(delta.total_seconds())
