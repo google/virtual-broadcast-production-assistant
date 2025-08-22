@@ -14,8 +14,6 @@ steps:
       - 'build'
       - '-t'
       - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA'
-      - '--cache-from'
-      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:latest'
       - '.'
     dir: 'orchestrator/agent'
 
@@ -24,8 +22,6 @@ steps:
     args:
       - 'push'
       - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA'
-      - '--cache-from'
-      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:latest'
     dir: 'orchestrator/agent'
 
   # Run smoke tests for the reverse proxy
