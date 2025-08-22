@@ -108,7 +108,6 @@ async def websocket_proxy(websocket: WebSocket, path: str):
     backend_ws_url = (
         f"wss://{LOCATION}-aiplatform.googleapis.com/v1/{AGENT_ENGINE_RESOURCE_NAME}"
         f"{path}")
-    logging.info("Connecting to backend websocket: %s", backend_ws_url)
     if query_string:
         backend_ws_url += f"?{query_string}"
 
@@ -117,8 +116,8 @@ async def websocket_proxy(websocket: WebSocket, path: str):
             f"https://{LOCATION}-aiplatform.googleapis.com")
         headers = {"Authorization": f"Bearer {id_token}"}
 
-        async with websockets.connect(backend_ws_url,
-                                      additional_headers=headers) as backend_ws:
+        async with websockets.connect(
+                backend_ws_url, additional_headers=headers) as backend_ws:
             await asyncio.gather(
                 forward_to_backend(websocket, backend_ws),
                 forward_to_client(websocket, backend_ws),
@@ -128,10 +127,12 @@ async def websocket_proxy(websocket: WebSocket, path: str):
         logging.error("Authentication error: %s", e)
         await websocket.close(code=1011, reason="Authentication error")
     except websockets.exceptions.WebSocketException as e:
-        logging.error("An error occurred in websocket proxy: %s", e)
-        logging.info("Websocket URL %s", backend_ws_url)
-        await websocket.close(code=1011, reason="An error occurred")
-        await websocket.close(code=1011)
+        logging.error("An error occurred connecting to backend %s: %s",
+                      backend_ws_url, e)
+        try:
+            await websocket.close(code=1011)
+        except RuntimeError:
+            pass  # Connection already closed
 
 
 @app.api_route("/{path:path}",
