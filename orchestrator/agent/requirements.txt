@@ -24,6 +24,7 @@ google-cloud-appengine-logging==1.6.2
 google-cloud-audit-log==0.3.2
 google-cloud-bigquery==3.35.1
 google-cloud-core==2.4.3
+google-cloud-firestore
 google-cloud-logging==3.12.1
 google-cloud-resource-manager==1.14.2
 google-cloud-secret-manager==2.24.0
@@ -89,3 +90,4 @@ uvicorn==0.35.0
 watchdog==6.0.0
 websockets==15.0.1
 zipp==3.23.0
+pytest-asyncio

@@ -32,4 +32,4 @@
   url_env: SHURE_AGENT_URL
   key_env: SHURE_AGENT_API_KEY
   secret_id: "shure-agent-api-key"
-  default_url: "http://localhost:8020"
+  default_url: "http://localhost:8021"
