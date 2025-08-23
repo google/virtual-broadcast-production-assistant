@@ -153,7 +153,7 @@ async def http_proxy(path: str, request: Request):
 
         async with httpx.AsyncClient() as client:
             backend_url = (f"https://{LOCATION}-aiplatform.googleapis.com/v1/"
-                           f"{AGENT_ENGINE_RESOURCE_NAME}{path}")
+                           f"{AGENT_ENGINE_RESOURCE_NAME}/{path}")
 
             backend_request = client.build_request(
                 method=request.method,
