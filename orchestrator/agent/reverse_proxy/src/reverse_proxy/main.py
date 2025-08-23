@@ -19,6 +19,8 @@ from google.auth.transport.requests import Request as GoogleAuthRequest
 from google.oauth2 import id_token as id_token_lib
 from starlette.background import BackgroundTask
 from starlette.responses import StreamingResponse
+from starlette.websockets import WebSocketDisconnect
+from websockets.exceptions import ConnectionClosed
 
 app = FastAPI()
 
@@ -74,18 +76,24 @@ async def get_id_token(target_audience):
     return await asyncio.to_thread(_get_id_token_sync, target_audience)
 
 
-async def forward_to_backend(client_ws, backend_ws):
+async def forward_to_backend(client_ws: WebSocket, backend_ws):
     """Forwards messages from the client to the backend websocket."""
-    while True:
-        data = await client_ws.receive_text()
-        await backend_ws.send(data)
+    try:
+        while True:
+            data = await client_ws.receive_text()
+            await backend_ws.send(data)
+    except WebSocketDisconnect:
+        logging.info("Client disconnected.")
 
 
-async def forward_to_client(client_ws, backend_ws):
+async def forward_to_client(client_ws: WebSocket, backend_ws):
     """Forwards messages from the backend to the client websocket."""
-    while True:
-        data = await backend_ws.recv()
-        await client_ws.send_text(data)
+    try:
+        while True:
+            data = await backend_ws.recv()
+            await client_ws.send_text(data)
+    except ConnectionClosed:
+        logging.info("Backend disconnected.")
 
 
 @app.websocket("/{path:path}")
@@ -106,7 +114,7 @@ async def websocket_proxy(websocket: WebSocket, path: str):
 
     query_string = urlencode(websocket.query_params.multi_items())
     backend_ws_url = (
-        f"wss://{LOCATION}-aiplatform.googleapis.com/v1/{AGENT_ENGINE_RESOURCE_NAME}"
+        f"wss://{LOCATION}-aiplatform.googleapis.com/v1/{AGENT_ENGINE_RESOURCE_NAME}/"
         f"{path}")
     if query_string:
         backend_ws_url += f"?{query_string}"
@@ -116,8 +124,8 @@ async def websocket_proxy(websocket: WebSocket, path: str):
             f"https://{LOCATION}-aiplatform.googleapis.com")
         headers = {"Authorization": f"Bearer {id_token}"}
 
-        async with websockets.connect(
-                backend_ws_url, additional_headers=headers) as backend_ws:
+        async with websockets.connect(backend_ws_url,
+                                      additional_headers=headers) as backend_ws:
             await asyncio.gather(
                 forward_to_backend(websocket, backend_ws),
                 forward_to_client(websocket, backend_ws),
