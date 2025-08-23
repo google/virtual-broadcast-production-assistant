@@ -35,3 +35,6 @@ venv/**
 */terraform.tfvars
 
 .env*
+
+
+.pytest_cache

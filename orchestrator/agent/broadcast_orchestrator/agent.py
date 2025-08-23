@@ -1,4 +1,4 @@
-"""Module for the Routing Agent."""
+"Module for the Routing Agent."
 import asyncio
 from urllib.parse import urlparse
 import json
@@ -9,7 +9,7 @@ from typing import Any
 from dotenv import load_dotenv
 import httpx
 from a2a.client import A2ACardResolver
-from a2a.client.errors import A2AClientTimeoutError
+from a2a.client.errors import A2AClientTimeoutError, A2AClientHTTPError
 from a2a.types import (
     AgentCard,
     MessageSendParams,
@@ -21,18 +21,16 @@ from a2a.types import (
     TextPart,
     Message,
 )
-from google.cloud import firestore
+from firebase_admin import firestore_async
+from google.cloud.exceptions import GoogleCloudError
 from google.adk import Agent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools.tool_context import ToolContext
 
-
 from .automation_system_instructions import (
     AUTOMATION_SYSTEMS,
-    CUEZ_CONFIG,
     DEFAULT_INSTRUCTIONS,
-    SOFIE_CONFIG,
 )
 
 from .config import (
@@ -40,6 +38,7 @@ from .config import (
     load_system_instructions,
 )
 from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
+from .firestore_observer import FirestoreAgentObserver
 
 load_dotenv()
 
@@ -87,6 +86,7 @@ def create_send_message_payload(
     return payload
 
 
+# pylint: disable=too-many-instance-attributes
 class RoutingAgent:
     """The Routing agent.
 
@@ -106,6 +106,7 @@ class RoutingAgent:
         self._initialized = False
         self._init_lock = asyncio.Lock()
         self._agent: Agent | None = None
+        self.observer = FirestoreAgentObserver()
 
     async def _load_agent(
             self, address: str,
@@ -120,9 +121,6 @@ class RoutingAgent:
             card_resolver = A2ACardResolver(client, address)
             try:
                 card: AgentCard = await card_resolver.get_agent_card()
-                # The remote agent card might contain a non-routable URL
-                # (e.g., http://0.0.0.0:port). We should prioritize the public
-                # address we used for discovery.
                 card_url_parts = urlparse(card.url)
                 if card_url_parts.hostname in ("0.0.0.0", "localhost",
                                                "127.0.0.1"):
@@ -135,26 +133,18 @@ class RoutingAgent:
                 return RemoteAgentConnections(agent_card=card,
                                               agent_url=card.url,
                                               api_key=api_key)
-            except httpx.ConnectError as e:
+            except (httpx.ConnectError, A2AClientHTTPError) as e:
                 logger.error("Failed to get agent card from %s: %s", address,
                              e)
-            except httpx.HTTPStatusError as e:
-                if e.response.status_code in (401, 403):
-                    logger.error(
-                        "Authentication error for agent at %s. Check if the API key is correct. Status: %s",
-                        address, e.response.status_code)
-                else:
-                    logger.error("HTTP error for agent at %s: %s", address, e)
-            except Exception as e:
+            except IOError as e:
                 logger.error("Failed to initialize connection for %s: %s",
                              address, e)
 
         return None
 
-    async def _async_init_components(
-            self,
-            remote_agents_config: dict[str,
-                                     str | None]):
+    async def _async_init_components(self,
+                                     remote_agents_config: dict[str,
+                                                                str | None]):
         """Asynchronously initializes components that require network I/O."""
         logger.info("Initializing remote agent connections...")
         for address, api_key in remote_agents_config.items():
@@ -164,11 +154,8 @@ class RoutingAgent:
                 self.remote_agent_connections[
                     connection.card.name] = connection
                 self.cards[connection.card.name] = connection.card
-        # Populate self.agents using the logic from original __init__ (via
-        # list_remote_agents)
-        agent_info = []
-        for agent_detail_dict in self.list_remote_agents():
-            agent_info.append(json.dumps(agent_detail_dict))
+
+        agent_info = [json.dumps(d) for d in self.list_remote_agents()]
         self.agents = "\n".join(agent_info)
 
     async def _async_init_if_needed(self):
@@ -177,7 +164,6 @@ class RoutingAgent:
             if self._initialized:
                 return
             agent_configs = load_remote_agents_config()
-
 
             rundown_agent_config_names = {
                 config['config_name']
@@ -207,8 +193,6 @@ class RoutingAgent:
         if self._agent:
             return self._agent
 
-        # Load the base instructions. The placeholders will be filled in
-        # before each turn in the before_agent_callback.
         initial_instructions = load_system_instructions()
 
         self._agent = Agent(
@@ -216,7 +200,9 @@ class RoutingAgent:
             name="Routing_agent",
             instruction=initial_instructions,
             before_agent_callback=self.before_agent_callback,
-            before_model_callback=self.before_model_callback,
+            after_agent_callback=self.after_agent_callback,
+            before_tool_callback=self.observer.before_tool,
+            after_tool_callback=self.observer.after_tool,
             description=(
                 "This Routing agent orchestrates requests for the user "
                 "to assist in live news or sports broadcast control"),
@@ -232,24 +218,19 @@ class RoutingAgent:
             return {"active_agent": f"{state['active_agent']}"}
         return {"active_agent": "None"}
 
-    def _get_formatted_instructions(
-            self,
-            rundown_system_preference: str) -> str:
+    def _get_formatted_instructions(self,
+                                    rundown_system_preference: str) -> str:
         """
-        Formats the system instructions with all necessary placeholders based on
-        the selected rundown system.
+        Formats the system instructions based on the selected rundown system.
         """
         system_config = AUTOMATION_SYSTEMS.get(rundown_system_preference, {})
-        rundown_instructions = system_config.get("instructions",
-                                                 DEFAULT_INSTRUCTIONS)
+        return system_config.get("instructions", DEFAULT_INSTRUCTIONS)
 
-        # Return the correct rundown instruction to be placed into state
-        # for placeholder replacement.
-        return rundown_instructions
-
-    async def before_agent_callback(self, callback_context: CallbackContext,
-                                    **kwargs):
+    # pylint: disable=too-many-locals
+    async def before_agent_callback(self, callback_context: CallbackContext):
         """A callback executed before the agent is called."""
+        print("!!! AGENT.PY: before_agent_callback IS RUNNING !!!")
+
         await self._async_init_if_needed()
         user_id = callback_context.state.get("user_id")
 
@@ -258,87 +239,78 @@ class RoutingAgent:
 
         if user_id:
             try:
-                db = firestore.AsyncClient()
-
-                # Fetch the user's preference document
+                db = firestore_async.client()
                 doc_ref = db.collection('user_preferences').document(user_id)
                 doc = await doc_ref.get()
-
                 if doc.exists:
                     rundown_system_preference = doc.to_dict().get(
                         'rundown_system', 'cuez')
-
                 logger.info("User '%s' preference set to: %s", user_id,
                             rundown_system_preference)
-
-            except Exception as e:
+            except GoogleCloudError as e:
                 logger.error(
                     "Failed to fetch user preferences for %s: %s. Using default.",
                     user_id, e)
 
-        # Dynamically load the preferred rundown agent
-        rundown_agent_connection = None
-        preferred_system_config = AUTOMATION_SYSTEMS.get(
-            rundown_system_preference)
-        if preferred_system_config:
+        preferred_config = AUTOMATION_SYSTEMS.get(rundown_system_preference)
+        rundown_conn = None
+        if preferred_config:
             agent_configs = load_remote_agents_config()
-            target_config_name = preferred_system_config['config_name']
+            config_name = preferred_config['config_name']
+            agent_config = next(
+                (c for c in agent_configs if c['name'] == config_name), None)
 
-            rundown_agent_config = next(
-                (c for c in agent_configs if c['name'] == target_config_name),
-                None)
-
-            if rundown_agent_config:
-                url = os.getenv(rundown_agent_config["url_env"],
-                                rundown_agent_config["default_url"])
-                api_key = os.getenv(rundown_agent_config["key_env"])
-                rundown_agent_connection = await self._load_agent(url, api_key)
-                if rundown_agent_connection:
+            if agent_config:
+                url = os.getenv(agent_config["url_env"],
+                                agent_config["default_url"])
+                api_key = os.getenv(agent_config["key_env"])
+                rundown_conn = await self._load_agent(url, api_key)
+                if rundown_conn:
                     callback_context.state[
-                        'rundown_agent_connection'] = rundown_agent_connection
+                        'rundown_agent_connection'] = rundown_conn
                     logger.info("Dynamically loaded rundown agent: %s",
-                                rundown_agent_connection.card.name)
+                                rundown_conn.card.name)
                 else:
                     logger.error(
                         "Failed to dynamically load rundown agent for preference: %s",
                         rundown_system_preference)
 
-        # Build the list of available agents for the prompt
-        available_agents = []
-        for name, conn in self.remote_agent_connections.items():
-            available_agents.append(f"- `{name}`: {conn.card.description}")
-
-        if rundown_agent_connection:
-            card = rundown_agent_connection.card
-            available_agents.append(f"- `{card.name}`: {card.description}")
-
-        available_agents_list = "\n".join(available_agents)
-        rundown_instructions = self._get_formatted_instructions(
-            rundown_system_preference)
-
-        # If the preferred agent failed to load, override the instructions
-        # to inform the model (and user) about the problem.
-        if not rundown_agent_connection and preferred_system_config:
-            agent_name = preferred_system_config.get('agent_name',
-                                                   rundown_system_preference)
-            logger.info("INSTRUCTIONS AGENT NAME: %s", agent_name)
-            rundown_instructions = (
-                f"IMPORTANT: The preferred rundown system agent ('{agent_name}') "
-                "failed to load. Inform the user that you cannot connect to it "
-                "and that they should check the agent's status. Do not attempt to use it."
+        available_agents = [
+            f"- `{n}`: {c.card.description}"
+            for n, c in self.remote_agent_connections.items()
+        ]
+        if rundown_conn:
+            available_agents.append(
+                f"- `{rundown_conn.card.name}`: {rundown_conn.card.description}"
             )
 
-        # Set the template variables in the state for the ADK to format.
+        rundown_instructions = self._get_formatted_instructions(
+            rundown_system_preference)
+        if not rundown_conn and preferred_config:
+            agent_name = preferred_config.get('agent_name',
+                                              rundown_system_preference)
+            rundown_instructions = (
+                "IMPORTANT: The preferred rundown system agent "
+                f"('{agent_name}') failed to load. Inform the user that you "
+                "cannot connect to it and that they should check the agent's "
+                "status. Do not attempt to use it.")
+
         callback_context.state[
             'rundown_system_instructions'] = rundown_instructions
-        callback_context.state['available_agents_list'] = available_agents_list
+        callback_context.state['available_agents_list'] = "\n".join(
+            available_agents)
         callback_context.state[
             'rundown_system_preference'] = rundown_system_preference
 
-    async def before_model_callback(self, callback_context: CallbackContext,
-                                    **kwargs):
+    async def after_agent_callback(self, callback_context: CallbackContext):
+        """A callback executed after the agent has finished."""
+        logger.info("after_agent_callback called")
+
+    async def before_model_callback(self, callback_context: CallbackContext):
         """A callback executed before the model is called."""
+        logger.info("before_model_callback called")
         await self._async_init_if_needed()
+        await self.observer.before_model(context=callback_context)
         state = callback_context.state
         if "session_active" not in state or not state["session_active"]:
             if "session_id" not in state:
@@ -352,16 +324,15 @@ class RoutingAgent:
 
         remote_agent_info = []
         for card in self.cards.values():
-
-            # This tool is for the agent to discover available remote agents.
             logger.info("Found agent card: %s", card.name)
-            logger.info("=" * 100)
+            logger.info("=%s", "=" * 100)
             remote_agent_info.append({
                 "name": card.name,
                 "description": card.description
             })
         return remote_agent_info
 
+    # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements,too-many-locals
     async def send_message(self, agent_name: str, task: str,
                            tool_context: ToolContext) -> list[str]:
         """Sends a task to remote seller agent
@@ -387,11 +358,12 @@ class RoutingAgent:
         }
 
         client = None
-        # Case-insensitive check for rundown agents
-        if agent_name.lower() in [name.lower() for name in rundown_agent_names]:
+        if agent_name.lower() in [
+                name.lower() for name in rundown_agent_names
+        ]:
             rundown_connection = state.get('rundown_agent_connection')
-            # Case-insensitive comparison with the card name
-            if rundown_connection and rundown_connection.card.name.lower() == agent_name.lower():
+            if rundown_connection and rundown_connection.card.name.lower(
+            ) == agent_name.lower():
                 client = rundown_connection
             else:
                 error_message = (
@@ -410,27 +382,18 @@ class RoutingAgent:
                     state['rundown_agent_connection'].card.name)
 
             error_message = (f"Error: Agent '{agent_name}' not found. "
-                             "Available agents are: "
-                             f"{available_agents}")
+                             f"Available agents are: {available_agents}")
             logger.error(error_message)
             return [error_message]
 
-        state = tool_context.state
         state["active_agent"] = agent_name
 
-        if not client:
-            raise ValueError(f"Client not available for {agent_name}")
-
         task_id = state.get("task_id", str(uuid.uuid4()))
-        state["task_id"] = task_id  # Ensure task_id is stored in state
-
+        state["task_id"] = task_id
         context_id = state.get("context_id", str(uuid.uuid4()))
         state["context_id"] = context_id
-
-        message_id = str(uuid.uuid4())
-        if "input_message_metadata" in state:
-            if "message_id" in state["input_message_metadata"]:
-                message_id = state["input_message_metadata"]["message_id"]
+        message_id = state.get("input_message_metadata",
+                               {}).get("message_id", str(uuid.uuid4()))
 
         payload = create_send_message_payload(task, task_id, context_id)
         payload["message"]["messageId"] = message_id
@@ -451,8 +414,7 @@ class RoutingAgent:
         except A2AClientTimeoutError as e:
             error_message = (
                 f"Request to agent '{agent_name}' timed out. The agent might be "
-                "overloaded or unresponsive."
-            )
+                "overloaded or unresponsive.")
             logger.error("ERROR: %s Details: %s", error_message, e)
             return [error_message]
         logger.info("send_response %s", send_response)
@@ -463,41 +425,23 @@ class RoutingAgent:
 
         result = send_response.root.result
 
-        # Check if the result is a Task or a Message
         if not isinstance(result, (Task, Message)):
             logger.warning("received unexpected response. Aborting get task ")
-            return [
-                "Received an unexpected response type: %s" % str(type(result))
-            ]
-        response = send_response
-        if hasattr(response, "root"):
-            content = response.root.model_dump_json(exclude_none=True)
-        else:
-            content = response.model_dump(mode="json", exclude_none=True)
+            return [f"Received an unexpected response type: {type(result)}"]
 
-        resp = []
+        content = result.model_dump_json(exclude_none=True)
         json_content = json.loads(content)
 
-        if json_content.get("result") and json_content["result"].get(
-                "artifacts"):
-            for artifact in json_content["result"]["artifacts"]:
+        resp = []
+        if json_content.get("artifacts"):
+            for artifact in json_content["artifacts"]:
                 if artifact.get("parts"):
                     resp.extend(
                         convert_parts([
                             Part.model_validate(p) for p in artifact["parts"]
                         ]))
-        elif json_content.get("result") and json_content["result"].get(
-                "parts"):
-            # Handle the case where the result is a Message
+        elif json_content.get("parts"):
             resp.extend(
-                convert_parts([
-                    Part.model_validate(p)
-                    for p in json_content["result"]["parts"]
-                ]))
+                convert_parts(
+                    [Part.model_validate(p) for p in json_content["parts"]]))
         return resp
-
-
-# Create the agent instance synchronously.
-# The async initialization will be handled lazily on the first call.
-routing_agent_instance = RoutingAgent()
-root_agent = routing_agent_instance.get_agent()

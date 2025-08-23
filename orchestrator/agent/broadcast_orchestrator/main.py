@@ -1,59 +1,52 @@
 """
-Derived very much from the adk-docs site
-https://google.github.io/adk-docs/streaming/custom-streaming-ws/
-"""
+Main FastAPI application for the Broadcast Orchestrator Agent.
 
-import json
+Handles WebSocket connections, user authentication, and orchestrates agent
+sessions using the ADK.
+"""
 import asyncio
 import base64
-import firebase_admin
-from firebase_admin import auth, firestore
-import warnings
+from contextlib import asynccontextmanager
+import json
 import logging
-import yaml
 import os
+# import uuid
+import warnings
 
+import firebase_admin
+import yaml
+from broadcast_orchestrator.agent import RoutingAgent
 from dotenv import load_dotenv
-
-from google.genai.types import (
-    Part,
-    Content,
-    Blob,
-)
-
-from google.adk.runners import InMemoryRunner
+from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect, status
+from firebase_admin import auth, firestore, firestore_async
 from google.adk.agents import LiveRequestQueue
 from google.adk.agents.run_config import RunConfig
-
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, status
-
-from broadcast_orchestrator.agent import root_agent
+from google.adk.runners import InMemoryRunner
+from google.genai.types import Blob, Content, Part
 
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
-# Configure logging to show messages from all modules
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
-logger = logging.getLogger(__name__)
 
-#
-# ADK Streaming
-#
+logger = logging.getLogger(__name__)
 
 # Load Gemini API Key
 load_dotenv()
 
+
 def seed_agent_status():
     """
     Reads agent configuration from a YAML file and seeds it into Firestore.
+
     This function is intended to be called on application startup.
     """
     try:
-        # Construct the path to the config file relative to this script
-        config_path = os.path.join(os.path.dirname(__file__), 'remote_agents_config.yaml')
-        with open(config_path, 'r') as file:
+        config_path = os.path.join(os.path.dirname(__file__),
+                                   'remote_agents_config.yaml')
+        with open(config_path, 'r', encoding="utf-8") as file:
             config = yaml.safe_load(file)
 
         db = firestore.client()
@@ -65,89 +58,118 @@ def seed_agent_status():
                 continue
 
             doc_ref = agents_ref.document(agent_id)
+
+            doc = doc_ref.get()
+            if doc.exists:
+                logger.info("Agent '%s' already exists in Firestore.",
+                            agent_id)
+                continue
+
             doc_data = {
-                'name': agent_details.get('name'),
-                'url': os.getenv(agent_details.get('url_env'), agent_details.get('default_url')),
-                'status': 'offline',  # Default status
-                'last_checked': firestore.SERVER_TIMESTAMP
+                'name':
+                agent_details.get('name'),
+                'url':
+                os.getenv(agent_details.get('url_env'),
+                          agent_details.get('default_url')),
+                'status':
+                'offline',  # Default status
+                # pylint: disable=no-member
+                'last_checked':
+                firestore.SERVER_TIMESTAMP
             }
             if 'secret_id' in agent_details:
                 doc_data['api_key_secret'] = agent_details['secret_id']
 
             doc_ref.set(doc_data, merge=True)
-            logger.info(f"Seeded/updated agent '{agent_id}' in Firestore.")
+            logger.info("Seeded/updated agent '%s' in Firestore.", agent_id)
 
-    except FileNotFoundError:
-        logger.error("remote_agents_config.yaml not found. Skipping agent status seeding.")
-    except Exception as e:
-        logger.error(f"An error occurred during agent status seeding: {e}")
+    except (FileNotFoundError, IOError) as e:
+        logger.error("Failed to read remote_agents_config.yaml: %s", e)
+    except yaml.YAMLError as e:
+        logger.error("Error parsing YAML file: %s", e)
+
 
 #
 # FastAPI web app
 #
-
-app = FastAPI()
-
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(fastapi_app: FastAPI):
     """
-    This function is called when the application starts.
-    It's a good place to initialize resources like the Firebase Admin SDK.
+    Initializes resources on application startup.
     """
+    # Initialize Firebase Admin SDK
     try:
-        # Check if the app is already initialized to avoid errors.
-        if not firebase_admin._apps:
-            firebase_admin.initialize_app()
-            logger.info("Firebase Admin SDK initialized successfully.")
-            # Seed the agent status data into Firestore
-            seed_agent_status()
-    except Exception as e:
-        logger.error(f"Error initializing Firebase Admin SDK: {e}")
+        firebase_admin.initialize_app()
+        logger.info("Firebase Admin SDK initialized successfully.")
+        seed_agent_status()
+    except ValueError:
+        logger.info("Firebase Admin SDK already initialized.")
+
+    # Create and store the agent instance in the app state
+    fastapi_app.state.routing_agent = RoutingAgent()
+
+    yield
+
+    # Anything afer yield will operate before shut down.
 
 
-APP_NAME = "ADK Streaming example"
+app = FastAPI(lifespan=lifespan)
+
+APP_NAME = "Virtual Production Assistant"
 
 
-async def start_agent_session(user_id, is_audio=False):
-    """Starts an agent session"""
+async def start_agent_session(user_id: str,
+                              app_instance: FastAPI,
+                              is_audio=False):
+    """Starts an agent session and returns the session ID."""
 
-    # Create a Runner
     runner = InMemoryRunner(
         app_name=APP_NAME,
-        agent=root_agent,
+        agent=app_instance.state.routing_agent.get_agent(),
     )
 
-    # Create a Session
-    # The user_id is required by the agent's `before_agent_callback` to
-    # fetch user-specific preferences. We pass it in the session's state
-    # so it's available in the callback context.
-    session = await runner.session_service.create_session(
-        app_name=APP_NAME, user_id=user_id, state={"user_id": user_id})
+    # session_id = str(uuid.uuid4())
 
-    # Set response modality
+    session = await runner.session_service.create_session(app_name=APP_NAME,
+                                                          user_id=user_id,
+                                                          state={
+                                                              "user_id":
+                                                              user_id,
+                                                              "session_id":
+                                                              user_id
+                                                          })
+
     modality = "AUDIO" if is_audio else "TEXT"
     run_config = RunConfig(response_modalities=[modality])
 
-    # Create a LiveRequestQueue for this session
     live_request_queue = LiveRequestQueue()
 
-    # Start agent session
     live_events = runner.run_live(
         user_id=user_id,
         session=session,
         live_request_queue=live_request_queue,
         run_config=run_config,
     )
-    return live_events, live_request_queue
+    return live_events, live_request_queue, user_id
 
 
-async def agent_to_client_messaging(websocket, live_events):
-    """Agent to client communication"""
+async def agent_to_client_messaging(websocket, live_events, session_id: str):
+    """Agent to client communication and agent response logging."""
+    full_response = ""
+    db = firestore_async.client()
     try:
         async for event in live_events:
-
-            # If the turn complete or interrupted, send it
             if event.turn_complete or event.interrupted:
+                if full_response:
+                    event_data = {
+                        "type": "AGENT_MESSAGE",
+                        "timestamp": firestore.SERVER_TIMESTAMP,
+                        "text": full_response,
+                    }
+                    await (db.collection("chat_sessions").document(
+                        session_id).collection("events").add(event_data))
+                    full_response = ""
+
                 message = {
                     "turn_complete": event.turn_complete,
                     "interrupted": event.interrupted,
@@ -156,16 +178,15 @@ async def agent_to_client_messaging(websocket, live_events):
                 logger.info("[AGENT TO CLIENT]: %s", message)
                 continue
 
-            # Read the Content and its first Part
             part: Part = (event.content and event.content.parts
                           and event.content.parts[0])
             if not part:
                 continue
 
-            # If it's audio, send Base64 encoded audio data
             is_audio = part.inline_data and part.inline_data.mime_type.startswith(
                 "audio/pcm")
             if is_audio:
+                # Audio is not logged as part of the chat history for now.
                 audio_data = part.inline_data and part.inline_data.data
                 if audio_data:
                     message = {
@@ -177,34 +198,43 @@ async def agent_to_client_messaging(websocket, live_events):
                                 len(audio_data))
                     continue
 
-            # If it's text and a parial text, send it
             if part.text and event.partial:
+                full_response += part.text
                 message = {"mime_type": "text/plain", "data": part.text}
                 await websocket.send_text(json.dumps(message))
                 logger.info("[AGENT TO CLIENT]: text/plain: %s", message)
+
     except WebSocketDisconnect:
         logger.info("Client disconnected, closing agent->client messaging.")
 
 
-async def client_to_agent_messaging(websocket, live_request_queue):
-    """Client to agent communication"""
+async def client_to_agent_messaging(websocket: WebSocket, live_request_queue,
+                                    session_id: str):
+    """Client to agent communication and user message logging."""
+    db = firestore_async.client()
     try:
         while True:
-            # Decode JSON message
             message_json = await websocket.receive_text()
             message = json.loads(message_json)
             mime_type = message["mime_type"]
             data = message["data"]
 
-            # Send the message to the agent
             if mime_type == "text/plain":
-                # Send a text message
+                # Log the user's message to Firestore.
+                event_data = {
+                    "type": "USER_MESSAGE",
+                    "timestamp": firestore.SERVER_TIMESTAMP,
+                    "text": data,
+                }
+                await (db.collection("chat_sessions").document(
+                    session_id).collection("events").add(event_data))
+
+                # Send the message to the agent.
                 content = Content(role="user",
                                   parts=[Part.from_text(text=data)])
                 live_request_queue.send_content(content=content)
                 logger.info("[CLIENT TO AGENT]: %s", data)
             elif mime_type == "audio/pcm":
-                # Send an audio data
                 decoded_data = base64.b64decode(data)
                 live_request_queue.send_realtime(
                     Blob(data=decoded_data, mime_type=mime_type))
@@ -212,8 +242,6 @@ async def client_to_agent_messaging(websocket, live_request_queue):
                 raise ValueError(f"Mime type not supported: {mime_type}")
     except WebSocketDisconnect:
         logger.info("Client disconnected, closing client->agent messaging.")
-
-
 
 
 @app.get("/")
@@ -236,11 +264,9 @@ async def websocket_endpoint(
         return
 
     try:
-        # Verify the token
         decoded_token = auth.verify_id_token(token)
         token_user_id = decoded_token["uid"]
 
-        # Ensure the user_id in the path matches the one in the token
         if user_id != token_user_id:
             logger.warning("User ID in path does not match token UID.")
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION,
@@ -251,45 +277,37 @@ async def websocket_endpoint(
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION,
                               reason="Invalid token")
         return
-    except Exception as e:
+    except (ValueError, KeyError) as e:
         logger.error(
             "An unexpected error occurred during token verification: %s", e)
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION,
                               reason="Token verification failed")
         return
 
-    # Wait for client connection
     await websocket.accept()
     logger.info("Client #%s connected, audio mode: %s", user_id, is_audio)
 
-    # Start agent session
-    live_events, live_request_queue = await start_agent_session(
-        user_id, is_audio == "true")
+    live_events, live_request_queue, session_id = await start_agent_session(
+        user_id, app_instance=websocket.app, is_audio=(is_audio == "true"))
 
-    # Start tasks
     agent_to_client_task = asyncio.create_task(
-        agent_to_client_messaging(websocket, live_events))
+        agent_to_client_messaging(websocket, live_events, session_id))
     client_to_agent_task = asyncio.create_task(
-        client_to_agent_messaging(websocket, live_request_queue))
+        client_to_agent_messaging(websocket, live_request_queue, session_id))
 
-    # Wait until the websocket is disconnected or an error occurs
     done, pending = await asyncio.wait(
         [agent_to_client_task, client_to_agent_task],
         return_when=asyncio.FIRST_COMPLETED,
     )
 
-    # If one task finishes, cancel the other one.
     for task in pending:
         task.cancel()
 
-    # Log any exceptions that might have caused a task to finish.
     for task in done:
         if task.exception():
             logger.error("A websocket task finished with an exception:",
                          exc_info=task.exception())
 
-    # Close LiveRequestQueue
     live_request_queue.close()
 
-    # Disconnected
     logger.info("Client #%s disconnected", user_id)
