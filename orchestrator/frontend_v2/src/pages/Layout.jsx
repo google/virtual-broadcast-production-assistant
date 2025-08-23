@@ -96,22 +96,27 @@ export default function Layout({ children }) {
               <Label htmlFor="rundown-system-toggle" className={rundownSystem === 'sofie' ? 'text-green-400 font-bold' : 'text-gray-400'}>SOFIE</Label>
             </div>
 
-            {currentUser && currentUser.isAnonymous && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-foreground"
-                onClick={() => {
-                  setIsUpgrading(true);
-                  signOut();
-                }}
-              >
-                Login with Google
-              </Button>
-            )}
-            <Button variant="outline" size="sm" className="text-foreground" onClick={() => signOut()}>
-              Sign Out
-            </Button>
+            {currentUser ? (
+              currentUser.isAnonymous ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-foreground"
+                  onClick={() => setIsUpgrading(true)}
+                >
+                  Login with Google
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-foreground"
+                  onClick={() => signOut()}
+                >
+                  Sign Out
+                </Button>
+              )
+            ) : null}
             {/* Connection Status - Responsive sizing */}
             <div className="hidden sm:flex items-center gap-2">
               {connectionStatus === "connected" ?
