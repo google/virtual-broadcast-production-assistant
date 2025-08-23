@@ -13,8 +13,14 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      setLoading(false);
+      if (user) {
+        setCurrentUser(user);
+        setLoading(false);
+      } else {
+        signInAnonymously(auth).catch(error => {
+          console.error("Anonymous sign-in failed:", error);
+        });
+      }
     });
 
     return unsubscribe;

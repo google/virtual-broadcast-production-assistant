@@ -9,25 +9,18 @@ export default function Auth() {
   const { isUpgrading, setIsUpgrading, signInAnonymously } = useAuth();
 
   useEffect(() => {
-    if (isUpgrading) {
-      const ui = firebaseui.auth.AuthUI.getInstance() || new firebaseui.auth.AuthUI(auth);
-      ui.start('#firebaseui-auth-container', {
-        signInOptions: [
-          GoogleAuthProvider.PROVIDER_ID,
-        ],
-        callbacks: {
-          signInSuccessWithAuthResult: function () {
-            setIsUpgrading(false);
-            return false;
-          },
+    const ui = firebaseui.auth.AuthUI.getInstance() || new firebaseui.auth.AuthUI(auth);
+    ui.start('#firebaseui-auth-container', {
+      signInOptions: [
+        GoogleAuthProvider.PROVIDER_ID,
+      ],
+      callbacks: {
+        signInSuccessWithAuthResult: function () {
+          setIsUpgrading(false);
+          return false;
         },
-      });
-    } else {
-        // If not upgrading, sign in anonymously
-        signInAnonymously().catch(error => {
-            console.error("Anonymous sign-in failed:", error);
-        });
-    }
+      },
+    });
   }, [isUpgrading, signInAnonymously, setIsUpgrading]);
 
   return (
