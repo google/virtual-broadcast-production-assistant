@@ -26,7 +26,9 @@ from google.cloud.exceptions import GoogleCloudError
 from google.adk import Agent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.readonly_context import ReadonlyContext
+from google.adk.events import Event
 from google.adk.tools.tool_context import ToolContext
+from google.genai.types import Content, Part as AdkPart
 
 from .automation_system_instructions import (
     AUTOMATION_SYSTEMS,
@@ -107,6 +109,97 @@ class RoutingAgent:
         self._init_lock = asyncio.Lock()
         self._agent: Agent | None = None
         self.observer = FirestoreAgentObserver()
+
+    def _convert_firestore_event_to_adk_event(self, event_data: dict) -> Event | None:
+        """Converts a Firestore event document to an ADK Event object."""
+        event_type = event_data.get("type")
+        agent_name = self.get_agent().name
+
+        if not event_type:
+            logger.warning("Skipping event with no type: %s", event_data)
+            return None
+
+        author = None
+        content = None
+
+        if event_type == "USER_MESSAGE":
+            author = "user"
+            text = event_data.get("text") or event_data.get("prompt")
+            if text:
+                content = Content(parts=[AdkPart(text=text)])
+        elif event_type == "AGENT_MESSAGE":
+            author = agent_name
+            text = (
+                event_data.get("text")
+                or event_data.get("prompt")
+                or event_data.get("response")
+            )
+            if text:
+                content = Content(parts=[AdkPart(text=text)])
+        elif event_type == "TOOL_START":
+            author = agent_name
+            tool_name = event_data.get("tool_name")
+            tool_args = event_data.get("tool_args", {})
+            if tool_name:
+                content = Content(
+                    parts=[AdkPart(function_call={"name": tool_name, "args": tool_args})]
+                )
+        elif event_type == "TOOL_END":
+            author = agent_name
+            tool_name = event_data.get("tool_name")
+            tool_output = event_data.get("tool_output")
+            if tool_name:
+                response_data = tool_output
+                if not isinstance(response_data, dict):
+                    response_data = {"output": response_data}
+                # Per ADK docs, role for tool response in history is 'user'
+                content = Content(
+                    parts=[
+                        AdkPart(
+                            function_response={
+                                "name": tool_name,
+                                "response": response_data,
+                            }
+                        )
+                    ],
+                    role="user",
+                )
+        else:
+            # Ignore other event types like MODEL_START, MODEL_END as they are for logging.
+            return None
+
+        if author and content:
+            return Event(author=author, content=content)
+
+        logger.warning("Could not convert event: %s", event_data)
+        return None
+
+    async def _load_chat_history(self, user_id: str) -> list[Event]:
+        """Loads chat history for a given user from Firestore."""
+        logger.info("Loading chat history for user: %s", user_id)
+        if not user_id:
+            return []
+        try:
+            db = firestore_async.client()
+            events_ref = (
+                db.collection("chat_sessions")
+                .document(user_id)
+                .collection("events")
+                .order_by("timestamp")
+            )
+            event_docs = events_ref.stream()
+            history = []
+            async for doc in event_docs:
+                event_data = doc.to_dict()
+                adk_event = self._convert_firestore_event_to_adk_event(event_data)
+                if adk_event:
+                    history.append(adk_event)
+            logger.info("Loaded %d events from chat history for user %s", len(history), user_id)
+            return history
+
+        except GoogleCloudError as e:
+            logger.error("Failed to load chat history for user %s: %s", user_id, e)
+            return []
 
     async def _load_agent(
             self, address: str,
@@ -232,6 +325,30 @@ class RoutingAgent:
         print("!!! AGENT.PY: before_agent_callback IS RUNNING !!!")
 
         await self._async_init_if_needed()
+
+        if not callback_context.state.get("history_loaded"):
+            user_id = callback_context.state.get("user_id")
+            logger.info("Attempting to load chat history for user: %s", user_id)
+            if user_id:
+                history = await self._load_chat_history(user_id)
+                if history:
+                    logger.info("Injecting %d events into history", len(history))
+                    # The ADK doesn't have a documented way to inject history.
+                    # The 'history' attribute on the context is the most likely place.
+                    if hasattr(callback_context, "history"):
+                        logger.info(
+                            "callback_context.history found, type: %s. Prepending loaded history.",
+                            type(callback_context.history),
+                        )
+                        # Assuming history is a list of events.
+                        callback_context.history = history + callback_context.history
+                    else:
+                        logger.warning(
+                            "CallbackContext does not have a 'history' attribute. "
+                            "Cannot inject chat history."
+                        )
+            callback_context.state["history_loaded"] = True
+
         user_id = callback_context.state.get("user_id")
 
         logger.info("before_agent_callback called for user: %s", user_id)
