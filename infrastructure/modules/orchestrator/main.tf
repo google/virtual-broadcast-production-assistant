@@ -34,6 +34,9 @@ resource "google_compute_backend_service" "backend_service" {
   backend {
     group = google_compute_region_network_endpoint_group.serverless_neg.id
   }
+
+  connection_draining_timeout_sec = 600
+  session_affinity = "CLIENT_IP"
 }
 
 resource "google_compute_region_network_endpoint_group" "serverless_neg" {
