@@ -132,7 +132,10 @@ async def test_before_agent_callback_loads_history(agent: RoutingAgent):
     # Mock the context
     mock_context = MagicMock()
     mock_context.state = {"user_id": "test_user"}
-    mock_context.history = []
+    mock_session = MagicMock()
+    mock_session.events = []
+    mock_context.session = mock_session
+
 
     # Mock the firestore call for user preferences
     mock_doc = AsyncMock()
@@ -158,8 +161,8 @@ async def test_before_agent_callback_loads_history(agent: RoutingAgent):
 
         agent._load_chat_history.assert_called_once_with("test_user")
         assert mock_context.state["history_loaded"] is True
-        assert len(mock_context.history) == 1
-        assert mock_context.history[0].content.parts[0].text == "Old message"
+        assert len(mock_context.session.events) == 1
+        assert mock_context.session.events[0].content.parts[0].text == "Old message"
         mock_logger.info.assert_any_call("Injecting %d events into history", 1)
 
         # Second call should not load history again

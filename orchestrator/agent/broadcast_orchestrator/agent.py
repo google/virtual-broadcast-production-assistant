@@ -335,16 +335,20 @@ class RoutingAgent:
                     logger.info("Injecting %d events into history", len(history))
                     # The ADK doesn't have a documented way to inject history.
                     # The 'history' attribute on the context is the most likely place.
-                    if hasattr(callback_context, "history"):
+                    if hasattr(callback_context, "session") and hasattr(
+                        callback_context.session, "events"
+                    ):
                         logger.info(
-                            "callback_context.history found, type: %s. Prepending loaded history.",
-                            type(callback_context.history),
+                            "callback_context.session.events found, type: %s. Prepending loaded history.",
+                            type(callback_context.session.events),
                         )
-                        # Assuming history is a list of events.
-                        callback_context.history = history + callback_context.history
+                        # Prepend the loaded history to the current session's events.
+                        callback_context.session.events = (
+                            history + callback_context.session.events
+                        )
                     else:
                         logger.warning(
-                            "CallbackContext does not have a 'history' attribute. "
+                            "CallbackContext does not have a 'session.events' attribute. "
                             "Cannot inject chat history."
                         )
             callback_context.state["history_loaded"] = True
