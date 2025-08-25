@@ -12,6 +12,7 @@ from a2a.client import A2ACardResolver
 from a2a.client.errors import A2AClientTimeoutError, A2AClientHTTPError
 from a2a.types import (
     AgentCard,
+    FilePart,
     MessageSendParams,
     Part,
     SendMessageRequest,
@@ -49,15 +50,26 @@ logger = logging.getLogger(__name__)
 
 def convert_part(part: Part):
     """Converts an A2A Part to a string."""
-    # Currently only support text parts
     if isinstance(part.root, TextPart):
         return part.root.text
-
+    if isinstance(part.root, FilePart):
+        if part.root.uri:
+            return {
+                "type": "file",
+                "uri": part.root.uri,
+                "filename": part.root.filename,
+            }
+        if part.root.data:
+            return {
+                "type": "file",
+                "data": part.root.data,
+                "filename": part.root.filename,
+            }
     return f"Unknown type: {type(part.root)}"
 
 
 def convert_parts(parts: list[Part]):
-    """Converts a list of A2A Parts to a list of strings."""
+    """Converts a list of A2A Parts to a list of strings or dicts."""
     rval = []
     for p in parts:
         rval.append(convert_part(p))
@@ -347,8 +359,9 @@ class RoutingAgent:
         return remote_agent_info
 
     # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements,too-many-locals
-    async def send_message(self, agent_name: str, task: str,
-                           tool_context: ToolContext) -> list[str]:
+    async def send_message(
+        self, agent_name: str, task: str, tool_context: ToolContext
+    ) -> list[str | dict[str, str]]:
         """Sends a task to remote seller agent
 
         This will send a message to the remote agent named agent_name.
