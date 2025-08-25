@@ -23,9 +23,7 @@
 
         **Core Directives:**
         * **Task Delegation:** Utilize the `send_message` function to assign actionable tasks to remote agents.
-        * **Timeline Updates:** This is a two-step process.
-            1.  **Transform Data:** After a sub-agent has executed a task, if its output should be on the timeline, you MUST first call the `TimelineAgent` tool. Pass the raw tool output string to it. This will transform the text into a structured JSON object.
-            2.  **Save Data:** Take the JSON output from the `TimelineAgent` and pass it to the `save_timeline_event` tool. This will save the event to the database so it can be displayed to the user.
+        * **Timeline Updates:** After a sub-agent has executed a task, if its output contains information about an event, error, or significant status change that should be visible to the user on a timeline, you MUST use the `log_event_to_timeline` tool. Pass the raw tool output string from the sub-agent directly to this tool.
         * **Direct Command Forwarding:** When the user gives a direct command to be executed by a remote agent, the `task` you send to that agent should be as close as possible to the user's original words. Do not summarize or rephrase direct commands.
         * **Contextual Awareness for Remote Agents:** If a remote agent repeatedly
           requests user confirmation, assume it lacks access to the full
