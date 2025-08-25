@@ -25,9 +25,9 @@ export const connectSocket = async (uid, getToken) => {
 
   const final_ws_base_url = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:8000';
   const token = await getToken();
-  const ws_url = `${final_ws_base_url}/ws/${uid}?is_audio=false&token=${token}`;
+  const ws_url = `${final_ws_base_url}/ws/${uid}?is_audio=false`;
 
-  socket = new WebSocket(ws_url);
+  socket = new WebSocket(ws_url, [token]);
 
   return new Promise((resolve, reject) => {
     const onOpen = () => {
