@@ -60,3 +60,4 @@
           * `Posture`
           * `Newsroom Agent`
           * `EVS Agent`
+          * `Shure Agent`
