@@ -145,17 +145,15 @@ class RoutingAgent:
         return None
 
     async def _async_init_components(self,
-                                     remote_agents_config: dict[str,
-                                                                str | None]):
+                                     remote_agents_to_load: list[tuple[str, str, str | None]]):
         """Asynchronously initializes components that require network I/O."""
         logger.info("Initializing remote agent connections...")
-        for address, api_key in remote_agents_config.items():
+        for agent_name, address, api_key in remote_agents_to_load:
 
             connection = await self._load_agent(address, api_key)
             if connection:
-                self.remote_agent_connections[
-                    connection.card.name] = connection
-                self.cards[connection.card.name] = connection.card
+                self.remote_agent_connections[agent_name] = connection
+                self.cards[agent_name] = connection.card
 
         agent_info = [json.dumps(d) for d in self.list_remote_agents()]
         self.agents = "\n".join(agent_info)
@@ -172,7 +170,7 @@ class RoutingAgent:
                 for config in AUTOMATION_SYSTEMS.values()
             }
 
-            remote_agents_config = {}
+            remote_agents_to_load = []
             for config in agent_configs:
                 if config["name"] in rundown_agent_config_names:
                     continue
@@ -180,14 +178,10 @@ class RoutingAgent:
                 agent_name = config["name"]
                 url = os.getenv(config["url_env"], config["default_url"])
                 api_key = os.getenv(config["key_env"])
-                if api_key:
-                    logger.info('API KEY FOUND for %s', agent_name)
-                else:
-                    logger.info('No API KEY for %s', agent_name)
                 if url:
-                    remote_agents_config[url] = api_key
+                    remote_agents_to_load.append((agent_name, url, api_key))
 
-            await self._async_init_components(remote_agents_config)
+            await self._async_init_components(remote_agents_to_load)
             self._initialized = True
 
     def get_agent(self) -> Agent:
@@ -282,6 +276,8 @@ class RoutingAgent:
                 if rundown_conn:
                     callback_context.state[
                         'rundown_agent_connection'] = rundown_conn
+                    callback_context.state[
+                        'rundown_agent_config_name'] = agent_config['name']
                     logger.info("Dynamically loaded rundown agent: %s",
                                 rundown_conn.card.name)
                 else:
@@ -289,14 +285,22 @@ class RoutingAgent:
                         "Failed to dynamically load rundown agent for preference: %s",
                         rundown_system_preference)
 
-        available_agents = [
-            f"- `{n}`: {c.card.description}"
-            for n, c in self.remote_agent_connections.items()
-        ]
+        available_agents = []
+        for n, c in self.remote_agent_connections.items():
+            display_name = c.card.name
+            if n.lower() != display_name.lower():
+                available_agents.append(f"  * `{n}` (also known as `{display_name}`): {c.card.description}")
+            else:
+                available_agents.append(f"  * `{n}`: {c.card.description}")
+
         if rundown_conn:
-            available_agents.append(
-                f"- `{rundown_conn.card.name}`: {rundown_conn.card.description}"
-            )
+            internal_name = callback_context.state.get('rundown_agent_config_name')
+            display_name = rundown_conn.card.name
+            if internal_name and internal_name.lower() != display_name.lower():
+                available_agents.append(f"  * `{internal_name}` (also known as `{display_name}`): {rundown_conn.card.description}")
+            else:
+                name_to_show = internal_name or display_name
+                available_agents.append(f"  * `{name_to_show}`: {rundown_conn.card.description}")
 
         rundown_instructions = self._get_formatted_instructions(
             rundown_system_preference)
@@ -376,20 +380,34 @@ class RoutingAgent:
                 name.lower() for name in rundown_agent_names
         ]:
             rundown_connection = state.get('rundown_agent_connection')
-            if rundown_connection and rundown_connection.card.name.lower(
-            ) == agent_name.lower():
-                client = rundown_connection
-            else:
+            if rundown_connection:
+                rundown_config_name = state.get('rundown_config_name')
+                rundown_display_name = rundown_connection.card.name
+                if agent_name.lower() in rundown_display_name.lower() or \
+                   (rundown_config_name and agent_name.lower() in rundown_config_name.lower()):
+                    client = rundown_connection
+            
+            if not client:
                 error_message = (
                     f"Error: Rundown agent '{agent_name}' not loaded for this session."
                 )
                 logger.error(error_message)
                 return [error_message]
         else:
+            matched_connections = []
             for registered_name, connection in self.remote_agent_connections.items():
-                if registered_name.lower() == agent_name.lower():
-                    client = connection
-                    break
+                if agent_name.lower() in registered_name.lower():
+                    matched_connections.append(connection)
+
+            if len(matched_connections) == 1:
+                client = matched_connections[0]
+            elif len(matched_connections) > 1:
+                matched_agent_names = [conn.card.name for conn in matched_connections]
+                error_message = (f"Error: Agent name '{agent_name}' is ambiguous. "
+                                 f"It matches: {matched_agent_names}. "
+                                 "Please be more specific.")
+                logger.error(error_message)
+                return [error_message]
 
         if not client:
             available_agents = list(self.remote_agent_connections.keys())
@@ -404,10 +422,12 @@ class RoutingAgent:
 
         state["active_agent"] = agent_name
 
-        task_id = state.get("task_id", str(uuid.uuid4()))
-        state["task_id"] = task_id
-        context_id = state.get("context_id", str(uuid.uuid4()))
-        state["context_id"] = context_id
+        agent_specific_task_id_key = f"{agent_name}_task_id"
+        task_id = state.get(agent_specific_task_id_key)
+
+        # Temporarily disable context_id to debug Shure agent issue
+        context_id = None
+
         message_id = state.get("input_message_metadata",
                                {}).get("message_id", str(uuid.uuid4()))
 
@@ -447,6 +467,9 @@ class RoutingAgent:
 
         content = result.model_dump_json(exclude_none=True)
         json_content = json.loads(content)
+
+        if isinstance(result, Task) and result.id:
+            state[agent_specific_task_id_key] = result.id
 
         resp = []
         if json_content.get("artifacts"):
