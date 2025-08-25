@@ -40,7 +40,9 @@ from .config import (
 )
 from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
 from .firestore_observer import FirestoreAgentObserver
-from .timeline_tool import update_timeline_activity
+from .timeline_agent import timeline_agent
+from .firestore_tools import save_timeline_event
+from google.adk.tools import agent_tool
 
 load_dotenv()
 
@@ -208,7 +210,11 @@ class RoutingAgent:
             description=(
                 "This Routing agent orchestrates requests for the user "
                 "to assist in live news or sports broadcast control"),
-            tools=[self.send_message, update_timeline_activity],
+            tools=[
+                self.send_message,
+                agent_tool.AgentTool(agent=timeline_agent),
+                save_timeline_event
+            ],
         )
         return self._agent
 

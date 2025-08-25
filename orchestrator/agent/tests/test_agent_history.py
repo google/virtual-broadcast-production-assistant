@@ -1,13 +1,21 @@
 """Tests for the chat history loading functionality in RoutingAgent."""
 # pylint: disable=protected-access
-from broadcast_orchestrator.history import _convert_firestore_event_to_adk_event
+from unittest.mock import patch, MagicMock
+
+import pytest
+from google.adk.events import Event
+from google.genai.types import Content, Part as AdkPart
+
+from broadcast_orchestrator.agent import RoutingAgent
+from broadcast_orchestrator.history import \
+    _convert_firestore_event_to_adk_event as convert_event
 
 
 def test_convert_user_message_event():
     """Verify that a USER_MESSAGE event is converted correctly."""
     firestore_event = {"type": "USER_MESSAGE", "prompt": "Hello, world!"}
-    adk_event = _convert_firestore_event_to_adk_event(firestore_event,
-                                                      "test_agent")
+    adk_event = convert_event(firestore_event, agent.get_agent().name)
+
     assert adk_event is not None
     assert adk_event.author == "user"
     assert adk_event.content.parts[0].text == "Hello, world!"
@@ -19,8 +27,8 @@ def test_convert_agent_message_event():
         "type": "AGENT_MESSAGE",
         "response": "Hello from the agent!",
     }
-    adk_event = _convert_firestore_event_to_adk_event(firestore_event,
-                                                      "test_agent")
+    adk_event = convert_event(firestore_event, agent.get_agent().name)
+
     assert adk_event is not None
     assert adk_event.author == "test_agent"
     assert adk_event.content.parts[0].text == "Hello from the agent!"
@@ -33,8 +41,8 @@ def test_convert_tool_start_event():
         "tool_name": "test_tool",
         "tool_args": {"arg1": "value1"},
     }
-    adk_event = _convert_firestore_event_to_adk_event(firestore_event,
-                                                      "test_agent")
+    adk_event = convert_event(firestore_event, agent.get_agent().name)
+
     assert adk_event is not None
     assert adk_event.author == "test_agent"
     assert adk_event.content.parts[0].function_call.name == "test_tool"
@@ -48,10 +56,11 @@ def test_convert_tool_end_event():
         "tool_name": "test_tool",
         "tool_output": "tool result",
     }
-    adk_event = _convert_firestore_event_to_adk_event(firestore_event,
-                                                      "test_agent")
+    adk_event = convert_event(firestore_event, agent.get_agent().name)
+
     assert adk_event is not None
     assert adk_event.author == "tool"
+    assert adk_event.content.role == "user"
     assert adk_event.content.parts[0].function_response.name == "test_tool"
     assert adk_event.content.parts[0].function_response.response == {
         "output": "tool result"
@@ -61,6 +70,5 @@ def test_convert_tool_end_event():
 def test_convert_unknown_event_returns_none():
     """Verify that an unknown event type returns None."""
     firestore_event = {"type": "UNKNOWN_EVENT"}
-    adk_event = _convert_firestore_event_to_adk_event(firestore_event,
-                                                      "test_agent")
+    adk_event = convert_event(firestore_event, agent.get_agent().name)
     assert adk_event is None
