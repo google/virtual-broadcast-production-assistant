@@ -125,12 +125,14 @@ async def start_agent_session(user_id: str,
                               is_audio=False):
     """Starts an agent session and returns the session ID."""
 
+    routing_agent = app_instance.state.routing_agent
+    agent = routing_agent.get_agent()
     runner = InMemoryRunner(
         app_name=APP_NAME,
-        agent=app_instance.state.routing_agent.get_agent(),
+        agent=agent,
     )
 
-    history = await load_chat_history(user_id)
+    history = await load_chat_history(user_id, agent.name)
 
     session = await runner.session_service.create_session(
         app_name=APP_NAME,

@@ -56,6 +56,6 @@
 
         * By default you should have availablitity of the following other supporting agents
           * `Momentslab Agent`
-          * `Posture Agent`
+          * `Posture`
           * `Newsroom Agent`
           * `EVS Agent`

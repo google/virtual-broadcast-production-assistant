@@ -10,11 +10,10 @@ from google.adk.events import Event
 logger = logging.getLogger(__name__)
 
 
-def _convert_firestore_event_to_adk_event(event_data: dict) -> Event | None:
+def _convert_firestore_event_to_adk_event(event_data: dict,
+                                            agent_name: str) -> Event | None:
     """Converts a Firestore event document to an ADK Event object."""
     event_type = event_data.get("type")
-    # This is a generic history loader, so we use a generic name for the agent.
-    agent_name = "agent"
 
     if not event_type:
         logger.warning("Skipping event with no type: %s", event_data)
@@ -46,14 +45,13 @@ def _convert_firestore_event_to_adk_event(event_data: dict) -> Event | None:
                 parts=[AdkPart(function_call={"name": tool_name, "args": tool_args})]
             )
     elif event_type == "TOOL_END":
-        author = agent_name
+        author = "tool"
         tool_name = event_data.get("tool_name")
         tool_output = event_data.get("tool_output")
         if tool_name:
             response_data = tool_output
             if not isinstance(response_data, dict):
                 response_data = {"output": response_data}
-            # Per ADK docs, role for tool response in history is 'user'
             content = Content(
                 parts=[
                     AdkPart(
@@ -62,8 +60,7 @@ def _convert_firestore_event_to_adk_event(event_data: dict) -> Event | None:
                             "response": response_data,
                         }
                     )
-                ],
-                role="user",
+                ]
             )
     else:
         # Ignore other event types like MODEL_START, MODEL_END as they are for logging.
@@ -76,7 +73,7 @@ def _convert_firestore_event_to_adk_event(event_data: dict) -> Event | None:
     return None
 
 
-async def load_chat_history(user_id: str) -> list[Event]:
+async def load_chat_history(user_id: str, agent_name: str) -> list[Event]:
     """Loads chat history for a given user from Firestore."""
     logger.info("Loading chat history for user: %s", user_id)
     if not user_id:
@@ -93,10 +90,12 @@ async def load_chat_history(user_id: str) -> list[Event]:
         history = []
         async for doc in event_docs:
             event_data = doc.to_dict()
-            adk_event = _convert_firestore_event_to_adk_event(event_data)
+            adk_event = _convert_firestore_event_to_adk_event(
+                event_data, agent_name)
             if adk_event:
                 history.append(adk_event)
-        logger.info("Loaded %d events from chat history for user %s", len(history), user_id)
+        logger.info("Loaded %d events from chat history for user %s",
+                    len(history), user_id)
         return history
 
     except GoogleCloudError as e:
