@@ -1,4 +1,7 @@
-
+import { useState, useEffect } from 'react';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/useAuth';
 import IssueCard from "./IssueCard";
 
 const timeSlots = [
@@ -9,58 +12,35 @@ const timeSlots = [
   { label: "+15 min", offset: 900 }
 ];
 
-// Mock issues data
-const mockIssues = [
-  {
-    id: "1",
-    category: "VIDEO",
-    title: "Missing clip", 
-    subtitle: "SLUG/CLIPNAME/1826",
-    severity: "critical",
-    timeOffsetSec: 0,
-    status: "default"
-  },
-  {
-    id: "2", 
-    category: "AUDIO",
-    title: "Distorted audio on clip",
-    subtitle: "SLUG/CLIPNAME/1826", 
-    severity: "critical",
-    timeOffsetSec: 180,
-    status: "working"
-  },
-  {
-    id: "3",
-    category: "VIDEO", 
-    title: "Illegal frames on clip",
-    subtitle: "SLUG/CLIPNAME/1826",
-    severity: "warning", 
-    timeOffsetSec: 300,
-    status: "default"
-  },
-  {
-    id: "4",
-    category: "REFORMATTING",
-    title: "Video aspect ratio mismatch", 
-    subtitle: "SLUG/CLIPNAME/1826",
-    severity: "warning",
-    timeOffsetSec: 300, 
-    status: "default"
-  },
-  {
-    id: "5",
-    category: "GFX",
-    title: "Missing graphic",
-    subtitle: "Item 01 - Story strap", 
-    severity: "warning",
-    timeOffsetSec: 900,
-    status: "default"
-  }
-];
-
 export default function TimelineView() {
+  const [issues, setIssues] = useState([]);
+  const { currentUser } = useAuth();
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const q = query(
+      collection(db, "timeline_events"),
+      where("user_id", "==", currentUser.uid),
+      orderBy("timestamp", "desc")
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const fetchedIssues = [];
+      querySnapshot.forEach((doc) => {
+        fetchedIssues.push({ id: doc.id, ...doc.data() });
+      });
+      setIssues(fetchedIssues);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, [currentUser]);
+
   const getIssuesForTimeSlot = (offset) => {
-    return mockIssues.filter(issue => issue.timeOffsetSec === offset);
+    // This logic might need adjustment depending on how timeOffsetSec is used.
+    // For now, we'll just filter by the offset.
+    return issues.filter(issue => issue.timeOffsetSec === offset);
   };
 
   return (
