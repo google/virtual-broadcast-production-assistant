@@ -24,6 +24,8 @@ from google.adk.agents.run_config import RunConfig
 from google.adk.runners import InMemoryRunner
 from google.genai.types import Blob, Content, Part
 
+from broadcast_orchestrator.history import load_chat_history
+
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 logging.basicConfig(
@@ -128,16 +130,19 @@ async def start_agent_session(user_id: str,
         agent=app_instance.state.routing_agent.get_agent(),
     )
 
-    # session_id = str(uuid.uuid4())
+    history = await load_chat_history(user_id)
 
-    session = await runner.session_service.create_session(app_name=APP_NAME,
-                                                          user_id=user_id,
-                                                          state={
-                                                              "user_id":
-                                                              user_id,
-                                                              "session_id":
-                                                              user_id
-                                                          })
+    session = await runner.session_service.create_session(
+        app_name=APP_NAME,
+        user_id=user_id,
+        state={
+            "user_id": user_id,
+            "session_id": user_id
+        })
+
+    if history:
+        logger.info("Injecting %d events into session %s", len(history), session.id)
+        session.events.extend(history)
 
     modality = "AUDIO" if is_audio else "TEXT"
     run_config = RunConfig(response_modalities=[modality])
@@ -153,12 +158,20 @@ async def start_agent_session(user_id: str,
     return live_events, live_request_queue, user_id
 
 
-async def agent_to_client_messaging(websocket, live_events, session_id: str):
+async def agent_to_client_messaging(websocket: WebSocket, live_events,
+                                    session_id: str,
+                                    user_has_spoken: asyncio.Event):
     """Agent to client communication and agent response logging."""
     full_response = ""
     db = firestore_async.client()
     try:
         async for event in live_events:
+            if not user_has_spoken.is_set():
+                logger.info(
+                    "[AGENT TO CLIENT]: Suppressed message because user has not spoken yet."
+                )
+                continue
+
             if event.turn_complete or event.interrupted:
                 if full_response:
                     event_data = {
@@ -209,12 +222,14 @@ async def agent_to_client_messaging(websocket, live_events, session_id: str):
 
 
 async def client_to_agent_messaging(websocket: WebSocket, live_request_queue,
-                                    session_id: str):
+                                    session_id: str,
+                                    user_has_spoken: asyncio.Event):
     """Client to agent communication and user message logging."""
     db = firestore_async.client()
     try:
         while True:
             message_json = await websocket.receive_text()
+            user_has_spoken.set()
             message = json.loads(message_json)
             mime_type = message["mime_type"]
             data = message["data"]
@@ -290,10 +305,14 @@ async def websocket_endpoint(
     live_events, live_request_queue, session_id = await start_agent_session(
         user_id, app_instance=websocket.app, is_audio=(is_audio == "true"))
 
+    user_has_spoken = asyncio.Event()
+
     agent_to_client_task = asyncio.create_task(
-        agent_to_client_messaging(websocket, live_events, session_id))
+        agent_to_client_messaging(websocket, live_events, session_id,
+                                  user_has_spoken))
     client_to_agent_task = asyncio.create_task(
-        client_to_agent_messaging(websocket, live_request_queue, session_id))
+        client_to_agent_messaging(websocket, live_request_queue, session_id,
+                                  user_has_spoken))
 
     done, pending = await asyncio.wait(
         [agent_to_client_task, client_to_agent_task],

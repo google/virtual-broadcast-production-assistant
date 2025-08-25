@@ -26,10 +26,8 @@ from google.cloud.exceptions import GoogleCloudError
 from google.adk import Agent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.readonly_context import ReadonlyContext
-from google.adk.events import Event
-from google.adk.sessions import InMemorySessionService
 from google.adk.tools.tool_context import ToolContext
-from google.genai.types import Content, Part as AdkPart
+from google.genai.types import Content
 
 from .automation_system_instructions import (
     AUTOMATION_SYSTEMS,
@@ -110,98 +108,6 @@ class RoutingAgent:
         self._init_lock = asyncio.Lock()
         self._agent: Agent | None = None
         self.observer = FirestoreAgentObserver()
-        self.session_service = InMemorySessionService()
-
-    def _convert_firestore_event_to_adk_event(self, event_data: dict) -> Event | None:
-        """Converts a Firestore event document to an ADK Event object."""
-        event_type = event_data.get("type")
-        agent_name = self.get_agent().name
-
-        if not event_type:
-            logger.warning("Skipping event with no type: %s", event_data)
-            return None
-
-        author = None
-        content = None
-
-        if event_type == "USER_MESSAGE":
-            author = "user"
-            text = event_data.get("text") or event_data.get("prompt")
-            if text:
-                content = Content(parts=[AdkPart(text=text)])
-        elif event_type == "AGENT_MESSAGE":
-            author = agent_name
-            text = (
-                event_data.get("text")
-                or event_data.get("prompt")
-                or event_data.get("response")
-            )
-            if text:
-                content = Content(parts=[AdkPart(text=text)])
-        elif event_type == "TOOL_START":
-            author = agent_name
-            tool_name = event_data.get("tool_name")
-            tool_args = event_data.get("tool_args", {})
-            if tool_name:
-                content = Content(
-                    parts=[AdkPart(function_call={"name": tool_name, "args": tool_args})]
-                )
-        elif event_type == "TOOL_END":
-            author = agent_name
-            tool_name = event_data.get("tool_name")
-            tool_output = event_data.get("tool_output")
-            if tool_name:
-                response_data = tool_output
-                if not isinstance(response_data, dict):
-                    response_data = {"output": response_data}
-                # Per ADK docs, role for tool response in history is 'user'
-                content = Content(
-                    parts=[
-                        AdkPart(
-                            function_response={
-                                "name": tool_name,
-                                "response": response_data,
-                            }
-                        )
-                    ],
-                    role="user",
-                )
-        else:
-            # Ignore other event types like MODEL_START, MODEL_END as they are for logging.
-            return None
-
-        if author and content:
-            return Event(author=author, content=content)
-
-        logger.warning("Could not convert event: %s", event_data)
-        return None
-
-    async def _load_chat_history(self, user_id: str) -> list[Event]:
-        """Loads chat history for a given user from Firestore."""
-        logger.info("Loading chat history for user: %s", user_id)
-        if not user_id:
-            return []
-        try:
-            db = firestore_async.client()
-            events_ref = (
-                db.collection("chat_sessions")
-                .document(user_id)
-                .collection("events")
-                .order_by("timestamp")
-            )
-            event_docs = events_ref.stream()
-            history = []
-            async for doc in event_docs:
-                event_data = doc.to_dict()
-                adk_event = self._convert_firestore_event_to_adk_event(event_data)
-                if adk_event:
-                    history.append(adk_event)
-            logger.info("Loaded %d events from chat history for user %s", len(history), user_id)
-            return history
-
-        except GoogleCloudError as e:
-            logger.error("Failed to load chat history for user %s: %s", user_id, e)
-            return []
 
     async def _load_agent(
             self, address: str,
@@ -294,7 +200,6 @@ class RoutingAgent:
             model="gemini-live-2.5-flash",
             name="Routing_agent",
             instruction=initial_instructions,
-            session_service=self.session_service,
             before_agent_callback=self.before_agent_callback,
             after_agent_callback=self.after_agent_callback,
             before_tool_callback=self.observer.before_tool,
@@ -338,32 +243,7 @@ class RoutingAgent:
                 user_id,
                 session_id,
             )
-            if user_id and session_id:
-                history = await self._load_chat_history(user_id)
-                if history:
-                    try:
-                        session = await self.session_service.get_session(
-                            app_name=app_name, user_id=user_id, session_id=session_id
-                        )
-                        if session:
-                            logger.info(
-                                "Injecting %d events into session %s",
-                                len(history),
-                                session_id,
-                            )
-                            session.events = history + session.events
-                            # No need to update session for InMemorySessionService
-                            # as it's a direct object reference.
-                        else:
-                            logger.warning(
-                                "Could not find session with id: %s", session_id
-                            )
-                    except Exception as e:
-                        logger.error(
-                            "Failed to get or update session for history injection: %s", e
-                        )
 
-            callback_context.state["history_loaded"] = True
 
         user_id = callback_context.state.get("user_id")
 
