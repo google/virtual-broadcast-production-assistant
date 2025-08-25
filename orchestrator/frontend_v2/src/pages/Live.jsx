@@ -6,6 +6,9 @@ import {
   Send,
   ChevronDown,
 } from "lucide-react";
+import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
 
 import TimelineView from "../components/live/TimelineView";
 import ChatPanel from "../components/live/ChatPanel";
@@ -24,6 +27,7 @@ export default function Live() {
   const [currentMessage, setCurrentMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [isAgentReplying, setIsAgentReplying] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const { currentUser } = useAuth();
   const { rundownSystem } = useRundown();
   const { addEventListener } = useSocket();
@@ -32,16 +36,33 @@ export default function Live() {
   useEffect(() => {
     if (!currentUser) return;
 
-    // Clear messages and show a reconfiguring message when rundownSystem changes
-    setMessages([
-      {
-        id: 'reconfiguring-message',
-        role: 'assistant',
-        text: `Reconfiguring for ${rundownSystem.toUpperCase()}...`,
-        timestamp: Date.now(),
-        partial: false,
-      },
-    ]);
+    const fetchHistory = async () => {
+      setHistoryLoading(true);
+      const q = query(
+        collection(db, `chat_sessions/${currentUser.uid}/events`),
+        where("type", "in", ["USER_MESSAGE", "AGENT_MESSAGE"]),
+        orderBy("timestamp", "asc")
+      );
+      const querySnapshot = await getDocs(q);
+      const history = querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          role: data.type === "USER_MESSAGE" ? "user" : "assistant",
+          text: data.text,
+          timestamp: data.timestamp.toMillis(),
+          partial: false,
+        };
+      });
+      setMessages(history);
+      setHistoryLoading(false);
+    };
+
+    fetchHistory();
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser || historyLoading) return;
 
     const onMessage = (message) => {
       if (message.turn_complete) {
@@ -93,8 +114,8 @@ export default function Live() {
 
     const onOpen = () => {
       console.log("connected");
-      // Replace the reconfiguring message with the initial operational message
-      setMessages([
+      setMessages((prevMessages) => [
+        ...prevMessages,
         {
           id: "1",
           role: "assistant",
@@ -128,7 +149,7 @@ export default function Live() {
       cleanupOpen();
       cleanupClose();
     };
-  }, [currentUser, rundownSystem, addEventListener]);
+  }, [currentUser, historyLoading, rundownSystem, addEventListener]);
 
   const handleSendMessage = () => {
     if (!currentMessage.trim()) return;
@@ -203,20 +224,22 @@ export default function Live() {
 
         {/* Input Controls */}
         <div className="p-4 border-t border-white/8 space-y-4">
-          <MicControl enabled={micEnabled} onToggle={handleMicToggle} />
+          <MicControl enabled={micEnabled} onToggle={handleMicToggle} disabled={historyLoading} />
           
           <div className="flex gap-2">
             <Input
               value={currentMessage}
               onChange={(e) => setCurrentMessage(e.target.value)}
-              placeholder="Send message to agents..."
+              placeholder={historyLoading ? "Loading history..." : "Send message to agents..."}
               className="bg-white/5 border-white/10 text-[#E6E1E5] placeholder:text-[#A6A0AA] text-sm"
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              disabled={historyLoading}
             />
             <Button
               onClick={handleSendMessage}
               size="icon"
               className="bg-[#FF2D86] hover:bg-[#FF2D86]/90 flex-shrink-0"
+              disabled={historyLoading}
             >
               <Send className="w-4 h-4" />
             </Button>
