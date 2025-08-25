@@ -267,18 +267,17 @@ async def health_check():
     return {"status": "ok"}
 
 
-@app.websocket("/ws/{user_id}")
-async def websocket_endpoint(
-        websocket: WebSocket,
-        user_id: str,
-        is_audio: str,
-        token: str | None = Query(default=None),
-):
-    """Client websocket endpoint"""
+async def verify_token(websocket: WebSocket, user_id: str):
+    """Verifies the Firebase ID token from the WebSocket connection."""
+    token = None
+    subprotocols = websocket.scope.get("subprotocols", [])
+    if subprotocols:
+        token = subprotocols[0]
+
     if not token:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION,
                               reason="Missing token")
-        return
+        return None
 
     try:
         decoded_token = auth.verify_id_token(token)
@@ -288,20 +287,33 @@ async def websocket_endpoint(
             logger.warning("User ID in path does not match token UID.")
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION,
                                   reason="User ID mismatch")
-            return
+            return None
+        return token
     except auth.InvalidIdTokenError as e:
         logger.error("Invalid Firebase ID token: %s", e)
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION,
                               reason="Invalid token")
-        return
+        return None
     except (ValueError, KeyError) as e:
         logger.error(
             "An unexpected error occurred during token verification: %s", e)
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION,
                               reason="Token verification failed")
+        return None
+
+
+@app.websocket("/ws/{user_id}")
+async def websocket_endpoint(
+        websocket: WebSocket,
+        user_id: str,
+        is_audio: str,
+):
+    """Client websocket endpoint"""
+    token = await verify_token(websocket, user_id)
+    if not token:
         return
 
-    await websocket.accept()
+    await websocket.accept(subprotocol=token)
     logger.info("Client #%s connected, audio mode: %s", user_id, is_audio)
 
     live_events, live_request_queue, session_id = await start_agent_session(
