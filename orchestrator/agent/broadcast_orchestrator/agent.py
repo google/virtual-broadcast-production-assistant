@@ -386,8 +386,10 @@ class RoutingAgent:
                 logger.error(error_message)
                 return [error_message]
         else:
-            if agent_name in self.remote_agent_connections:
-                client = self.remote_agent_connections[agent_name]
+            for registered_name, connection in self.remote_agent_connections.items():
+                if registered_name.lower() == agent_name.lower():
+                    client = connection
+                    break
 
         if not client:
             available_agents = list(self.remote_agent_connections.keys())
