@@ -1,18 +1,15 @@
 import { createContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, signInAnonymously, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signInAnonymously, signOut, GoogleAuthProvider, linkWithPopup } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 export const AuthContext = createContext();
 
-
-
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isUpgrading, setIsUpgrading] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       setLoading(false);
     });
@@ -20,11 +17,19 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
+  const linkGoogleAccount = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await linkWithPopup(auth.currentUser, provider);
+    } catch (error) {
+      console.error("Error linking Google account:", error);
+    }
+  };
+
   const value = {
     currentUser,
     loading,
-    isUpgrading,
-    setIsUpgrading,
+    linkGoogleAccount,
     signInAnonymously: () => signInAnonymously(auth),
     signOut: () => signOut(auth),
   };
