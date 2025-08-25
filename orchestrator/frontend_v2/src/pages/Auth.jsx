@@ -6,33 +6,14 @@ import { auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/useAuth';
 
 export default function Auth() {
-  const { isUpgrading, setIsUpgrading, signInAnonymously } = useAuth();
+  const { signInAnonymously } = useAuth();
 
   useEffect(() => {
-    if (isUpgrading) {
-      const ui = firebaseui.auth.AuthUI.getInstance() || new firebaseui.auth.AuthUI(auth);
-      ui.start('#firebaseui-auth-container', {
-        signInOptions: [
-          GoogleAuthProvider.PROVIDER_ID,
-        ],
-        callbacks: {
-          signInSuccessWithAuthResult: function () {
-            setIsUpgrading(false);
-            return false;
-          },
-        },
-      });
-    } else {
-        // If not upgrading, sign in anonymously
-        signInAnonymously().catch(error => {
-            console.error("Anonymous sign-in failed:", error);
-        });
-    }
-  }, [isUpgrading, signInAnonymously, setIsUpgrading]);
+    signInAnonymously().catch(error => {
+        console.error("Anonymous sign-in failed:", error);
+    });
+  }, [signInAnonymously]);
 
-  return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-      <div id="firebaseui-auth-container"></div>
-    </div>
-  );
+  // Render a loading indicator or null while sign-in happens
+  return <div>Loading...</div>;
 }

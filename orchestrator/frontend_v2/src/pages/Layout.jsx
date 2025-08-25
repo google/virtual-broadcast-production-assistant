@@ -17,12 +17,22 @@ import {
   CalendarDays,
   BookUser,
   Menu,
-  X
+  X,
+  LogOut,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navigationItems = [
 { title: "Live", url: createPageUrl("Live"), icon: Radio, description: "Control Room" },
@@ -38,7 +48,7 @@ const navigationItems = [
 
 export default function Layout({ children }) {
   const location = useLocation();
-  const { currentUser, signOut, setIsUpgrading } = useAuth();
+  const { currentUser, signOut, linkGoogleAccount } = useAuth();
   const { connectionStatus } = useSocket();
   const { rundownSystem, updateRundownSystem } = useRundown();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -52,6 +62,21 @@ export default function Layout({ children }) {
     <div className="min-h-screen bg-[#0D0B12] text-[#E6E1E5]">
       {/* Header */}
       <header className="bg-[#1C1A22] border-b border-white/8 px-4 sm:px-6 py-4">
+        {currentUser && (
+          <div style={{
+            position: 'absolute',
+            top: '0',
+            left: '0',
+            right: '0',
+            background: 'red',
+            color: 'white',
+            padding: '10px',
+            textAlign: 'center',
+            zIndex: 9999
+          }}>
+            DEBUG: UID: {currentUser.uid} | Email: {currentUser.email} | isAnonymous: {String(currentUser.isAnonymous)}
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 sm:gap-6">
             {/* Logo and Title */}
@@ -96,22 +121,46 @@ export default function Layout({ children }) {
               <Label htmlFor="rundown-system-toggle" className={rundownSystem === 'sofie' ? 'text-green-400 font-bold' : 'text-gray-400'}>SOFIE</Label>
             </div>
 
-            {currentUser && currentUser.isAnonymous && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-foreground"
-                onClick={() => {
-                  setIsUpgrading(true);
-                  signOut();
-                }}
-              >
-                Login with Google
-              </Button>
-            )}
-            <Button variant="outline" size="sm" className="text-foreground" onClick={() => signOut()}>
-              Sign Out
-            </Button>
+            {currentUser ? (
+              currentUser.isAnonymous ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-foreground"
+                  onClick={linkGoogleAccount}
+                >
+                  Login with Google
+                </Button>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={currentUser.photoURL} alt={currentUser.displayName || ''} />
+                        <AvatarFallback>
+                          {currentUser.displayName ? currentUser.displayName[0] : currentUser.email[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{currentUser.displayName}</p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {currentUser.email}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => signOut()}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )
+            ) : null}
             {/* Connection Status - Responsive sizing */}
             <div className="hidden sm:flex items-center gap-2">
               {connectionStatus === "connected" ?
