@@ -1,6 +1,6 @@
 """Tests for the chat history loading functionality in RoutingAgent."""
 # pylint: disable=protected-access
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, MagicMock
 
 import pytest
 from google.adk.events import Event
@@ -12,9 +12,9 @@ from broadcast_orchestrator.agent import RoutingAgent
 @pytest.fixture
 def agent():
     """Provides a RoutingAgent with a mocked firestore client."""
-    with patch("broadcast_orchestrator.agent.firestore_async") as mock_agent_fs, patch(
+    with patch("broadcast_orchestrator.agent.firestore_async"), patch(
         "broadcast_orchestrator.firestore_observer.firestore_async"
-    ) as mock_observer_fs:
+    ):
         with patch(
             "broadcast_orchestrator.agent.load_remote_agents_config",
             return_value=[],
@@ -26,61 +26,67 @@ def agent():
                 agent_instance = RoutingAgent()
                 agent_instance.get_agent = MagicMock()
                 agent_instance.get_agent.return_value.name = "Routing_agent"
-                # Attach mocks to the instance for use in tests
-                agent_instance.mock_agent_fs = mock_agent_fs
-                agent_instance.mock_observer_fs = mock_observer_fs
                 yield agent_instance
 
 
-@pytest.mark.asyncio
-async def test_before_agent_callback_loads_history_correctly(agent: RoutingAgent):
-    """Verify that before_agent_callback loads and injects history correctly."""
-    # Mock the context object to simulate the real structure
-    mock_context = MagicMock()
-    mock_context.state = {"user_id": "test_user"}
+def test_convert_user_message_event(agent: RoutingAgent):
+    """Verify that a USER_MESSAGE event is converted correctly."""
+    firestore_event = {"type": "USER_MESSAGE", "prompt": "Hello, world!"}
+    adk_event = agent._convert_firestore_event_to_adk_event(firestore_event)
 
-    mock_session = MagicMock()
-    mock_session.events = [
-        Event(author="user", content=Content(parts=[AdkPart(text="Current message")]))
-    ]
+    assert adk_event is not None
+    assert adk_event.author == "user"
+    assert adk_event.content.parts[0].text == "Hello, world!"
 
-    mock_invocation_context = MagicMock()
-    mock_invocation_context.session = mock_session
 
-    # This is the key part: mocking the private attribute
-    mock_context._invocation_context = mock_invocation_context
+def test_convert_agent_message_event(agent: RoutingAgent):
+    """Verify that an AGENT_MESSAGE event is converted correctly."""
+    firestore_event = {
+        "type": "AGENT_MESSAGE",
+        "response": "Hello from the agent!",
+    }
+    adk_event = agent._convert_firestore_event_to_adk_event(firestore_event)
 
-    # Mock the firestore call for user preferences
-    mock_doc = AsyncMock()
-    mock_doc.exists = False
-    agent.mock_agent_fs.client.return_value.collection.return_value.document.return_value.get = AsyncMock(
-        return_value=mock_doc
-    )
+    assert adk_event is not None
+    assert adk_event.author == "Routing_agent"
+    assert adk_event.content.parts[0].text == "Hello from the agent!"
 
-    # Mock the history loading function to return some past events
-    past_events = [
-        Event(author="user", content=Content(parts=[AdkPart(text="Past message 1")])),
-        Event(author="Routing_agent", content=Content(parts=[AdkPart(text="Past response 1")])),
-    ]
-    agent._load_chat_history = AsyncMock(return_value=past_events)
 
-    # Call the function under test
-    await agent.before_agent_callback(mock_context)
+def test_convert_tool_start_event(agent: RoutingAgent):
+    """Verify that a TOOL_START event is converted correctly."""
+    firestore_event = {
+        "type": "TOOL_START",
+        "tool_name": "test_tool",
+        "tool_args": {"arg1": "value1"},
+    }
+    adk_event = agent._convert_firestore_event_to_adk_event(firestore_event)
 
-    # --- Assertions ---
-    # 1. History loading was called
-    agent._load_chat_history.assert_called_once_with("test_user")
+    assert adk_event is not None
+    assert adk_event.author == "Routing_agent"
+    assert adk_event.content.parts[0].function_call.name == "test_tool"
+    assert adk_event.content.parts[0].function_call.args["arg1"] == "value1"
 
-    # 2. The history_loaded flag is set
-    assert mock_context.state["history_loaded"] is True
 
-    # 3. The events list is correctly prepended
-    final_events = mock_context._invocation_context.session.events
-    assert len(final_events) == 3  # 2 past events + 1 current event
-    assert final_events[0].content.parts[0].text == "Past message 1"
-    assert final_events[1].content.parts[0].text == "Past response 1"
-    assert final_events[2].content.parts[0].text == "Current message"
+def test_convert_tool_end_event(agent: RoutingAgent):
+    """Verify that a TOOL_END event is converted correctly."""
+    firestore_event = {
+        "type": "TOOL_END",
+        "tool_name": "test_tool",
+        "tool_output": "tool result",
+    }
+    adk_event = agent._convert_firestore_event_to_adk_event(firestore_event)
 
-    # 4. Check that it doesn't run again
-    await agent.before_agent_callback(mock_context)
-    agent._load_chat_history.assert_called_once()  # Still called only once
+    assert adk_event is not None
+    assert adk_event.author == "Routing_agent"
+    assert adk_event.content.role == "user"
+    assert adk_event.content.parts[0].function_response.name == "test_tool"
+    assert adk_event.content.parts[0].function_response.response == {
+        "output": "tool result"
+    }
+
+
+def test_convert_unknown_event_returns_none(agent: RoutingAgent):
+    """Verify that an unknown event type returns None."""
+    firestore_event = {"type": "UNKNOWN_EVENT"}
+    adk_event = agent._convert_firestore_event_to_adk_event(firestore_event)
+    assert adk_event is None

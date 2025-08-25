@@ -27,6 +27,7 @@ from google.adk import Agent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.events import Event
+from google.adk.sessions import InMemorySessionService
 from google.adk.tools.tool_context import ToolContext
 from google.genai.types import Content, Part as AdkPart
 
@@ -109,6 +110,7 @@ class RoutingAgent:
         self._init_lock = asyncio.Lock()
         self._agent: Agent | None = None
         self.observer = FirestoreAgentObserver()
+        self.session_service = InMemorySessionService()
 
     def _convert_firestore_event_to_adk_event(self, event_data: dict) -> Event | None:
         """Converts a Firestore event document to an ADK Event object."""
@@ -292,6 +294,7 @@ class RoutingAgent:
             model="gemini-live-2.5-flash",
             name="Routing_agent",
             instruction=initial_instructions,
+            session_service=self.session_service,
             before_agent_callback=self.before_agent_callback,
             after_agent_callback=self.after_agent_callback,
             before_tool_callback=self.observer.before_tool,
@@ -327,25 +330,39 @@ class RoutingAgent:
 
         if not callback_context.state.get("history_loaded"):
             user_id = callback_context.state.get("user_id")
-            logger.info("Attempting to load chat history for user: %s", user_id)
-            if user_id:
+            session_id = callback_context.state.get("session_id")
+            app_name = self.get_agent().name
+
+            logger.info(
+                "Attempting to load chat history for user: %s, session: %s",
+                user_id,
+                session_id,
+            )
+            if user_id and session_id:
                 history = await self._load_chat_history(user_id)
                 if history:
-                    logger.info("Injecting %d events into history", len(history))
-                    # pylint: disable=protected-access
-                    if hasattr(callback_context, "_invocation_context") and hasattr(
-                        callback_context._invocation_context, "session"
-                    ):
-                        logger.info("Injecting history into session events.")
-                        callback_context._invocation_context.session.events = (
-                            history
-                            + callback_context._invocation_context.session.events
+                    try:
+                        session = await self.session_service.get_session(
+                            app_name=app_name, user_id=user_id, session_id=session_id
                         )
-                    else:
-                        logger.warning(
-                            "Could not find session.events in callback_context._invocation_context. "
-                            "Cannot inject chat history."
+                        if session:
+                            logger.info(
+                                "Injecting %d events into session %s",
+                                len(history),
+                                session_id,
+                            )
+                            session.events = history + session.events
+                            # No need to update session for InMemorySessionService
+                            # as it's a direct object reference.
+                        else:
+                            logger.warning(
+                                "Could not find session with id: %s", session_id
+                            )
+                    except Exception as e:
+                        logger.error(
+                            "Failed to get or update session for history injection: %s", e
                         )
+
             callback_context.state["history_loaded"] = True
 
         user_id = callback_context.state.get("user_id")
