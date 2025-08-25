@@ -53,6 +53,7 @@ def _convert_firestore_event_to_adk_event(event_data: dict,
             if not isinstance(response_data, dict):
                 response_data = {"output": response_data}
             content = Content(
+                role="user",
                 parts=[
                     AdkPart(
                         function_response={
@@ -60,7 +61,7 @@ def _convert_firestore_event_to_adk_event(event_data: dict,
                             "response": response_data,
                         }
                     )
-                ]
+                ],
             )
     else:
         # Ignore other event types like MODEL_START, MODEL_END as they are for logging.
