@@ -12,7 +12,7 @@ import { db } from "@/lib/firebase";
 
 import TimelineView from "../components/live/TimelineView";
 import ChatPanel from "../components/live/ChatPanel";
-
+import TelemetryPanel from "../components/live/TelemetryPanel";
 import AgentStatusList from "../components/live/AgentStatusList";
 import MicControl from "../components/live/MicControl";
 import { useAuth } from "@/contexts/useAuth";
@@ -254,9 +254,9 @@ export default function Live() {
 
       {/* Right Panel - Telemetry & Agents - Hidden on mobile, collapsible on tablet */}
       <div className="hidden md:flex w-full md:w-80 lg:w-80 bg-[#1C1A22] border-t md:border-t-0 md:border-l border-white/8 flex-col">
-        {/* <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden">
           <TelemetryPanel />
-        </div> */}
+        </div>
         <div className="border-t border-white/8">
           <AgentStatusList />
         </div>

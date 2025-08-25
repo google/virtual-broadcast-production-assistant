@@ -39,6 +39,10 @@ vi.mock('@/contexts/useAuth');
 vi.mock('@/contexts/useRundown');
 vi.mock('@/contexts/useSocket');
 
+vi.mock('../components/live/TelemetryPanel', () => ({
+  default: () => <div data-testid="telemetry-panel"></div>,
+}));
+
 
 import { getDocs } from 'firebase/firestore';
 
