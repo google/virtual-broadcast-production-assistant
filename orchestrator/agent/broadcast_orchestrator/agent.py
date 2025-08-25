@@ -324,6 +324,10 @@ class RoutingAgent:
         """A callback executed before the agent is called."""
         print("!!! AGENT.PY: before_agent_callback IS RUNNING !!!")
 
+        # --- TEMP LOGGING TO INSPECT CALLBACK_CONTEXT ---
+        logger.info("Inspecting callback_context attributes: %s", dir(callback_context))
+        # --- END TEMP LOGGING ---
+
         await self._async_init_if_needed()
 
         if not callback_context.state.get("history_loaded"):
