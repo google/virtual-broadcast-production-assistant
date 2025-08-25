@@ -323,11 +323,6 @@ class RoutingAgent:
     async def before_agent_callback(self, callback_context: CallbackContext):
         """A callback executed before the agent is called."""
         print("!!! AGENT.PY: before_agent_callback IS RUNNING !!!")
-
-        # --- TEMP LOGGING TO INSPECT CALLBACK_CONTEXT ---
-        logger.info("Inspecting callback_context attributes: %s", dir(callback_context))
-        # --- END TEMP LOGGING ---
-
         await self._async_init_if_needed()
 
         if not callback_context.state.get("history_loaded"):
@@ -337,22 +332,18 @@ class RoutingAgent:
                 history = await self._load_chat_history(user_id)
                 if history:
                     logger.info("Injecting %d events into history", len(history))
-                    # The ADK doesn't have a documented way to inject history.
-                    # The 'history' attribute on the context is the most likely place.
-                    if hasattr(callback_context, "session") and hasattr(
-                        callback_context.session, "events"
+                    # pylint: disable=protected-access
+                    if hasattr(callback_context, "_invocation_context") and hasattr(
+                        callback_context._invocation_context, "session"
                     ):
-                        logger.info(
-                            "callback_context.session.events found, type: %s. Prepending loaded history.",
-                            type(callback_context.session.events),
-                        )
-                        # Prepend the loaded history to the current session's events.
-                        callback_context.session.events = (
-                            history + callback_context.session.events
+                        logger.info("Injecting history into session events.")
+                        callback_context._invocation_context.session.events = (
+                            history
+                            + callback_context._invocation_context.session.events
                         )
                     else:
                         logger.warning(
-                            "CallbackContext does not have a 'session.events' attribute. "
+                            "Could not find session.events in callback_context._invocation_context. "
                             "Cannot inject chat history."
                         )
             callback_context.state["history_loaded"] = True
