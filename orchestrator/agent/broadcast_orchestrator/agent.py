@@ -27,6 +27,7 @@ from google.adk import Agent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools.tool_context import ToolContext
+from google.genai.types import Content
 
 from .automation_system_instructions import (
     AUTOMATION_SYSTEMS,
@@ -230,8 +231,20 @@ class RoutingAgent:
     async def before_agent_callback(self, callback_context: CallbackContext):
         """A callback executed before the agent is called."""
         print("!!! AGENT.PY: before_agent_callback IS RUNNING !!!")
-
         await self._async_init_if_needed()
+
+        if not callback_context.state.get("history_loaded"):
+            user_id = callback_context.state.get("user_id")
+            session_id = callback_context.state.get("session_id")
+            app_name = self.get_agent().name
+
+            logger.info(
+                "Attempting to load chat history for user: %s, session: %s",
+                user_id,
+                session_id,
+            )
+
+
         user_id = callback_context.state.get("user_id")
 
         logger.info("before_agent_callback called for user: %s", user_id)
