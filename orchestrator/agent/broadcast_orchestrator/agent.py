@@ -431,8 +431,11 @@ class RoutingAgent:
         agent_specific_task_id_key = f"{agent_name}_task_id"
         task_id = state.get(agent_specific_task_id_key)
 
-        # Temporarily disable context_id to debug Shure agent issue
-        context_id = None
+        agent_specific_context_id_key = f"{agent_name}_context_id"
+        context_id = state.get(agent_specific_context_id_key)
+        if not context_id:
+            context_id = str(uuid.uuid4())
+            state[agent_specific_context_id_key] = context_id
 
         message_id = state.get("input_message_metadata",
                                {}).get("message_id", str(uuid.uuid4()))
