@@ -1,0 +1,22 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: broadcaster-agent
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/sessionAffinity: "true"
+        autoscaling.knative.dev/minScale: "1"
+    spec:
+      serviceAccountName: websocket-service-account
+      containers:
+      - image: broadcaster-agent
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: "2"
+            memory: "2Gi"

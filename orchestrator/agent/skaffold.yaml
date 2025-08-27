@@ -1,0 +1,12 @@
+apiVersion: skaffold/v4beta7
+kind: Config
+build:
+  artifacts:
+  - image: broadcaster-agent
+    docker:
+      dockerfile: Dockerfile
+manifests:
+  rawYaml:
+  - service.yaml
+deploy:
+  cloudrun: {}

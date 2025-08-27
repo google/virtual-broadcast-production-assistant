@@ -5,6 +5,7 @@ resource "google_project_service" "apis" {
     "dns.googleapis.com",
     "servicenetworking.googleapis.com",
     "vpcaccess.googleapis.com",
+    "clouddeploy.googleapis.com",
   ])
   project = var.project_id
   service = each.key
@@ -45,7 +46,7 @@ resource "google_compute_region_network_endpoint_group" "serverless_neg" {
   region                = var.region
   network_endpoint_type = "SERVERLESS"
   cloud_run {
-    service = google_cloud_run_v2_service.orchestrator_agent.name
+    service = google_cloud_run_v2_service.broadcaster_agent.name
   }
 }
 
@@ -88,7 +89,7 @@ resource "google_dns_record_set" "dns_record" {
   rrdatas = [google_compute_global_address.static_ip.address]
 }
 
-resource "google_cloud_run_v2_service" "orchestrator_agent" {
+resource "google_cloud_run_v2_service" "broadcaster_agent" {
   project  = var.project_id
   name     = var.service_name
   location = var.region
@@ -185,4 +186,12 @@ resource "google_compute_router_nat" "nat" {
   }
   nat_ip_allocate_option             = "MANUAL_ONLY"
   nat_ips                            = [google_compute_address.nat_ip.self_link]
+}
+
+module "cloud_deploy" {
+  source                 = "../cloud-deploy"
+  project_id             = var.project_id
+  region                 = var.region
+  pipeline_name          = "${var.service_name}-pipeline"
+  target_name            = "${var.service_name}-target"
 }
