@@ -56,7 +56,4 @@
         {rundown_system_instructions}
 
         * By default you should have availablitity of the following other supporting agents
-          * `Momentslab Agent`
-          * `Posture`
-          * `Newsroom Agent`
-          * `EVS Agent`
+          {available_agents_list}
