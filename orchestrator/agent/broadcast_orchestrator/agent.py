@@ -379,7 +379,7 @@ class RoutingAgent:
     # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements,too-many-locals
     async def send_message(
         self, agent_name: str, task: str, tool_context: ToolContext
-    ) -> list[str | dict[str, Any]]:
+    ) -> list[str]:
         """Sends a task to remote seller agent
 
         This will send a message to the remote agent named agent_name.
@@ -387,11 +387,14 @@ class RoutingAgent:
         Args:
             agent_name: The name of the agent to send the task to.
             task: The comprehensive conversation context summary and goal to be
-                achieved regarding user inquiry and purchase request.
+                achieved regarding user inquiry and purchase request. This can be
+                a simple string for a text message, or a JSON string for
+                complex data like a file.
             tool_context: The tool context this method runs in.
 
         Returns:
-            A list of parts from the remote agent's response.
+            A list of strings from the remote agent's response. Complex objects
+            are returned as JSON strings.
         """
         await self._async_init_if_needed()
         logger.info("Sending task to %s: %s", agent_name, task)
@@ -461,8 +464,35 @@ class RoutingAgent:
         message_id = state.get("input_message_metadata",
                                {}).get("message_id", str(uuid.uuid4()))
 
-        payload = create_send_message_payload(task, task_id, context_id)
-        payload["message"]["messageId"] = message_id
+        payload_parts = []
+        try:
+            task_data = json.loads(task)
+            if isinstance(task_data, dict) and 'file' in task_data:
+                file_info = task_data['file']
+                payload_parts.append({
+                    "type": "file",
+                    "file": {
+                        "uri": file_info['uri'],
+                        "name": file_info.get('filename', ''),
+                        "mime_type": file_info['mime_type']
+                    }
+                })
+            else:
+                payload_parts.append({'type': 'text', 'text': task})
+        except json.JSONDecodeError:
+            payload_parts.append({'type': 'text', 'text': task})
+
+        payload = {
+            "message": {
+                "role": "user",
+                "parts": payload_parts,
+                "messageId": message_id,
+            },
+        }
+        if task_id:
+            payload["message"]["taskId"] = task_id
+        if context_id:
+            payload["message"]["contextId"] = context_id
 
         try:
             message_request = SendMessageRequest(
@@ -510,14 +540,18 @@ class RoutingAgent:
                         Part.model_validate(p)
                         for p in artifact_data["parts"]
                     ])
-                resp.append({
+                resp.append(json.dumps({
                     "artifact_id": artifact_data.get("artifactId"),
                     "name": artifact_data.get("name"),
                     "description": artifact_data.get("description"),
                     "parts": converted_parts,
-                })
+                }))
         elif json_content.get("parts"):
-            resp.extend(
-                convert_parts(
-                    [Part.model_validate(p) for p in json_content["parts"]]))
+            converted = convert_parts(
+                [Part.model_validate(p) for p in json_content["parts"]])
+            for item in converted:
+                if isinstance(item, dict):
+                    resp.append(json.dumps(item))
+                else:
+                    resp.append(item)
         return resp
