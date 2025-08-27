@@ -112,6 +112,7 @@ resource "google_cloud_run_v2_service" "orchestrator_agent" {
       max_instance_count = 100
     }
     session_affinity    = true
+    timeout             = "3600s"
     service_account     = var.service_account_email
     vpc_access {
       connector = google_vpc_access_connector.connector.id
