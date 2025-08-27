@@ -139,7 +139,7 @@ class RoutingAgent:
         if api_key:
             headers["X-API-Key"] = api_key
 
-        async with httpx.AsyncClient(timeout=10, headers=headers) as client:
+        async with httpx.AsyncClient(timeout=60, headers=headers) as client:
             card_resolver = A2ACardResolver(client, address)
             try:
                 card: AgentCard = await card_resolver.get_agent_card()
