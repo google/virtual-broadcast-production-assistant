@@ -12,6 +12,7 @@ from a2a.client import A2ACardResolver
 from a2a.client.errors import A2AClientTimeoutError, A2AClientHTTPError
 from a2a.types import (
     AgentCard,
+    DataPart,
     FilePart,
     MessageSendParams,
     Part,
@@ -65,6 +66,8 @@ def convert_part(part: Part):
                 "data": part.root.data,
                 "filename": part.root.filename,
             }
+    if isinstance(part.root, DataPart):
+        return {"type": "data", "data": part.root.data}
     return f"Unknown type: {type(part.root)}"
 
 
