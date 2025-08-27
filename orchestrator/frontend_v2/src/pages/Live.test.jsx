@@ -23,8 +23,12 @@ vi.mock('firebase/firestore', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
-    getFirestore: vi.fn(),
+    getFirestore: vi.fn(() => ({})),
     collection: vi.fn(),
+    query: vi.fn(),
+    where: vi.fn(),
+    orderBy: vi.fn(),
+    getDocs: vi.fn(() => Promise.resolve({ docs: [] })),
     onSnapshot: vi.fn(() => () => {}), // Return an unsubscribe function
   };
 });
@@ -35,15 +39,20 @@ vi.mock('@/contexts/useAuth');
 vi.mock('@/contexts/useRundown');
 vi.mock('@/contexts/useSocket');
 
+vi.mock('../components/live/TelemetryPanel', () => ({
+  default: () => <div data-testid="telemetry-panel"></div>,
+}));
+
+
+import { getDocs } from 'firebase/firestore';
 
 describe('Live page', () => {
-  let mockAddEventListener;
   let eventListeners;
 
   beforeEach(() => {
     vi.clearAllMocks();
     eventListeners = {};
-    mockAddEventListener = vi.fn((event, handler) => {
+    const mockAddEventListener = vi.fn((event, handler) => {
       eventListeners[event] = handler;
       return () => {
         delete eventListeners[event];
@@ -61,14 +70,21 @@ describe('Live page', () => {
     useSocket.mockReturnValue({
       addEventListener: mockAddEventListener,
     });
+
+    // Reset mocks before each test
+    getDocs.mockClear();
   });
 
-  it('should display "Connection established" message when socket is opened', () => {
+  it('should display "Connection established" message when socket is opened', async () => {
     render(
       <Router>
         <Live />
       </Router>
     );
+
+    await act(async () => {
+      await Promise.resolve(); // allow fetchHistory to resolve
+    });
 
     act(() => {
       eventListeners.open();
@@ -77,18 +93,39 @@ describe('Live page', () => {
     expect(screen.getByText('Connection established')).toBeInTheDocument();
   });
 
-  it('should display "Agent connection disconnected" message when socket is closed', () => {
+  it('should display "Agent connection disconnected" message when socket is closed', async () => {
     render(
       <Router>
         <Live />
       </Router>
     );
 
+    await act(async () => {
+      await Promise.resolve(); // allow fetchHistory to resolve
+    });
+
     act(() => {
       eventListeners.close();
     });
 
     expect(screen.getByText('Agent connection disconnected')).toBeInTheDocument();
+  });
+
+  it('should load and display chat history', async () => {
+    const mockHistory = [
+      { id: '1', data: () => ({ type: 'USER_MESSAGE', text: 'Hello', timestamp: { toMillis: () => Date.now() } }) },
+      { id: '2', data: () => ({ type: 'AGENT_MESSAGE', text: 'Hi there!', timestamp: { toMillis: () => Date.now() } }) },
+    ];
+    getDocs.mockResolvedValue({ docs: mockHistory });
+
+    render(
+      <Router>
+        <Live />
+      </Router>
+    );
+
+    await screen.findByText('Hello');
+    expect(screen.getByText('Hi there!')).toBeInTheDocument();
   });
 
   it('should toggle microphone on and off and update agent replying status', async () => {

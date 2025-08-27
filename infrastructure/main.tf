@@ -17,6 +17,7 @@ module "agent_health_checker" {
 
   project_id                          = var.project_id
   region                              = var.region
+  vpc_access_connector_id             = module.orchestrator.vpc_access_connector_id
 }
 
 module "activity_agent" {

@@ -24,6 +24,8 @@ from google.adk.agents.run_config import RunConfig
 from google.adk.runners import InMemoryRunner
 from google.genai.types import Blob, Content, Part
 
+from broadcast_orchestrator.history import load_chat_history
+
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 logging.basicConfig(
@@ -123,21 +125,26 @@ async def start_agent_session(user_id: str,
                               is_audio=False):
     """Starts an agent session and returns the session ID."""
 
+    routing_agent = app_instance.state.routing_agent
+    agent = routing_agent.get_agent()
     runner = InMemoryRunner(
         app_name=APP_NAME,
-        agent=app_instance.state.routing_agent.get_agent(),
+        agent=agent,
     )
 
-    # session_id = str(uuid.uuid4())
+    history = await load_chat_history(user_id, agent.name)
 
-    session = await runner.session_service.create_session(app_name=APP_NAME,
-                                                          user_id=user_id,
-                                                          state={
-                                                              "user_id":
-                                                              user_id,
-                                                              "session_id":
-                                                              user_id
-                                                          })
+    session = await runner.session_service.create_session(
+        app_name=APP_NAME,
+        user_id=user_id,
+        state={
+            "user_id": user_id,
+            "session_id": user_id
+        })
+
+    if history:
+        logger.info("Injecting %d events into session %s", len(history), session.id)
+        session.events.extend(history)
 
     modality = "AUDIO" if is_audio else "TEXT"
     run_config = RunConfig(response_modalities=[modality])
@@ -153,12 +160,20 @@ async def start_agent_session(user_id: str,
     return live_events, live_request_queue, user_id
 
 
-async def agent_to_client_messaging(websocket, live_events, session_id: str):
+async def agent_to_client_messaging(websocket: WebSocket, live_events,
+                                    session_id: str,
+                                    user_has_spoken: asyncio.Event):
     """Agent to client communication and agent response logging."""
     full_response = ""
     db = firestore_async.client()
     try:
         async for event in live_events:
+            if not user_has_spoken.is_set():
+                logger.info(
+                    "[AGENT TO CLIENT]: Suppressed message because user has not spoken yet."
+                )
+                continue
+
             if event.turn_complete or event.interrupted:
                 if full_response:
                     event_data = {
@@ -209,12 +224,14 @@ async def agent_to_client_messaging(websocket, live_events, session_id: str):
 
 
 async def client_to_agent_messaging(websocket: WebSocket, live_request_queue,
-                                    session_id: str):
+                                    session_id: str,
+                                    user_has_spoken: asyncio.Event):
     """Client to agent communication and user message logging."""
     db = firestore_async.client()
     try:
         while True:
             message_json = await websocket.receive_text()
+            user_has_spoken.set()
             message = json.loads(message_json)
             mime_type = message["mime_type"]
             data = message["data"]
@@ -250,18 +267,17 @@ async def health_check():
     return {"status": "ok"}
 
 
-@app.websocket("/ws/{user_id}")
-async def websocket_endpoint(
-        websocket: WebSocket,
-        user_id: str,
-        is_audio: str,
-        token: str | None = Query(default=None),
-):
-    """Client websocket endpoint"""
+async def verify_token(websocket: WebSocket, user_id: str):
+    """Verifies the Firebase ID token from the WebSocket connection."""
+    token = None
+    subprotocols = websocket.scope.get("subprotocols", [])
+    if subprotocols:
+        token = subprotocols[0]
+
     if not token:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION,
                               reason="Missing token")
-        return
+        return None
 
     try:
         decoded_token = auth.verify_id_token(token)
@@ -271,29 +287,46 @@ async def websocket_endpoint(
             logger.warning("User ID in path does not match token UID.")
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION,
                                   reason="User ID mismatch")
-            return
+            return None
+        return token
     except auth.InvalidIdTokenError as e:
         logger.error("Invalid Firebase ID token: %s", e)
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION,
                               reason="Invalid token")
-        return
+        return None
     except (ValueError, KeyError) as e:
         logger.error(
             "An unexpected error occurred during token verification: %s", e)
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION,
                               reason="Token verification failed")
+        return None
+
+
+@app.websocket("/ws/{user_id}")
+async def websocket_endpoint(
+        websocket: WebSocket,
+        user_id: str,
+        is_audio: str,
+):
+    """Client websocket endpoint"""
+    token = await verify_token(websocket, user_id)
+    if not token:
         return
 
-    await websocket.accept()
+    await websocket.accept(subprotocol=token)
     logger.info("Client #%s connected, audio mode: %s", user_id, is_audio)
 
     live_events, live_request_queue, session_id = await start_agent_session(
         user_id, app_instance=websocket.app, is_audio=(is_audio == "true"))
 
+    user_has_spoken = asyncio.Event()
+
     agent_to_client_task = asyncio.create_task(
-        agent_to_client_messaging(websocket, live_events, session_id))
+        agent_to_client_messaging(websocket, live_events, session_id,
+                                  user_has_spoken))
     client_to_agent_task = asyncio.create_task(
-        client_to_agent_messaging(websocket, live_request_queue, session_id))
+        client_to_agent_messaging(websocket, live_request_queue, session_id,
+                                  user_has_spoken))
 
     done, pending = await asyncio.wait(
         [agent_to_client_task, client_to_agent_task],

@@ -34,6 +34,9 @@ resource "google_compute_backend_service" "backend_service" {
   backend {
     group = google_compute_region_network_endpoint_group.serverless_neg.id
   }
+
+  connection_draining_timeout_sec = 600
+  session_affinity = "CLIENT_IP"
 }
 
 resource "google_compute_region_network_endpoint_group" "serverless_neg" {
@@ -119,6 +122,12 @@ resource "google_cloud_run_v2_service" "orchestrator_agent" {
   traffic {
     type     = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
     percent  = 100
+  }
+
+  lifecycle {
+    ignore_changes = [
+      template[0].containers[0].image,
+    ]
   }
 
   depends_on = [google_vpc_access_connector.connector]

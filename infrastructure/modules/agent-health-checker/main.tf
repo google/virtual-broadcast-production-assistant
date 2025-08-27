@@ -37,6 +37,13 @@ resource "google_cloud_run_v2_job" "agent_health_checker" {
   template {
     template {
       service_account = google_service_account.agent_health_checker.email
+      dynamic "vpc_access" {
+        for_each = var.vpc_access_connector_id != null ? [1] : []
+        content {
+          connector = var.vpc_access_connector_id
+          egress    = "ALL_TRAFFIC"
+        }
+      }
       containers {
         image = format("%s-docker.pkg.dev/%s/cloud-run-source-deploy/agent-health-check:%s", var.region, var.project_id, var.image_tag)
         env {
@@ -45,6 +52,12 @@ resource "google_cloud_run_v2_job" "agent_health_checker" {
         }
       }
     }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      template[0].template[0].containers[0].image,
+    ]
   }
 }
 
