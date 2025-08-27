@@ -13,3 +13,9 @@ variable "image_tag" {
   type        = string
   default     = "latest"
 }
+
+variable "vpc_access_connector_id" {
+  description = "The ID of the VPC Access Connector to use for the Cloud Run Job."
+  type        = string
+  default     = null
+}

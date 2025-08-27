@@ -124,6 +124,12 @@ resource "google_cloud_run_v2_service" "orchestrator_agent" {
     percent  = 100
   }
 
+  lifecycle {
+    ignore_changes = [
+      template[0].containers[0].image,
+    ]
+  }
+
   depends_on = [google_vpc_access_connector.connector]
 }
 
