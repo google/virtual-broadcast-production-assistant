@@ -12,6 +12,10 @@ from a2a.client import A2ACardResolver
 from a2a.client.errors import A2AClientTimeoutError, A2AClientHTTPError
 from a2a.types import (
     AgentCard,
+    DataPart,
+    FilePart,
+    FileWithBytes,
+    FileWithUri,
     MessageSendParams,
     Part,
     SendMessageRequest,
@@ -49,15 +53,31 @@ logger = logging.getLogger(__name__)
 
 def convert_part(part: Part):
     """Converts an A2A Part to a string."""
-    # Currently only support text parts
     if isinstance(part.root, TextPart):
         return part.root.text
-
+    if isinstance(part.root, FilePart):
+        file_details = part.root.file
+        if isinstance(file_details, FileWithUri):
+            return {
+                "type": "file",
+                "uri": file_details.uri,
+                "filename": file_details.name,
+                "mime_type": file_details.mime_type,
+            }
+        if isinstance(file_details, FileWithBytes):
+            return {
+                "type": "file",
+                "data": file_details.bytes,
+                "filename": file_details.name,
+                "mime_type": file_details.mime_type,
+            }
+    if isinstance(part.root, DataPart):
+        return {"type": "data", "data": part.root.data}
     return f"Unknown type: {type(part.root)}"
 
 
 def convert_parts(parts: list[Part]):
-    """Converts a list of A2A Parts to a list of strings."""
+    """Converts a list of A2A Parts to a list of strings or dicts."""
     rval = []
     for p in parts:
         rval.append(convert_part(p))
@@ -357,8 +377,9 @@ class RoutingAgent:
         return remote_agent_info
 
     # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements,too-many-locals
-    async def send_message(self, agent_name: str, task: str,
-                           tool_context: ToolContext) -> list[str]:
+    async def send_message(
+        self, agent_name: str, task: str, tool_context: ToolContext
+    ) -> list[str | dict[str, Any]]:
         """Sends a task to remote seller agent
 
         This will send a message to the remote agent named agent_name.
@@ -482,12 +503,19 @@ class RoutingAgent:
 
         resp = []
         if json_content.get("artifacts"):
-            for artifact in json_content["artifacts"]:
-                if artifact.get("parts"):
-                    resp.extend(
-                        convert_parts([
-                            Part.model_validate(p) for p in artifact["parts"]
-                        ]))
+            for artifact_data in json_content["artifacts"]:
+                converted_parts = []
+                if artifact_data.get("parts"):
+                    converted_parts = convert_parts([
+                        Part.model_validate(p)
+                        for p in artifact_data["parts"]
+                    ])
+                resp.append({
+                    "artifact_id": artifact_data.get("artifactId"),
+                    "name": artifact_data.get("name"),
+                    "description": artifact_data.get("description"),
+                    "parts": converted_parts,
+                })
         elif json_content.get("parts"):
             resp.extend(
                 convert_parts(
