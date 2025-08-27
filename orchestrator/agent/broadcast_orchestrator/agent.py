@@ -147,7 +147,8 @@ class RoutingAgent:
     async def _async_init_components(self,
                                      remote_agents_to_load: list[tuple[str, str, str | None]]):
         """Asynchronously initializes components that require network I/O."""
-        logger.info("Initializing remote agent connections...")
+        logger.info("Initializing remote agent connections... %s",
+                    remote_agents_to_load)
         for agent_name, address, api_key in remote_agents_to_load:
 
             connection = await self._load_agent(address, api_key)
@@ -239,7 +240,6 @@ class RoutingAgent:
                 session_id,
             )
 
-
         user_id = callback_context.state.get("user_id")
 
         logger.info("before_agent_callback called for user: %s", user_id)
@@ -289,18 +289,24 @@ class RoutingAgent:
         for n, c in self.remote_agent_connections.items():
             display_name = c.card.name
             if n.lower() != display_name.lower():
-                available_agents.append(f"  * `{n}` (also known as `{display_name}`): {c.card.description}")
+                available_agents.append(
+                    f"  * `{n}` (also known as `{display_name}`): {c.card.description}"
+                )
             else:
                 available_agents.append(f"  * `{n}`: {c.card.description}")
 
         if rundown_conn:
-            internal_name = callback_context.state.get('rundown_agent_config_name')
+            internal_name = callback_context.state.get(
+                'rundown_agent_config_name')
             display_name = rundown_conn.card.name
             if internal_name and internal_name.lower() != display_name.lower():
-                available_agents.append(f"  * `{internal_name}` (also known as `{display_name}`): {rundown_conn.card.description}")
+                available_agents.append(
+                    f"  * `{internal_name}` (also known as `{display_name}`): {rundown_conn.card.description}"
+                )
             else:
                 name_to_show = internal_name or display_name
-                available_agents.append(f"  * `{name_to_show}`: {rundown_conn.card.description}")
+                available_agents.append(
+                    f"  * `{name_to_show}`: {rundown_conn.card.description}")
 
         rundown_instructions = self._get_formatted_instructions(
             rundown_system_preference)
@@ -386,7 +392,7 @@ class RoutingAgent:
                 if agent_name.lower() in rundown_display_name.lower() or \
                    (rundown_config_name and agent_name.lower() in rundown_config_name.lower()):
                     client = rundown_connection
-            
+
             if not client:
                 error_message = (
                     f"Error: Rundown agent '{agent_name}' not loaded for this session."
