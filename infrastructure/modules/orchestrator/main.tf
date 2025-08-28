@@ -1,3 +1,12 @@
+terraform {
+  required_providers {
+    random = {
+      source  = "hashicorp/random"
+      version = "3.6.0"
+    }
+  }
+}
+
 resource "google_project_service" "apis" {
   for_each = toset([
     "run.googleapis.com",
@@ -40,13 +49,25 @@ resource "google_compute_backend_service" "backend_service" {
   session_affinity = "CLIENT_IP"
 }
 
+resource "random_id" "neg_suffix" {
+  byte_length = 4
+  keepers = {
+    # This will change only when the service name changes, forcing a new NEG.
+    service = "orchestrator-agent"
+  }
+}
+
 resource "google_compute_region_network_endpoint_group" "serverless_neg" {
   project               = var.project_id
-  name                  = "${var.service_name}-neg"
+  name                  = "${var.service_name}-neg-${random_id.neg_suffix.hex}"
   region                = var.region
   network_endpoint_type = "SERVERLESS"
   cloud_run {
-    service = google_cloud_run_v2_service.orchestrator_agent.name
+    service = "orchestrator-agent"
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
