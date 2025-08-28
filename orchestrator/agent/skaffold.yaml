@@ -2,7 +2,7 @@ apiVersion: skaffold/v4beta7
 kind: Config
 build:
   artifacts:
-  - image: broadcaster-agent
+  - image: orchestrator-agent
     docker:
       dockerfile: Dockerfile
 manifests:

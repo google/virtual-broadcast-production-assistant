@@ -1,7 +1,7 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: broadcaster-agent
+  name: orchestrator-agent
   annotations:
     run.googleapis.com/ingress: all
 spec:
@@ -13,7 +13,7 @@ spec:
     spec:
       serviceAccountName: websocket-service-account
       containers:
-      - image: broadcaster-agent
+      - image: orchestrator-agent
         ports:
         - containerPort: 8080
         resources:
