@@ -23,25 +23,24 @@ steps:
       - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA'
     dir: 'orchestrator/agent'
 
-  # 3. Deploy to Cloud Run
+  # 3. Create Cloud Deploy release
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: gcloud
     args:
-      - 'run'
       - 'deploy'
-      - '${_SERVICE_NAME}'
-      - '--image'
-      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA'
+      - 'releases'
+      - 'create'
+      - 'release-${SHORT_SHA}'
+      - '--delivery-pipeline'
+      - '${_SERVICE_NAME}-pipeline'
       - '--region'
       - '${_REGION}'
-      - '--platform'
-      - 'managed'
-      - '--min-instances=1'
-      - '--cpu=2'
-      - '--memory=2Gi'
-      - '--session-affinity'
-      - '--service-account=websocket-service-account@$PROJECT_ID.iam.gserviceaccount.com'
-      - '--allow-unauthenticated'
+      - '--source'
+      - '.'
+      - '--skaffold-file'
+      - 'skaffold.yaml'
+      - '--images'
+      - '${_SERVICE_NAME}=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA'
     dir: 'orchestrator/agent'
 
 # Define images to be pushed to Artifact Registry
