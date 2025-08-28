@@ -25,3 +25,9 @@ resource "google_project_iam_member" "cloud_build_runner_cloud_deploy_releaser" 
   role    = "roles/clouddeploy.releaser"
   member  = "serviceAccount:cloud-build-runner@${var.project_id}.iam.gserviceaccount.com"
 }
+
+resource "google_project_iam_member" "cloud_build_runner_storage_admin" {
+  project = var.project_id
+  role    = "roles/storage.admin"
+  member  = "serviceAccount:cloud-build-runner@${var.project_id}.iam.gserviceaccount.com"
+}

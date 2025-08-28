@@ -193,5 +193,5 @@ module "cloud_deploy" {
   project_id             = var.project_id
   region                 = var.region
   pipeline_name          = "${var.service_name}-pipeline"
-  target_name            = "${var.service_name}-target"
+  target_name            = "orchestrator-target"
 }
