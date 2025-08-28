@@ -38,9 +38,11 @@ export default function Live() {
 
     const fetchHistory = async () => {
       setHistoryLoading(true);
+      const sixtyMinutesAgo = new Date(Date.now() - 60 * 60 * 1000);
       const q = query(
         collection(db, `chat_sessions/${currentUser.uid}/events`),
         where("type", "in", ["USER_MESSAGE", "AGENT_MESSAGE"]),
+        where("timestamp", ">=", sixtyMinutesAgo),
         orderBy("timestamp", "asc")
       );
       const querySnapshot = await getDocs(q);
