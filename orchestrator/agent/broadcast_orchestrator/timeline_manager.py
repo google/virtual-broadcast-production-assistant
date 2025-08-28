@@ -1,136 +1,139 @@
 """A tool for transforming and saving timeline events in a single step."""
 
+import asyncio
 import json
 import uuid
 import logging
 from datetime import datetime, timezone
-from google.adk.agents import LlmAgent
 from google.adk.tools.tool_context import ToolContext
 import firebase_admin
 from firebase_admin import firestore_async
-from google.genai.types import Content, Part
 
-logger = logging.Logger(__name__)
-# It's a good practice to have the model name as a constant
-GEMINI_MODEL = "gemini-2.5-flash"
-
-# The detailed prompt for the TimelineAgent
-TRANSFORMATION_PROMPT = """
-You are a data transformation specialist. Your task is to convert a raw A2A output from a sub-agent's tool into a structured JSON object.
-This JSON object will be used to populate a timeline view in a frontend application.
-
-The raw A2A input will be provided to you. You must analyze this text and extract the relevant information to populate the following JSON structure.
-
-**Target JSON Structure:**
-```json
-{
-  "id": "A unique identifier for the event. You can generate a UUID.",
-  "category": "The category of the event (e.g., 'VIDEO', 'AUDIO', 'GFX', 'REFORMATTING', 'GENERAL').",
-  "title": "A concise, human-readable title for the event.",
-  "subtitle": "A short, descriptive subtitle with more details.",
-  "severity": "The severity of the event. Must be one of: 'critical', 'warning', 'info'.",
-  "timeOffsetSec": "The time offset in seconds from now. If not specified, default to 0.",
-  "status": "The status of the event. Default to 'default'."
-}
-```
-
-**Instructions:**
-1.  Carefully read the provided A2A response input.
-2.  Identify the key pieces of information.
-3.  Map the extracted information to the fields in the target JSON structure.
-4.  If a value for a field cannot be determined from the input, use a reasonable default or 'null'.
-5.  The `id` field must be a unique identifier. Generate a UUID for it.
-6.  The `severity` must be one of the specified values. Infer the severity from the input text (e.g., words like 'error', 'failed' suggest 'critical'; 'warning', 'mismatch' suggest 'warning'). Default to 'info' if unsure.
-7.  Your final output must be only the JSON object, with no other text or explanations.
-"""
-
-# Define the transformation agent. It's defined here as it's only used by this tool.
-timeline_transformer_agent = LlmAgent(
-    name="TimelineTransformerAgent",
-    model=GEMINI_MODEL,
-    instruction=TRANSFORMATION_PROMPT,
-)
+logger = logging.getLogger(__name__)
 
 # Initialize Firebase Admin SDK
 if not firebase_admin._apps:
     firebase_admin.initialize_app()
 
 
-async def log_event_to_timeline(raw_text: str,
-                                tool_context: ToolContext) -> str:
+async def update_timeline_event_status(event_id: str, status: str) -> str:
     """
-    Takes raw text from a tool, transforms it into a structured timeline event
-    using a dedicated agent, and saves it to Firestore.
+    Updates the status of a timeline event in Firestore.
 
     Args:
-        raw_text: The raw string output from the sub-agent's tool.
-        tool_context: The context of the tool call.
+        event_id: The ID of the event to update.
+        status: The new status (e.g., 'corrected', 'acknowledged').
 
     Returns:
         A string indicating the result of the operation.
     """
-    print(f"Log event to timeline tool called with text: {raw_text}")
-
+    logger.info("Updating timeline event %s to status %s", event_id, status)
     try:
-        # --- Step 1: Transform the data using the TimelineTransformerAgent ---
-
-        # We need to run the agent in-process. The simplest way is to call its
-        # underlying model directly, since it's a simple LlmAgent with no tools.
-        model = timeline_transformer_agent.model
-        response = await model.generate_content_async(
-            f"{TRANSFORMATION_PROMPT}\n\n**Raw Text Input:**\n{raw_text}")
-
-        json_string = response.text.strip()
-        if json_string.startswith("```json"):
-            json_string = json_string[7:]
-        if json_string.endswith("```"):
-            json_string = json_string[:-3]
-
-        structured_data = json.loads(json_string)
-
-        if 'id' not in structured_data or not structured_data['id']:
-            structured_data['id'] = str(uuid.uuid4())
-
-        print("Successfully transformed data:")
-        print(json.dumps(structured_data, indent=2))
-
-        # --- Step 2: Save the structured data to Firestore ---
-
-        user_id = tool_context.state.get("user_id", "unknown_user")
-        session_id = tool_context.state.get("session_id", "unknown_session")
-
-        structured_data['user_id'] = user_id
-        structured_data['session_id'] = session_id
-        structured_data['timestamp'] = datetime.now(timezone.utc)
-
         db = firestore_async.client()
-        doc_ref = db.collection("timeline_events").document(
-            structured_data['id'])
-        await doc_ref.set(structured_data)
-
-        print(
-            f"Successfully saved event {structured_data['id']} to Firestore.")
-
-        return f"Event '{structured_data.get('title')}' was successfully logged to the timeline."
-
+        doc_ref = db.collection("timeline_events").document(event_id)
+        await doc_ref.update({"status": status})
+        logger.info("Successfully updated status for event %s.", event_id)
+        return f"Timeline event {event_id} status updated to {status}."
     except Exception as e:
-        print(f"Error in log_event_to_timeline: {e}")
-        return f"Failed to log event to timeline: {e}"
+        logger.error("Error in update_timeline_event_status: %s", e)
+        return f"Failed to update status for event {event_id}: {e}"
 
 
 async def process_tool_output_for_timeline(**kwargs):
     """
-    Processes the output of a tool call and updates the timeline in Firestore.
+    Processes the output of a tool call, transforms relevant parts, and
+    updates the timeline in Firestore.
     """
-    logger.info("KWargs: %s", kwargs)
+    logger.info("Processing tool output for timeline...")
     tool = kwargs.get("tool")
-    tool_output = kwargs.get("tool_response")
+    tool_context = kwargs.get("tool_context")
 
-    if not tool:
-        logging.warning("Could not process tool output: tool missing.")
+    if not tool or not tool_context:
+        logger.warning(
+            "Could not process tool output: required context missing.")
         return
 
     if tool.name == "send_message":
-        # Here is where you would parse the A2A payload from tool_output
-        # and then write to the timeline_events collection in Firestore.
-        logging.info("'send_message' tool output: %s", tool_output)
+        logger.info(
+            "'send_message' tool output detected. Parsing for timeline events."
+        )
+        try:
+            full_a2a_response_string = tool_context.state.get(
+                "last_a2a_response")
+            if not full_a2a_response_string:
+                logger.warning(
+                    "Could not find 'last_a2a_response' in tool context state."
+                )
+                return
+
+            response_data = json.loads(full_a2a_response_string)
+
+            all_parts = response_data.get("parts", [])
+
+            if response_data.get("artifacts"):
+                for artifact in response_data.get("artifacts"):
+                    all_parts.extend(artifact.get("parts", []))
+
+            file_parts_to_log = [p for p in all_parts if p.get("file")]
+
+            if not file_parts_to_log:
+                logger.info("No file parts found to log to timeline.")
+                return
+
+            logger.info(
+                "Found %d file parts to log. Transforming in Python...",
+                len(file_parts_to_log))
+
+            list_of_events = []
+            for file_part in file_parts_to_log:
+                logger.info("Processing file part: %s", file_part)
+                metadata = file_part.get("metadata", {})
+                
+                title = metadata.get("title", "New Video Clip")
+                subtitle = metadata.get("description", "No description available.")
+                video_uri = file_part.get("file", {}).get("uri")
+                thumbnail_uri = metadata.get("cover_url")
+
+                event_data = {
+                    "id": str(uuid.uuid4()),
+                    "type": "VIDEO_CLIP",
+                    "category": "VIDEO",
+                    "title": title,
+                    "subtitle": subtitle,
+                    "severity": "info",
+                    "status": "default",
+                    "timeOffsetSec": 0,
+                    "details": {
+                        "video_uri": video_uri,
+                        "thumbnail_uri": thumbnail_uri
+                    }
+                }
+                list_of_events.append(event_data)
+
+            # --- Save all events to Firestore concurrently ---
+            user_id = tool_context.state.get("user_id", "unknown_user")
+            session_id = tool_context.state.get("session_id",
+                                                "unknown_session")
+            db = firestore_async.client()
+
+            tasks = []
+            for event_data in list_of_events:
+                event_data['user_id'] = user_id
+                event_data['session_id'] = session_id
+                event_data['timestamp'] = datetime.now(timezone.utc)
+
+                doc_ref = db.collection("timeline_events").document(
+                    event_data['id'])
+                tasks.append(doc_ref.set(event_data))
+
+            logger.info("Preparing to write %d events to Firestore.",
+                        len(tasks))
+            await asyncio.gather(*tasks)
+            logger.info("Successfully saved %d timeline events to Firestore.",
+                        len(tasks))
+
+        except (json.JSONDecodeError, IndexError, KeyError) as e:
+            logger.error(
+                "Failed to parse or process tool_output for timeline: %s",
+                e,
+                exc_info=True)
