@@ -4,7 +4,7 @@ Module for loading chat history from Firestore.
 import logging
 from datetime import datetime, timedelta, timezone
 from firebase_admin import firestore_async
-from google.cloud.exceptions import GoogleCloudError
+from google.cloud.exceptions import GoogleCloudError, FailedPrecondition
 from google.genai.types import Content, Part as AdkPart
 from google.adk.events import Event
 
@@ -107,6 +107,14 @@ async def load_chat_history(user_id: str, agent_name: str) -> list[Event]:
                     len(history), user_id)
         return history
 
+    except FailedPrecondition as e:
+        logger.error(
+            "Failed to load chat history for user %s due to a missing Firestore index. "
+            "Please create the required index. Original error: %s",
+            user_id,
+            e,
+        )
+        return []
     except GoogleCloudError as e:
         logger.error("Failed to load chat history for user %s: %s", user_id, e)
         return []
