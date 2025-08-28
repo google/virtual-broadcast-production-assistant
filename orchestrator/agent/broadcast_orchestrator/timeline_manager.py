@@ -2,6 +2,7 @@
 
 import json
 import uuid
+import logging
 from datetime import datetime, timezone
 from google.adk.agents import LlmAgent
 from google.adk.tools.tool_context import ToolContext
@@ -9,14 +10,16 @@ import firebase_admin
 from firebase_admin import firestore_async
 from google.genai.types import Content, Part
 
+logger = logging.Logger(__name__)
 # It's a good practice to have the model name as a constant
-GEMINI_MODEL = "gemini-1.5-flash"
+GEMINI_MODEL = "gemini-2.5-flash"
 
 # The detailed prompt for the TimelineAgent
 TRANSFORMATION_PROMPT = """
-You are a data transformation specialist. Your task is to convert a raw text output from a sub-agent's tool into a structured JSON object. This JSON object will be used to populate a timeline view in a frontend application.
+You are a data transformation specialist. Your task is to convert a raw A2A output from a sub-agent's tool into a structured JSON object.
+This JSON object will be used to populate a timeline view in a frontend application.
 
-The raw text input will be provided to you. You must analyze this text and extract the relevant information to populate the following JSON structure.
+The raw A2A input will be provided to you. You must analyze this text and extract the relevant information to populate the following JSON structure.
 
 **Target JSON Structure:**
 ```json
@@ -32,7 +35,7 @@ The raw text input will be provided to you. You must analyze this text and extra
 ```
 
 **Instructions:**
-1.  Carefully read the provided raw text input.
+1.  Carefully read the provided A2A response input.
 2.  Identify the key pieces of information.
 3.  Map the extracted information to the fields in the target JSON structure.
 4.  If a value for a field cannot be determined from the input, use a reasonable default or 'null'.
@@ -52,7 +55,9 @@ timeline_transformer_agent = LlmAgent(
 if not firebase_admin._apps:
     firebase_admin.initialize_app()
 
-async def log_event_to_timeline(raw_text: str, tool_context: ToolContext) -> str:
+
+async def log_event_to_timeline(raw_text: str,
+                                tool_context: ToolContext) -> str:
     """
     Takes raw text from a tool, transforms it into a structured timeline event
     using a dedicated agent, and saves it to Firestore.
@@ -73,8 +78,7 @@ async def log_event_to_timeline(raw_text: str, tool_context: ToolContext) -> str
         # underlying model directly, since it's a simple LlmAgent with no tools.
         model = timeline_transformer_agent.model
         response = await model.generate_content_async(
-            f"{TRANSFORMATION_PROMPT}\n\n**Raw Text Input:**\n{raw_text}"
-        )
+            f"{TRANSFORMATION_PROMPT}\n\n**Raw Text Input:**\n{raw_text}")
 
         json_string = response.text.strip()
         if json_string.startswith("```json"):
@@ -100,13 +104,33 @@ async def log_event_to_timeline(raw_text: str, tool_context: ToolContext) -> str
         structured_data['timestamp'] = datetime.now(timezone.utc)
 
         db = firestore_async.client()
-        doc_ref = db.collection("timeline_events").document(structured_data['id'])
+        doc_ref = db.collection("timeline_events").document(
+            structured_data['id'])
         await doc_ref.set(structured_data)
 
-        print(f"Successfully saved event {structured_data['id']} to Firestore.")
+        print(
+            f"Successfully saved event {structured_data['id']} to Firestore.")
 
         return f"Event '{structured_data.get('title')}' was successfully logged to the timeline."
 
     except Exception as e:
         print(f"Error in log_event_to_timeline: {e}")
         return f"Failed to log event to timeline: {e}"
+
+
+async def process_tool_output_for_timeline(**kwargs):
+    """
+    Processes the output of a tool call and updates the timeline in Firestore.
+    """
+    logger.info("KWargs: %s", kwargs)
+    tool = kwargs.get("tool")
+    tool_output = kwargs.get("tool_response")
+
+    if not tool:
+        logging.warning("Could not process tool output: tool missing.")
+        return
+
+    if tool.name == "send_message":
+        # Here is where you would parse the A2A payload from tool_output
+        # and then write to the timeline_events collection in Firestore.
+        logging.info("'send_message' tool output: %s", tool_output)

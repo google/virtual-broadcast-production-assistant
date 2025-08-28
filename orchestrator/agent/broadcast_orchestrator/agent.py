@@ -44,7 +44,7 @@ from .config import (
 )
 from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
 from .firestore_observer import FirestoreAgentObserver
-from .timeline_manager import log_event_to_timeline
+from .timeline_manager import log_event_to_timeline, process_tool_output_for_timeline
 
 load_dotenv()
 
@@ -139,7 +139,7 @@ class RoutingAgent:
         if api_key:
             headers["X-API-Key"] = api_key
 
-        async with httpx.AsyncClient(timeout=60, headers=headers) as client:
+        async with httpx.AsyncClient(timeout=5, headers=headers) as client:
             card_resolver = A2ACardResolver(client, address)
             try:
                 card: AgentCard = await card_resolver.get_agent_card()
@@ -164,8 +164,8 @@ class RoutingAgent:
 
         return None
 
-    async def _async_init_components(self,
-                                     remote_agents_to_load: list[tuple[str, str, str | None]]):
+    async def _async_init_components(
+            self, remote_agents_to_load: list[tuple[str, str, str | None]]):
         """Asynchronously initializes components that require network I/O."""
         logger.info("Initializing remote agent connections... %s",
                     remote_agents_to_load)
@@ -219,7 +219,7 @@ class RoutingAgent:
             before_agent_callback=self.before_agent_callback,
             after_agent_callback=self.after_agent_callback,
             before_tool_callback=self.observer.before_tool,
-            after_tool_callback=self.observer.after_tool,
+            after_tool_callback=self.after_tool,
             description=(
                 "This Routing agent orchestrates requests for the user "
                 "to assist in live news or sports broadcast control"),
@@ -349,6 +349,19 @@ class RoutingAgent:
     async def after_agent_callback(self, callback_context: CallbackContext):
         """A callback executed after the agent has finished."""
         logger.info("after_agent_callback called")
+
+    async def after_tool(self, **kwargs):
+        """A callback executed after a tool has finished."""
+        tool_context = kwargs.get("tool_context")
+        if not tool_context:
+            logger.warning(
+                "Could not process after_tool event: tool_context missing.")
+            return
+
+        await asyncio.gather(
+            self.observer.after_tool(**kwargs),
+            process_tool_output_for_timeline(**kwargs),
+        )
 
     async def before_model_callback(self, callback_context: CallbackContext):
         """A callback executed before the model is called."""
