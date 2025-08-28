@@ -5,6 +5,7 @@ resource "google_project_service" "apis" {
     "dns.googleapis.com",
     "servicenetworking.googleapis.com",
     "vpcaccess.googleapis.com",
+    "clouddeploy.googleapis.com",
   ])
   project = var.project_id
   service = each.key
@@ -185,4 +186,12 @@ resource "google_compute_router_nat" "nat" {
   }
   nat_ip_allocate_option             = "MANUAL_ONLY"
   nat_ips                            = [google_compute_address.nat_ip.self_link]
+}
+
+module "cloud_deploy" {
+  source                 = "../cloud-deploy"
+  project_id             = var.project_id
+  region                 = var.region
+  pipeline_name          = "${var.service_name}-pipeline"
+  target_name            = "${var.service_name}-target"
 }
