@@ -18,5 +18,6 @@ resource "google_clouddeploy_target" "target" {
 
   run {
     location = "projects/${var.project_id}/locations/${var.region}"
+
   }
 }
