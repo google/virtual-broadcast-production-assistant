@@ -19,4 +19,12 @@ resource "google_clouddeploy_target" "target" {
   run {
     location = "projects/${var.project_id}/locations/${var.region}"
   }
+
+  dynamic "execution_configs" {
+    for_each = var.execution_service_account_email != "" ? [1] : []
+    content {
+      usages          = ["RENDER", "DEPLOY"]
+      service_account = var.execution_service_account_email
+    }
+  }
 }
