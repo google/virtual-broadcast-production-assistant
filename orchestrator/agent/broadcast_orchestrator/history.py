@@ -2,6 +2,7 @@
 Module for loading chat history from Firestore.
 """
 import logging
+from datetime import datetime, timedelta, timezone
 from firebase_admin import firestore_async
 from google.cloud.exceptions import GoogleCloudError
 from google.genai.types import Content, Part as AdkPart
@@ -75,16 +76,23 @@ def _convert_firestore_event_to_adk_event(event_data: dict,
 
 
 async def load_chat_history(user_id: str, agent_name: str) -> list[Event]:
-    """Loads chat history for a given user from Firestore."""
+    """
+    Loads chat history for a given user from Firestore from the last 60 minutes.
+    """
     logger.info("Loading chat history for user: %s", user_id)
     if not user_id:
         return []
     try:
         db = firestore_async.client()
+
+        # Calculate the timestamp for 60 minutes ago
+        sixty_minutes_ago = datetime.now(timezone.utc) - timedelta(minutes=60)
+
         events_ref = (
             db.collection("chat_sessions")
             .document(user_id)
             .collection("events")
+            .where("timestamp", ">=", sixty_minutes_ago)
             .order_by("timestamp")
         )
         event_docs = events_ref.stream()
