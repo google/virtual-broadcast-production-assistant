@@ -44,7 +44,7 @@ from .config import (
 )
 from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
 from .firestore_observer import FirestoreAgentObserver
-from .timeline_manager import log_event_to_timeline, process_tool_output_for_timeline
+from .timeline_manager import process_tool_output_for_timeline
 
 load_dotenv()
 
@@ -223,7 +223,7 @@ class RoutingAgent:
             description=(
                 "This Routing agent orchestrates requests for the user "
                 "to assist in live news or sports broadcast control"),
-            tools=[self.send_message, log_event_to_timeline],
+            tools=[self.send_message],
         )
         return self._agent
 
@@ -235,8 +235,9 @@ class RoutingAgent:
             return {"active_agent": f"{state['active_agent']}"}
         return {"active_agent": "None"}
 
-    def _get_formatted_instructions(self,
-                                    rundown_system_preference: str) -> str:
+    def _get_formatted_instructions(
+        self,
+        rundown_system_preference: str) -> str:
         """
         Formats the system instructions based on the selected rundown system.
         """
@@ -307,29 +308,55 @@ class RoutingAgent:
 
         available_agents = []
         for n, c in self.remote_agent_connections.items():
+            description_lines = []
             display_name = c.card.name
             if n.lower() != display_name.lower():
-                available_agents.append(
-                    f"  * `{n}` (also known as `{display_name}`): {c.card.description}"
+                description_lines.append(
+                    f"* `{n}` (also known as `{display_name}`): {c.card.description}"
                 )
             else:
-                available_agents.append(f"  * `{n}`: {c.card.description}")
+                description_lines.append(f"* `{n}`: {c.card.description}")
+
+            if c.card.skills:
+                description_lines.append("  Skills:")
+                for skill in c.card.skills:
+                    description_lines.append(
+                        f"  - `{skill.id}` ({skill.name}): {skill.description}"
+                    )
+                    if skill.examples:
+                        description_lines.append(
+                            f"    Example: {skill.examples[0]}")
+
+            available_agents.append("\n".join(description_lines))
 
         if rundown_conn:
+            description_lines = []
             internal_name = callback_context.state.get(
                 'rundown_agent_config_name')
             display_name = rundown_conn.card.name
             if internal_name and internal_name.lower() != display_name.lower():
-                available_agents.append(
-                    f"  * `{internal_name}` (also known as `{display_name}`): {rundown_conn.card.description}"
+                description_lines.append(
+                    f"* `{internal_name}` (also known as `{display_name}`): {rundown_conn.card.description}"
                 )
             else:
                 name_to_show = internal_name or display_name
-                available_agents.append(
-                    f"  * `{name_to_show}`: {rundown_conn.card.description}")
+                description_lines.append(
+                    f"* `{name_to_show}`: {rundown_conn.card.description}")
 
-        rundown_instructions = self._get_formatted_instructions(
-            rundown_system_preference)
+            if rundown_conn.card.skills:
+                description_lines.append("  Skills:")
+                for skill in rundown_conn.card.skills:
+                    description_lines.append(
+                        f"  - `{skill.id}` ({skill.name}): {skill.description}"
+                    )
+                    if skill.examples:
+                        description_lines.append(
+                            f"    Example: {skill.examples[0]}")
+
+            available_agents.append("\n".join(description_lines))
+
+            rundown_instructions = self._get_formatted_instructions(
+                rundown_system_preference)
         if not rundown_conn and preferred_config:
             agent_name = preferred_config.get('agent_name',
                                               rundown_system_preference)
@@ -358,10 +385,12 @@ class RoutingAgent:
                 "Could not process after_tool event: tool_context missing.")
             return
 
-        await asyncio.gather(
-            self.observer.after_tool(**kwargs),
-            process_tool_output_for_timeline(**kwargs),
-        )
+        # Await the primary Firestore observer
+        await self.observer.after_tool(**kwargs)
+
+        # Create a background task for the timeline processing
+        # so it doesn't block the agent's response to the user.
+        asyncio.create_task(process_tool_output_for_timeline(**kwargs))
 
     async def before_model_callback(self, callback_context: CallbackContext):
         """A callback executed before the model is called."""
@@ -439,7 +468,9 @@ class RoutingAgent:
         else:
             matched_connections = []
             for registered_name, connection in self.remote_agent_connections.items():
-                if agent_name.lower() in registered_name.lower():
+                if (
+                    agent_name.lower() in registered_name.lower() or 
+                    agent_name.lower() in connection.card.name.lower()):
                     matched_connections.append(connection)
 
             if len(matched_connections) == 1:
@@ -538,33 +569,23 @@ class RoutingAgent:
             logger.warning("received unexpected response. Aborting get task ")
             return [f"Received an unexpected response type: {type(result)}"]
 
-        content = result.model_dump_json(exclude_none=True)
-        json_content = json.loads(content)
+        # Store the full response in the context for the after_tool hook to process.
+        response_json_string = result.model_dump_json(exclude_none=True)
+        tool_context.state["last_a2a_response"] = response_json_string
 
         if isinstance(result, Task) and result.id:
             state[agent_specific_task_id_key] = result.id
 
-        resp = []
-        if json_content.get("artifacts"):
-            for artifact_data in json_content["artifacts"]:
-                converted_parts = []
-                if artifact_data.get("parts"):
-                    converted_parts = convert_parts([
-                        Part.model_validate(p)
-                        for p in artifact_data["parts"]
-                    ])
-                resp.append(json.dumps({
-                    "artifact_id": artifact_data.get("artifactId"),
-                    "name": artifact_data.get("name"),
-                    "description": artifact_data.get("description"),
-                    "parts": converted_parts,
-                }))
-        elif json_content.get("parts"):
-            converted = convert_parts(
-                [Part.model_validate(p) for p in json_content["parts"]])
-            for item in converted:
-                if isinstance(item, dict):
-                    resp.append(json.dumps(item))
-                else:
-                    resp.append(item)
-        return resp
+        # Create and return a human-readable summary for the LLM.
+        summary_parts = []
+        parts_to_summarize = result.parts or []
+        if hasattr(result, 'artifacts') and result.artifacts:
+            for artifact in result.artifacts:
+                parts_to_summarize.extend(artifact.parts or [])
+
+        for part in parts_to_summarize:
+            if isinstance(part.root, TextPart):
+                summary_parts.append(part.root.text)
+        
+        summary = "\n".join(summary_parts)
+        return [summary]
