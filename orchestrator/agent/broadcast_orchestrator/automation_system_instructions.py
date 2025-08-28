@@ -5,13 +5,15 @@ automation systems that the orchestrator agent can control.
 
 CUEZ_CONFIG = {
     "config_name":
-    "CUEZ_AGENT",
+    "CUEZ_RUNDOWN_AGENT",
     "agent_name":
     "Cuez Rundown Agent",
     "instructions":
     """
-You are configured to interact with the Cuez rundown system.
-- Use the `Cuez Rundown Agent` for all rundown-related tasks.
+You are configured to interact with the Cuez broadcast system, which has two main components: a rundown system and an automation system.
+- For tasks related to the show's schedule, stories, or content (the rundown), use the `Cuez Rundown Agent`.
+- For tasks related to controlling the broadcast, like playing, pausing, or stopping elements, use the `CUEZ_AUTOMATOR_AGENT`.
+- Remember to use the exact agent names `Cuez Rundown Agent` or `CUEZ_AUTOMATOR_AGENT` when using the `send_message` tool.
 - All your responses should be tailored for an operator of Cuez.
 """
 }

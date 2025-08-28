@@ -1,4 +1,4 @@
-- name: CUEZ_AGENT
+- name: CUEZ_RUNDOWN_AGENT
   url_env: CUEZ_AGENT_URL
   key_env: CUEZ_AGENT_API_KEY
   default_url: "http://localhost:8001"
