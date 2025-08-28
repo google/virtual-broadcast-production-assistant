@@ -91,3 +91,4 @@ watchdog==6.0.0
 websockets==15.0.1
 zipp==3.23.0
 pytest-asyncio
+pytest-mock
