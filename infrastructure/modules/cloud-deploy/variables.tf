@@ -17,3 +17,9 @@ variable "target_name" {
   description = "The name of the Cloud Deploy target."
   type        = string
 }
+
+variable "execution_service_account_email" {
+  description = "The email of the service account to use for Cloud Deploy execution."
+  type        = string
+  default     = ""
+}
