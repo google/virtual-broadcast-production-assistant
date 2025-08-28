@@ -16,11 +16,9 @@ resource "google_clouddeploy_target" "target" {
   location = var.region
   name     = var.target_name
 
-  run {
-    location = "projects/${var.project_id}/locations/${var.region}"
+  custom_target {
+    custom_target_type = google_clouddeploy_custom_target_type.run_target.id
   }
-
-  custom_target_type = google_clouddeploy_custom_target_type.run_target.id
 }
 
 resource "google_clouddeploy_custom_target_type" "run_target" {

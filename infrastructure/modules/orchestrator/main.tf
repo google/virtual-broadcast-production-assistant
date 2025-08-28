@@ -46,7 +46,7 @@ resource "google_compute_region_network_endpoint_group" "serverless_neg" {
   region                = var.region
   network_endpoint_type = "SERVERLESS"
   cloud_run {
-    service = google_cloud_run_v2_service.broadcaster_agent.name
+    service = google_cloud_run_v2_service.orchestrator_agent.name
   }
 }
 
@@ -89,7 +89,7 @@ resource "google_dns_record_set" "dns_record" {
   rrdatas = [google_compute_global_address.static_ip.address]
 }
 
-resource "google_cloud_run_v2_service" "broadcaster_agent" {
+resource "google_cloud_run_v2_service" "orchestrator_agent" {
   project  = var.project_id
   name     = var.service_name
   location = var.region
