@@ -40,7 +40,7 @@ steps:
       - '--skaffold-file'
       - 'skaffold.yaml'
       - '--images'
-      - '${_SERVICE_NAME}=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA'
+      - 'broadcaster-agent=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA'
     dir: 'orchestrator/agent'
 
 # Define images to be pushed to Artifact Registry
