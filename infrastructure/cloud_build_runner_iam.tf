@@ -31,3 +31,9 @@ resource "google_project_iam_member" "cloud_build_runner_storage_admin" {
   role    = "roles/storage.admin"
   member  = "serviceAccount:cloud-build-runner@${var.project_id}.iam.gserviceaccount.com"
 }
+
+resource "google_service_account_iam_member" "cloud_build_runner_act_as_self" {
+  service_account_id = "projects/${var.project_id}/serviceAccounts/cloud-build-runner@${var.project_id}.iam.gserviceaccount.com"
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:cloud-build-runner@${var.project_id}.iam.gserviceaccount.com"
+}

@@ -193,6 +193,6 @@ module "cloud_deploy" {
   project_id             = var.project_id
   region                 = var.region
   pipeline_name          = "${var.service_name}-pipeline"
-  target_name            = "orchestrator-target"
+  target_name            = "orchestrator-run-target"
   execution_service_account_email = "cloud-build-runner@${var.project_id}.iam.gserviceaccount.com"
 }
