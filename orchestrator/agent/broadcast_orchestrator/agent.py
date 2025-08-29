@@ -292,7 +292,7 @@ class RoutingAgent:
                 (c for c in agent_configs if c['name'] == config_name), None)
 
             if agent_config:
-                url = os.getenv(agent_config["url_env"],
+                url = os.getenv(agent_config["url_env"], 
                                 agent_config["default_url"])
                 api_key = os.getenv(agent_config["key_env"])
                 rundown_conn = await self._load_agent(url, api_key)
@@ -356,7 +356,7 @@ class RoutingAgent:
             rundown_instructions = self._get_formatted_instructions(
                 rundown_system_preference)
         if not rundown_conn and preferred_config:
-            agent_name = preferred_config.get('agent_name',
+            agent_name = preferred_config.get('agent_name', 
                                               rundown_system_preference)
             rundown_instructions = (
                 "IMPORTANT: The preferred rundown system agent "
@@ -592,5 +592,5 @@ class RoutingAgent:
             if isinstance(part.root, TextPart):
                 summary_parts.append(part.root.text)
         
-        summary = "\n".join(summary_parts)
+        summary = "\n\n".join(summary_parts)
         return [summary]
