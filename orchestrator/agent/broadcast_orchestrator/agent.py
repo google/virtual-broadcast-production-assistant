@@ -292,7 +292,7 @@ class RoutingAgent:
                 (c for c in agent_configs if c['name'] == config_name), None)
 
             if agent_config:
-                url = os.getenv(agent_config["url_env"], 
+                url = os.getenv(agent_config["url_env"],
                                 agent_config["default_url"])
                 api_key = os.getenv(agent_config["key_env"])
                 rundown_conn = await self._load_agent(url, api_key)
@@ -356,7 +356,7 @@ class RoutingAgent:
             rundown_instructions = self._get_formatted_instructions(
                 rundown_system_preference)
         if not rundown_conn and preferred_config:
-            agent_name = preferred_config.get('agent_name', 
+            agent_name = preferred_config.get('agent_name',
                                               rundown_system_preference)
             rundown_instructions = (
                 "IMPORTANT: The preferred rundown system agent "
@@ -467,7 +467,7 @@ class RoutingAgent:
             for registered_name, connection in self.remote_agent_connections.items(
             ):
                 if (
-                    agent_name.lower() in registered_name.lower()
+                        agent_name.lower() in registered_name.lower()
                         or agent_name.lower() in connection.card.name.lower()):
                     matched_connections.append(connection)
 
@@ -577,20 +577,21 @@ class RoutingAgent:
         if isinstance(result, Task) and result.id:
             state[agent_specific_task_id_key] = result.id
 
-        # Create and return a human-readable summary for the LLM.
-        summary_parts = []
-        parts_to_summarize = []
+        # Create and return a representation of all parts for the LLM.
+        output_parts = []
+        parts_to_process = []
 
         if isinstance(result, Message):
-            parts_to_summarize = result.parts or []
+            parts_to_process = result.parts or []
+            logger.info("Message %s", result)
         elif isinstance(result, Task):
+            logger.info("Task %s", result)
             if hasattr(result, 'artifacts') and result.artifacts:
                 for artifact in result.artifacts:
-                    parts_to_summarize.extend(artifact.parts or [])
-        
-        for part in parts_to_summarize:
-            if isinstance(part.root, TextPart):
-                summary_parts.append(part.root.text)
-        
-        summary = "\n\n".join(summary_parts)
-        return [summary]
+                    parts_to_process.extend(artifact.parts or [])
+
+        for part in parts_to_process:
+            part_dict = part.model_dump(exclude_none=True)
+            output_parts.append(json.dumps(part_dict))
+
+        return output_parts
