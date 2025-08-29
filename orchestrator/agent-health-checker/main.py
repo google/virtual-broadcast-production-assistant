@@ -45,40 +45,33 @@ def get_secret(secret_id):
     return response.payload.data.decode("UTF-8")
 
 
-async def get_agent_tags(client, base_url):
-    """Fetches and extracts capability tags from an agent's .well-known URL."""
-    tags = []
+async def get_agent_card(client, base_url):
+    """Fetches an agent's card from its .well-known URL."""
+    card = None
     try:
         # Construct the .well-known URL by removing any trailing slashes
         well_known_url = base_url.rstrip("/") + "/.well-known/agent.json"
         response = await client.get(well_known_url, timeout=5)
         response.raise_for_status()
-        agent_card = response.json()
+        card = response.json()
 
-        if "skills" in agent_card and agent_card["skills"]:
-            all_tags = []
-            for skill in agent_card["skills"]:
-                if "tags" in skill and skill["tags"]:
-                    all_tags.extend(skill["tags"])
-            unique_tags = list(dict.fromkeys(all_tags))
-            tags = unique_tags[:3]
     except httpx.RequestError as e:
         print(f"Error fetching agent.json for {base_url}: {e}")
     except json.JSONDecodeError as e:
         print(f"Error decoding agent.json for {base_url}: {e}")
     except Exception as e:
         print(
-            "An unexpected error occurred while fetching tags for "
+            "An unexpected error occurred while fetching card for "
             f"{base_url}: {e}"
         )
-    return tags
+    return card
 
 
 async def check_agent_health(agent_id, agent_dict):
     """Checks the health of a single agent and extracts capability tags."""
     url = agent_dict.get("url")
     status = "offline"
-    tags = []
+    card = None
     headers = {}
     a2a_endpoint = None
 
@@ -90,7 +83,7 @@ async def check_agent_health(agent_id, agent_dict):
             print(f"Failed to get secret for {agent_id}: {e}")
             return {
                 "status": "error",
-                "tags": [],
+                "card": None,
                 "a2a_endpoint": a2a_endpoint
             }
 
@@ -99,41 +92,37 @@ async def check_agent_health(agent_id, agent_dict):
             async with httpx.AsyncClient(timeout=10,
                                          headers=headers) as client:
                 # Fetch the agent card to get the correct a2a_endpoint
-                well_known_url = f"{url.rstrip('/')}/.well-known/agent.json"
-                card_response = await client.get(well_known_url)
-                card_response.raise_for_status()
-                card_data = card_response.json()
+                card = await get_agent_card(client, url)
 
-                a2a_endpoint = card_data.get("url", url)
+                if card:
+                    a2a_endpoint = card.get("url", url)
 
-                # Step 1: Basic health check using A2A
-                a2a_card = AgentCard(name=agent_id,
-                                     url=a2a_endpoint,
-                                     description="Health check",
-                                     capabilities=AgentCapabilities(),
-                                     defaultInputModes=[],
-                                     defaultOutputModes=[],
-                                     skills=[],
-                                     version="1.0")
-                a2a_client = A2AClient(client, a2a_card)
-                message_request = SendMessageRequest(
-                    id=str(uuid.uuid4()),
-                    params=MessageSendParams(message=Message(
-                        messageId=str(uuid.uuid4()),
-                        role="user",
-                        parts=[Part(root=TextPart(text="Are you there?"))])))
-                response = await a2a_client.send_message(message_request)
+                    # Step 1: Basic health check using A2A
+                    a2a_card = AgentCard(name=agent_id,
+                                         url=a2a_endpoint,
+                                         description="Health check",
+                                         capabilities=AgentCapabilities(),
+                                         defaultInputModes=[],
+                                         defaultOutputModes=[],
+                                         skills=[],
+                                         version="1.0")
+                    a2a_client = A2AClient(client, a2a_card)
+                    message_request = SendMessageRequest(
+                        id=str(uuid.uuid4()),
+                        params=MessageSendParams(message=Message(
+                            messageId=str(uuid.uuid4()),
+                            role="user",
+                            parts=[Part(root=TextPart(text="Are you there?"))])))
+                    response = await a2a_client.send_message(message_request)
 
-                # Step 2: If agent is online, fetch tags from .well-known
-                if response:
-                    status = "online"
-                    tags = await get_agent_tags(client, url)
+                    if response:
+                        status = "online"
 
         except Exception as e:
             print(f"A2A check failed for {agent_id}: {e}")
             status = "offline"
 
-    return {"status": status, "tags": tags, "a2a_endpoint": a2a_endpoint}
+    return {"status": status, "card": card, "a2a_endpoint": a2a_endpoint}
 
 
 async def main():
@@ -171,7 +160,7 @@ async def main():
         update_data = {
             "status": result["status"],
             "last_checked": firestore.SERVER_TIMESTAMP,
-            "tags": result.get("tags", [])  # Ensure tags is always a list
+            "card": result.get("card"),
         }
         new_a2a_endpoint = result.get("a2a_endpoint")
         if new_a2a_endpoint and agent_dict.get(
@@ -182,8 +171,7 @@ async def main():
             agents_ref.document(agent_id).update(update_data)
         )
         status = result["status"]
-        tags = result.get("tags", [])
-        print(f"Updated status for {agent_id}: {status}, Tags: {tags}")
+        print(f"Updated status for {agent_id}: {status}")
 
     await asyncio.gather(*update_tasks)
     print("Firestore updates complete.")
