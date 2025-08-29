@@ -213,7 +213,7 @@ class RoutingAgent:
         initial_instructions = load_system_instructions()
 
         self._agent = Agent(
-            model="gemini-live-2.5-flash",
+            model="gemini-live-2.5-flash-preview",
             name="Routing_agent",
             instruction=initial_instructions,
             before_agent_callback=self.before_agent_callback,
@@ -235,9 +235,8 @@ class RoutingAgent:
             return {"active_agent": f"{state['active_agent']}"}
         return {"active_agent": "None"}
 
-    def _get_formatted_instructions(
-        self,
-        rundown_system_preference: str) -> str:
+    def _get_formatted_instructions(self,
+                                    rundown_system_preference: str) -> str:
         """
         Formats the system instructions based on the selected rundown system.
         """
@@ -419,9 +418,8 @@ class RoutingAgent:
         return remote_agent_info
 
     # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements,too-many-locals
-    async def send_message(
-        self, agent_name: str, task: str, tool_context: ToolContext
-    ) -> list[str]:
+    async def send_message(self, agent_name: str, task: str,
+                           tool_context: ToolContext) -> list[str]:
         """Sends a task to remote seller agent
 
         This will send a message to the remote agent named agent_name.
@@ -467,19 +465,22 @@ class RoutingAgent:
                 return [error_message]
         else:
             matched_connections = []
-            for registered_name, connection in self.remote_agent_connections.items():
-                if (
-                    agent_name.lower() in registered_name.lower() or 
-                    agent_name.lower() in connection.card.name.lower()):
+            for registered_name, connection in self.remote_agent_connections.items(
+            ):
+                if (agent_name.lower() in registered_name.lower()
+                        or agent_name.lower() in connection.card.name.lower()):
                     matched_connections.append(connection)
 
             if len(matched_connections) == 1:
                 client = matched_connections[0]
             elif len(matched_connections) > 1:
-                matched_agent_names = [conn.card.name for conn in matched_connections]
-                error_message = (f"Error: Agent name '{agent_name}' is ambiguous. "
-                                 f"It matches: {matched_agent_names}. "
-                                 "Please be more specific.")
+                matched_agent_names = [
+                    conn.card.name for conn in matched_connections
+                ]
+                error_message = (
+                    f"Error: Agent name '{agent_name}' is ambiguous. "
+                    f"It matches: {matched_agent_names}. "
+                    "Please be more specific.")
                 logger.error(error_message)
                 return [error_message]
 
@@ -586,6 +587,6 @@ class RoutingAgent:
         for part in parts_to_summarize:
             if isinstance(part.root, TextPart):
                 summary_parts.append(part.root.text)
-        
+
         summary = "\n".join(summary_parts)
         return [summary]
