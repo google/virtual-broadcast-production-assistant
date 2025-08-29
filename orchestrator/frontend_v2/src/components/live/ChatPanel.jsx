@@ -29,7 +29,7 @@ export default function ChatPanel({ messages, isAgentReplying }) {
 
           return (
             <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] rounded-xl p-3 ${
+              <div className={`dark max-w-[85%] rounded-xl p-3 ${
                 message.role === 'user'
                   ? 'bg-[#FF2D86] text-white'
                   : 'bg-white/10 text-[#E6E1E5]'
