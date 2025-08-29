@@ -57,6 +57,9 @@ export default function IssueCard({ issue }) {
 
   if (issue.type === 'VIDEO_CLIP') {
     const thumbnailUrl = issue.details?.thumbnail_uri || 'https://placehold.co/600x400?text=Video+Preview';
+    const videoUrl = (issue.details?.tc_in && issue.details?.tc_out)
+      ? `${issue.details.video_uri}#t=${issue.details.tc_in},${issue.details.tc_out}`
+      : issue.details?.video_uri;
 
     return (
       <>
@@ -81,7 +84,7 @@ export default function IssueCard({ issue }) {
             <DialogHeader>
               <DialogTitle>{issue.title}</DialogTitle>
             </DialogHeader>
-            <video controls autoPlay src={issue.details?.video_uri} className="w-full rounded-lg aspect-video">
+            <video controls autoPlay src={videoUrl} className="w-full rounded-lg aspect-video">
               Your browser does not support the video tag.
             </video>
           </DialogContent>
