@@ -6,7 +6,7 @@ import {
   Send,
   ChevronDown,
 } from "lucide-react";
-import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import { collection, query, where, orderBy, getDocs, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 
@@ -30,8 +30,38 @@ export default function Live() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const { currentUser } = useAuth();
   const { rundownSystem } = useRundown();
-  const { addEventListener } = useSocket();
+  const { addEventListener, reconnect } = useSocket();
   const currentMessageIdRef = useRef(null);
+
+  const handleClearAll = async () => {
+    if (!currentUser) return;
+
+    // 1. Delete all firestore events for the chat session
+    const sixtyMinutesAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const chatEventsQuery = query(
+      collection(db, `chat_sessions/${currentUser.uid}/events`),
+      where("timestamp", ">=", sixtyMinutesAgo),
+    );
+    const chatEventsSnapshot = await getDocs(chatEventsQuery);
+    chatEventsSnapshot.forEach((doc) => {
+      deleteDoc(doc.ref);
+    });
+
+    // 2. Delete all timeline events for the session
+    const timelineEventsQuery = query(
+      collection(db, "timeline_events"),
+      where("user_id", "==", currentUser.uid),
+      where("session_id", "==", currentUser.uid)
+    );
+    const timelineEventsSnapshot = await getDocs(timelineEventsQuery);
+    timelineEventsSnapshot.forEach((doc) => {
+      deleteDoc(doc.ref);
+    });
+
+    // 3. Re-initialise the chat
+    setMessages([]);
+    reconnect();
+  };
 
   useEffect(() => {
     if (!currentUser) return;
@@ -213,7 +243,7 @@ export default function Live() {
 
           <div className="flex items-center gap-2 text-sm">
             <Badge variant="outline" className="text-[#A6A0AA] text-xs">All items</Badge>
-            <Button variant="ghost" size="sm" className="text-[#A6A0AA] hover:text-[#E6E1E5] text-xs">
+            <Button variant="ghost" size="sm" className="text-[#A6A0AA] hover:text-[#E6E1E5] text-xs" onClick={handleClearAll}>
               Clear All
             </Button>
           </div>
