@@ -50,6 +50,7 @@ export default function Live() {
     // 2. Delete all timeline events for the session
     const timelineEventsQuery = query(
       collection(db, "timeline_events"),
+      where("user_id", "==", currentUser.uid),
       where("session_id", "==", currentUser.uid)
     );
     const timelineEventsSnapshot = await getDocs(timelineEventsQuery);
