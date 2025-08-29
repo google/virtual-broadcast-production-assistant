@@ -261,24 +261,10 @@ class RoutingAgent:
             )
 
         user_id = callback_context.state.get("user_id")
+        rundown_system_preference = callback_context.state.get("rundown_agent", "cuez")
 
-        logger.info("before_agent_callback called for user: %s", user_id)
-        rundown_system_preference = "cuez"  # A safe default
-
-        if user_id:
-            try:
-                db = firestore_async.client()
-                doc_ref = db.collection('user_preferences').document(user_id)
-                doc = await doc_ref.get()
-                if doc.exists:
-                    rundown_system_preference = doc.to_dict().get(
-                        'rundown_system', 'cuez')
-                logger.info("User '%s' preference set to: %s", user_id,
-                            rundown_system_preference)
-            except GoogleCloudError as e:
-                logger.error(
-                    "Failed to fetch user preferences for %s: %s. Using default.",
-                    user_id, e)
+        logger.info("before_agent_callback called for user: %s, rundown_agent: %s",
+                    user_id, rundown_system_preference)
 
         preferred_config = AUTOMATION_SYSTEMS.get(rundown_system_preference)
         rundown_conn = None

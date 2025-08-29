@@ -9,11 +9,11 @@ import { SocketProvider } from './contexts/SocketContext.jsx'
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AuthProvider>
-      <SocketProvider>
-        <RundownProvider>
+      <RundownProvider>
+        <SocketProvider>
           <App />
-        </RundownProvider>
-      </SocketProvider>
+        </SocketProvider>
+      </RundownProvider>
     </AuthProvider>
   </React.StrictMode>,
 )

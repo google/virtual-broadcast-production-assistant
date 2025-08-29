@@ -122,7 +122,8 @@ APP_NAME = "Virtual Production Assistant"
 
 async def start_agent_session(user_id: str,
                               app_instance: FastAPI,
-                              is_audio=False):
+                              is_audio=False,
+                              rundown_agent: str | None = None):
     """Starts an agent session and returns the session ID."""
 
     routing_agent = app_instance.state.routing_agent
@@ -134,12 +135,15 @@ async def start_agent_session(user_id: str,
 
     history = await load_chat_history(user_id, agent.name)
 
+    session_id = f"{user_id}-{rundown_agent}" if rundown_agent else user_id
+
     session = await runner.session_service.create_session(
         app_name=APP_NAME,
         user_id=user_id,
         state={
             "user_id": user_id,
-            "session_id": user_id
+            "session_id": session_id,
+            "rundown_agent": rundown_agent
         })
 
     if history:
@@ -157,7 +161,7 @@ async def start_agent_session(user_id: str,
         live_request_queue=live_request_queue,
         run_config=run_config,
     )
-    return live_events, live_request_queue, user_id
+    return live_events, live_request_queue, session_id
 
 
 async def agent_to_client_messaging(websocket: WebSocket, live_events,
@@ -307,6 +311,7 @@ async def websocket_endpoint(
         websocket: WebSocket,
         user_id: str,
         is_audio: str,
+        rundown_agent: str | None = Query(None),
 ):
     """Client websocket endpoint"""
     token = await verify_token(websocket, user_id)
@@ -317,7 +322,10 @@ async def websocket_endpoint(
     logger.info("Client #%s connected, audio mode: %s", user_id, is_audio)
 
     live_events, live_request_queue, session_id = await start_agent_session(
-        user_id, app_instance=websocket.app, is_audio=(is_audio == "true"))
+        user_id,
+        app_instance=websocket.app,
+        is_audio=(is_audio == "true"),
+        rundown_agent=rundown_agent)
 
     user_has_spoken = asyncio.Event()
 

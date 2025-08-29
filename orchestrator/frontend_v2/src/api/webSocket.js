@@ -1,8 +1,12 @@
 let socket = null;
 
-export const connectSocket = async (uid, getToken) => {
+export const connectSocket = async (uid, getToken, rundown_agent) => {
   if (socket && socket.readyState === WebSocket.OPEN) {
-    return socket;
+    // To handle rundown agent changes, we need to disconnect and reconnect
+    if (socket.url.includes(`rundown_agent=${rundown_agent}`)) {
+      return socket;
+    }
+    disconnectSocket();
   }
 
   if (socket && socket.readyState === WebSocket.CONNECTING) {
@@ -25,7 +29,7 @@ export const connectSocket = async (uid, getToken) => {
 
   const final_ws_base_url = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:8000';
   const token = await getToken();
-  const ws_url = `${final_ws_base_url}/ws/${uid}?is_audio=false`;
+  const ws_url = `${final_ws_base_url}/ws/${uid}?is_audio=false&rundown_agent=${rundown_agent}`;
 
   socket = new WebSocket(ws_url, [token]);
 

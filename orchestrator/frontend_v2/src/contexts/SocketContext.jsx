@@ -1,6 +1,7 @@
 import { createContext, useEffect, useState, useCallback } from "react";
 import { connectSocket, disconnectSocket } from "@/api/webSocket";
 import { useAuth } from "./useAuth";
+import { useRundown } from "./useRundown";
 
 export const SocketContext = createContext(null);
 
@@ -10,27 +11,36 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("connecting");
   const { currentUser } = useAuth();
+  const { rundownSystem } = useRundown();
 
   const reconnect = useCallback(async () => {
     disconnectSocket();
     if (currentUser) {
       setConnectionStatus("connecting");
       try {
-        const socket_instance = await connectSocket(currentUser.uid, () => currentUser.getIdToken());
+        const socket_instance = await connectSocket(
+          currentUser.uid,
+          () => currentUser.getIdToken(),
+          rundownSystem
+        );
         setSocket(socket_instance);
       } catch (error) {
         console.error("Failed to reconnect WebSocket:", error);
         setConnectionStatus("disconnected");
       }
     }
-  }, [currentUser]);
+  }, [currentUser, rundownSystem]);
 
   useEffect(() => {
     if (currentUser) {
       const establishConnection = async () => {
         setConnectionStatus("connecting");
         try {
-          const socket_instance = await connectSocket(currentUser.uid, () => currentUser.getIdToken());
+          const socket_instance = await connectSocket(
+            currentUser.uid,
+            () => currentUser.getIdToken(),
+            rundownSystem
+          );
           setSocket(socket_instance);
         } catch (error) {
           console.error("Failed to connect WebSocket:", error);
@@ -45,7 +55,7 @@ export const SocketProvider = ({ children }) => {
         setSocket(null);
       };
     }
-  }, [currentUser]);
+  }, [currentUser, rundownSystem]);
 
   useEffect(() => {
     if (!socket) return;
