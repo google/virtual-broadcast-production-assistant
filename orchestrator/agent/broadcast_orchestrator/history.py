@@ -77,12 +77,12 @@ def _convert_firestore_event_to_adk_event(event_data: dict,
     return None
 
 
-async def load_chat_history(user_id: str, agent_name: str) -> list[Event]:
+async def load_chat_history(session_id: str, agent_name: str) -> list[Event]:
     """
-    Loads chat history for a given user from Firestore from the last 60 minutes.
+    Loads chat history for a given session from Firestore from the last 60 minutes.
     """
-    logger.info("Loading chat history for user: %s", user_id)
-    if not user_id:
+    logger.info("Loading chat history for session: %s", session_id)
+    if not session_id:
         return []
     try:
         db = firestore_async.client()
@@ -92,7 +92,7 @@ async def load_chat_history(user_id: str, agent_name: str) -> list[Event]:
 
         events_ref = (
             db.collection("chat_sessions")
-            .document(user_id)
+            .document(session_id)
             .collection("events")
             .where(filter=FieldFilter("timestamp", ">=", sixty_minutes_ago))
             .order_by("timestamp")
@@ -105,18 +105,18 @@ async def load_chat_history(user_id: str, agent_name: str) -> list[Event]:
                 event_data, agent_name)
             if adk_event:
                 history.append(adk_event)
-        logger.info("Loaded %d events from chat history for user %s",
-                    len(history), user_id)
+        logger.info("Loaded %d events from chat history for session %s",
+                    len(history), session_id)
         return history
 
     except PreconditionFailed as e:
         logger.error(
-            "Failed to load chat history for user %s due to a missing Firestore index. "
+            "Failed to load chat history for session %s due to a missing Firestore index. "
             "Please create the required index. Original error: %s",
-            user_id,
+            session_id,
             e,
         )
         return []
     except GoogleCloudError as e:
-        logger.error("Failed to load chat history for user %s: %s", user_id, e)
+        logger.error("Failed to load chat history for session %s: %s", session_id, e)
         return []

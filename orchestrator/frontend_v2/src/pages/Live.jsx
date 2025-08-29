@@ -38,9 +38,10 @@ export default function Live() {
 
     const fetchHistory = async () => {
       setHistoryLoading(true);
+      const sessionId = `${currentUser.uid}-${rundownSystem}`;
       const sixtyMinutesAgo = new Date(Date.now() - 60 * 60 * 1000);
       const q = query(
-        collection(db, `chat_sessions/${currentUser.uid}/events`),
+        collection(db, `chat_sessions/${sessionId}/events`),
         where("type", "in", ["USER_MESSAGE", "AGENT_MESSAGE"]),
         where("timestamp", ">=", sixtyMinutesAgo),
         orderBy("timestamp", "asc")
@@ -61,7 +62,7 @@ export default function Live() {
     };
 
     fetchHistory();
-  }, [currentUser]);
+  }, [currentUser, rundownSystem]);
 
   useEffect(() => {
     if (!currentUser || historyLoading) return;

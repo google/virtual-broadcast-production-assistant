@@ -133,9 +133,8 @@ async def start_agent_session(user_id: str,
         agent=agent,
     )
 
-    history = await load_chat_history(user_id, agent.name)
-
     session_id = f"{user_id}-{rundown_agent}" if rundown_agent else user_id
+    history = await load_chat_history(session_id, agent.name)
 
     session = await runner.session_service.create_session(
         app_name=APP_NAME,
