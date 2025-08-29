@@ -15,10 +15,10 @@
   key_env: MOMENTSLAB_AGENT_API_KEY
   default_url: "http://localhost:10003"
   secret_id: "moments-lab-agent-api-key"
-# - name: HIGHFIELD_AGENT
-#   url_env: HIGHFIELD_AGENT_URL
-#   key_env: HIGHFIELD_AGENT_API_KEY
-#   default_url: "http://localhost:10004"
+- name: HIGHFIELD_AGENT
+  url_env: HIGHFIELD_AGENT_URL
+  key_env: HIGHFIELD_AGENT_API_KEY
+  default_url: "http://localhost:10004"
 - name: EVS_AGENT
   url_env: EVS_AGENT_URL
   key_env: EVS_AGENT_API_KEY
