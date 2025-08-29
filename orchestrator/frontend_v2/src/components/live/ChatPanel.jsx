@@ -1,5 +1,7 @@
 import { useRef, useEffect } from "react";
 import { format } from "date-fns";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function ChatPanel({ messages, isAgentReplying }) {
   const scrollRef = useRef(null);
@@ -17,20 +19,29 @@ export default function ChatPanel({ messages, isAgentReplying }) {
       </div>
       
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-xl p-3 ${
-              message.role === 'user'
-                ? 'bg-[#FF2D86] text-white'
-                : 'bg-white/10 text-[#E6E1E5]'
-            }`}>
-              <p className="text-sm">{message.text}</p>
-              <div className="text-xs opacity-70 mt-1">
-                {format(new Date(message.timestamp), 'HH:mm')}
+        {messages.map((message) => {
+          const messageText = message.parts
+            ? message.parts
+                .filter(part => part.kind === 'text' && part.text)
+                .map(part => part.text.trim())
+                .join('\n\n')
+            : message.text;
+
+          return (
+            <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`dark max-w-[85%] rounded-xl p-3 ${
+                message.role === 'user'
+                  ? 'bg-[#FF2D86] text-white'
+                  : 'bg-white/10 text-[#E6E1E5]'
+              }`}>
+                <ReactMarkdown className="text-sm prose dark:prose-invert" remarkPlugins={[remarkGfm]}>{messageText}</ReactMarkdown>
+                <div className="text-xs opacity-70 mt-1">
+                  {format(new Date(message.timestamp), 'HH:mm')}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {isAgentReplying && (
           <div className="flex justify-start" data-testid="agent-replying-indicator">
             <div className="max-w-[85%] rounded-xl p-3 bg-white/10 text-[#E6E1E5]">
