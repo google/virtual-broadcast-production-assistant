@@ -15,6 +15,7 @@ resource "google_project_service" "apis" {
     "servicenetworking.googleapis.com",
     "vpcaccess.googleapis.com",
     "clouddeploy.googleapis.com",
+    "aiplatform.googleapis.com",
   ])
   project = var.project_id
   service = each.key
@@ -154,6 +155,14 @@ resource "google_cloud_run_v2_service" "orchestrator_agent" {
   }
 
   depends_on = [google_vpc_access_connector.connector]
+}
+
+resource "google_cloud_run_v2_service_iam_member" "orchestrator_agent_invoker" {
+  project  = google_cloud_run_v2_service.orchestrator_agent.project
+  location = google_cloud_run_v2_service.orchestrator_agent.location
+  name     = google_cloud_run_v2_service.orchestrator_agent.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
 }
 
 resource "google_compute_network" "vpc_network" {
