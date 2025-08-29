@@ -94,6 +94,15 @@ async def process_tool_output_for_timeline(**kwargs):
                 video_uri = file_part.get("file", {}).get("uri")
                 thumbnail_uri = metadata.get("cover_url")
 
+                details = {
+                    "video_uri": video_uri,
+                    "thumbnail_uri": thumbnail_uri,
+                }
+
+                if metadata.get("type") == "moment":
+                    details["tc_in"] = metadata.get("tc_in")
+                    details["tc_out"] = metadata.get("tc_out")
+
                 event_data = {
                     "id": str(uuid.uuid4()),
                     "type": "VIDEO_CLIP",
@@ -103,10 +112,7 @@ async def process_tool_output_for_timeline(**kwargs):
                     "severity": "info",
                     "status": "default",
                     "timeOffsetSec": 0,
-                    "details": {
-                        "video_uri": video_uri,
-                        "thumbnail_uri": thumbnail_uri
-                    }
+                    "details": details
                 }
                 list_of_events.append(event_data)
 
