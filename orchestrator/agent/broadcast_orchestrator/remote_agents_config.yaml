@@ -1,6 +1,6 @@
 - name: CUEZ_RUNDOWN_AGENT
-  url_env: CUEZ_AGENT_URL
-  key_env: CUEZ_AGENT_API_KEY
+  url_env: CUEZ_RUNDOWN_AGENT_URL
+  key_env: CUEZ_RUNDOWN_AGENT_API_KEY
   default_url: "http://localhost:8001"
 - name: CUEZ_AUTOMATOR_AGENT
   url_env: CUEZ_AUTOMATOR_AGENT_URL
@@ -28,10 +28,10 @@
   key_env: SOFIE_AGENT_API_KEY
   default_url: "http://localhost:10011"
   secret_id: "sofie-agent-api-key"
-- name: ACTIVITIES_AGENT
-  url_env: ACTIVITIES_AGENT_URL
-  key_env: ACTIVITIES_AGENT_API_KEY
-  default_url: "http://localhost:8020"
+# - name: ACTIVITIES_AGENT
+#   url_env: ACTIVITIES_AGENT_URL
+#   key_env: ACTIVITIES_AGENT_API_KEY
+#   default_url: "http://localhost:8020"
 - name: SHURE_AGENT
   url_env: SHURE_AGENT_URL
   key_env: SHURE_AGENT_API_KEY
