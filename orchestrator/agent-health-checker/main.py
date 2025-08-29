@@ -107,12 +107,14 @@ async def check_agent_health(agent_id, agent_dict):
                                          skills=[],
                                          version="1.0")
                     a2a_client = A2AClient(client, a2a_card)
-                    message_request = SendMessageRequest(
-                        id=str(uuid.uuid4()),
-                        params=MessageSendParams(message=Message(
-                            messageId=str(uuid.uuid4()),
-                            role="user",
-                            parts=[Part(root=TextPart(text="Are you there?"))])))
+                    health_check_message = Message(
+                        messageId=str(uuid.uuid4()),
+                        role="user",
+                        parts=[Part(root=TextPart(text="Are you there?"))])
+                    message_params = MessageSendParams(
+                        message=health_check_message)
+                    message_request = SendMessageRequest(id=str(uuid.uuid4()),
+                                                         params=message_params)
                     response = await a2a_client.send_message(message_request)
 
                     if response:
