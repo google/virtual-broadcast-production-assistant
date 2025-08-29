@@ -131,7 +131,8 @@ class RoutingAgent:
         self.observer = FirestoreAgentObserver()
 
     async def _load_agent(
-            self, address: str,
+            self,
+            address: str,
             api_key: str | None) -> RemoteAgentConnections | None:
         """Loads a single remote agent and returns its connection object."""
         logger.info("Attempting to connect to remote agent at: %s", address)
@@ -165,7 +166,8 @@ class RoutingAgent:
         return None
 
     async def _async_init_components(
-            self, remote_agents_to_load: list[tuple[str, str, str | None]]):
+            self,
+            remote_agents_to_load: list[tuple[str, str, str | None]]):
         """Asynchronously initializes components that require network I/O."""
         logger.info("Initializing remote agent connections... %s",
                     remote_agents_to_load)
@@ -235,8 +237,9 @@ class RoutingAgent:
             return {"active_agent": f"{state['active_agent']}"}
         return {"active_agent": "None"}
 
-    def _get_formatted_instructions(self,
-                                    rundown_system_preference: str) -> str:
+    def _get_formatted_instructions(
+            self,
+            rundown_system_preference: str) -> str:
         """
         Formats the system instructions based on the selected rundown system.
         """
@@ -311,8 +314,7 @@ class RoutingAgent:
             display_name = c.card.name
             if n.lower() != display_name.lower():
                 description_lines.append(
-                    f"* `{n}` (also known as `{display_name}`): {c.card.description}"
-                )
+                    f"* `{n}` (also known as `{display_name}`): {c.card.description}")
             else:
                 description_lines.append(f"* `{n}`: {c.card.description}")
 
@@ -320,8 +322,7 @@ class RoutingAgent:
                 description_lines.append("  Skills:")
                 for skill in c.card.skills:
                     description_lines.append(
-                        f"  - `{skill.id}` ({skill.name}): {skill.description}"
-                    )
+                        f"  - `{skill.id}` ({skill.name}): {skill.description}")
                     if skill.examples:
                         description_lines.append(
                             f"    Example: {skill.examples[0]}")
@@ -335,8 +336,7 @@ class RoutingAgent:
             display_name = rundown_conn.card.name
             if internal_name and internal_name.lower() != display_name.lower():
                 description_lines.append(
-                    f"* `{internal_name}` (also known as `{display_name}`): {rundown_conn.card.description}"
-                )
+                    f"* `{internal_name}` (also known as `{display_name}`): {rundown_conn.card.description}")
             else:
                 name_to_show = internal_name or display_name
                 description_lines.append(
@@ -346,8 +346,7 @@ class RoutingAgent:
                 description_lines.append("  Skills:")
                 for skill in rundown_conn.card.skills:
                     description_lines.append(
-                        f"  - `{skill.id}` ({skill.name}): {skill.description}"
-                    )
+                        f"  - `{skill.id}` ({skill.name}): {skill.description}")
                     if skill.examples:
                         description_lines.append(
                             f"    Example: {skill.examples[0]}")
@@ -467,7 +466,8 @@ class RoutingAgent:
             matched_connections = []
             for registered_name, connection in self.remote_agent_connections.items(
             ):
-                if (agent_name.lower() in registered_name.lower()
+                if (
+                    agent_name.lower() in registered_name.lower()
                         or agent_name.lower() in connection.card.name.lower()):
                     matched_connections.append(connection)
 
@@ -579,14 +579,18 @@ class RoutingAgent:
 
         # Create and return a human-readable summary for the LLM.
         summary_parts = []
-        parts_to_summarize = result.parts or []
-        if hasattr(result, 'artifacts') and result.artifacts:
-            for artifact in result.artifacts:
-                parts_to_summarize.extend(artifact.parts or [])
+        parts_to_summarize = []
 
+        if isinstance(result, Message):
+            parts_to_summarize = result.parts or []
+        elif isinstance(result, Task):
+            if hasattr(result, 'artifacts') and result.artifacts:
+                for artifact in result.artifacts:
+                    parts_to_summarize.extend(artifact.parts or [])
+        
         for part in parts_to_summarize:
             if isinstance(part.root, TextPart):
                 summary_parts.append(part.root.text)
-
+        
         summary = "\n".join(summary_parts)
         return [summary]
