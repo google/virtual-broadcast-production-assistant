@@ -4,6 +4,7 @@ metadata:
   name: orchestrator-agent
   annotations:
     run.googleapis.com/ingress: all
+    run.googleapis.com/invoker-iam-disabled: 'true'
 spec:
   template:
     metadata:
@@ -16,6 +17,7 @@ spec:
       - image: orchestrator-agent
         ports:
         - containerPort: 8080
+        timeoutSeconds: 3600
         resources:
           limits:
             cpu: "2"
