@@ -1,5 +1,6 @@
 import { useRef, useEffect } from "react";
 import { format } from "date-fns";
+import ReactMarkdown from "react-markdown";
 
 export default function ChatPanel({ messages, isAgentReplying }) {
   const scrollRef = useRef(null);
@@ -24,7 +25,7 @@ export default function ChatPanel({ messages, isAgentReplying }) {
                 ? 'bg-[#FF2D86] text-white'
                 : 'bg-white/10 text-[#E6E1E5]'
             }`}>
-              <p className="text-sm">{message.text}</p>
+              <ReactMarkdown className="text-sm prose dark:prose-invert">{message.text}</ReactMarkdown>
               <div className="text-xs opacity-70 mt-1">
                 {format(new Date(message.timestamp), 'HH:mm')}
               </div>
