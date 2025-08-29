@@ -50,7 +50,7 @@ def seed_agent_status():
                                    'remote_agents_config.yaml')
         with open(config_path, 'r', encoding="utf-8") as file:
             config = yaml.safe_load(file)
-
+        logger.info(config)
         db = firestore.client()
         agents_ref = db.collection('agent_status')
 
@@ -103,10 +103,10 @@ async def lifespan(fastapi_app: FastAPI):
     try:
         firebase_admin.initialize_app()
         logger.info("Firebase Admin SDK initialized successfully.")
-        seed_agent_status()
+
     except ValueError:
         logger.info("Firebase Admin SDK already initialized.")
-
+    seed_agent_status()
     # Create and store the agent instance in the app state
     fastapi_app.state.routing_agent = RoutingAgent()
 
