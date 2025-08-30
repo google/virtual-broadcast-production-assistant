@@ -26,20 +26,43 @@ To run the Agent Health Checker, you need to configure the following: a Firestor
 
 ### 3.1. Firestore Setup
 
-The service requires a Firestore collection named `agent_status`. Each document in this collection represents an agent to be monitored. The document ID should be a unique identifier for the agent.
+The service requires a Firestore collection named `agent_status`. Each document in this collection represents an agent to be monitored and stores both its configuration and its latest health status. The document ID should be a unique identifier for the agent.
 
-Each document must contain the following fields:
+#### **Input Fields**
+
+These fields must be present in the document for the health checker to work correctly:
 
 *   `url` (String): The base URL of the remote agent. The health checker will look for the agent card at `{url}/.well-known/agent.json`.
+*   `name` (String): A human-readable name for the agent.
 *   `api_key_secret` (String, Optional): The name of the secret in Google Secret Manager that stores the agent's API key. If the agent does not require an API key, this field can be omitted.
 
-**Example Document:**
+#### **Output Fields**
+
+These fields are added or updated by the health checker script:
+
+*   `status` (String): The health status of the agent. Can be `online`, `offline`, or `error`.
+*   `last_checked` (Timestamp): The timestamp of the last health check.
+*   `card` (Map): The content of the agent's `agent.json` file.
+*   `a2a_endpoint` (String): The Agent-to-Agent communication endpoint discovered from the agent card.
+
+#### **Example Document**
+
+Below is an example of what a document in the `agent_status` collection would look like after a successful health check.
 
 ```json
 // Document ID: my-cool-agent
 {
+  "name": "My Cool Agent",
   "url": "https://my-agent.example.com",
-  "api_key_secret": "my-cool-agent-api-key"
+  "api_key_secret": "my-cool-agent-api-key",
+  "status": "online",
+  "last_checked": "2025-08-30T12:00:00Z",
+  "card": {
+    "name": "My Cool Agent",
+    "url": "https://my-agent.example.com/a2a",
+    "description": "An example agent card."
+  },
+  "a2a_endpoint": "https://my-agent.example.com/a2a"
 }
 ```
 
