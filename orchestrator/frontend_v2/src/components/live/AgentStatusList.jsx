@@ -34,6 +34,18 @@ export default function AgentStatusList() {
 
   const onlineAgentsCount = agents.filter(a => a.status === 'online').length;
 
+  const statusOrder = {
+    'offline': 1,
+    'error': 2,
+    'online': 3,
+  };
+
+  const sortedAgents = agents.slice().sort((a, b) => {
+    const orderA = statusOrder[a.status] || 99;
+    const orderB = statusOrder[b.status] || 99;
+    return orderA - orderB;
+  });
+
   return (
     <div className="p-4">
       <div className="flex items-center gap-2 mb-4">
@@ -45,7 +57,7 @@ export default function AgentStatusList() {
       </div>
       
       <div className="space-y-3">
-        {agents.map((agent) => (
+        {sortedAgents.map((agent) => (
           <div key={agent.id} className="p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
             <div className="flex items-start justify-between mb-2">
               <div className="flex-1">
