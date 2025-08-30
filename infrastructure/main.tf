@@ -40,9 +40,43 @@ module "agent_health_checker" {
   vpc_access_connector_id = module.orchestrator.vpc_access_connector_id
 }
 
-module "activity_agent" {
-  source = "./modules/activity-agent"
+# Cloud Deploy for Frontend V2
+resource "google_clouddeploy_target" "frontend_staging_target" {
+  project  = var.project_id
+  location = var.region
+  name     = "frontend-v2-staging-target"
+  run {
+    location = "projects/${var.project_id}/locations/${var.region}"
+  }
+}
 
-  project_id   = var.project_id
-  service_name = var.activity_agent_service_name
+resource "google_clouddeploy_target" "frontend_stable_target" {
+  project  = var.project_id
+  location = var.region
+  name     = "frontend-v2-stable-target"
+  run {
+    location = "projects/${var.project_id}/locations/${var.region}"
+  }
+}
+
+resource "google_clouddeploy_delivery_pipeline" "frontend_pipeline" {
+  project  = var.project_id
+  location = var.region
+  name     = "frontend-v2-delivery"
+
+  serial_pipeline {
+    stages {
+      target_id = google_clouddeploy_target.frontend_staging_target.name
+      profiles  = []
+    }
+    stages {
+      target_id = google_clouddeploy_target.frontend_stable_target.name
+      profiles  = []
+    }
+  }
+
+  depends_on = [
+    google_clouddeploy_target.frontend_staging_target,
+    google_clouddeploy_target.frontend_stable_target,
+  ]
 }

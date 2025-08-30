@@ -1,0 +1,25 @@
+apiVersion: skaffold/v4beta1
+kind: Config
+manifests:
+  rawYaml:
+  - service.yaml
+deploy:
+  cloudrun: {}
+profiles:
+- name: stable
+  deploy:
+    cloudrun:
+      projectid: $PROJECT_ID
+      region: ${_REGION}
+      service: frontend-v2-stable
+- name: staging
+  deploy:
+    cloudrun:
+      projectid: $PROJECT_ID
+      region: ${_REGION}
+      service: frontend-v2-staging
+build:
+  artifacts:
+  - image: frontend-v2-image
+    docker:
+      dockerfile: Dockerfile
