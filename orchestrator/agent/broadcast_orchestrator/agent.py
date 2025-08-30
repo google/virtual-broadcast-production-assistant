@@ -39,6 +39,7 @@ from .automation_system_instructions import (
 )
 
 import os
+from google.cloud import secretmanager
 from .agent_repository import get_all_agents
 from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
 from .firestore_observer import FirestoreAgentObserver
@@ -62,6 +63,22 @@ def load_system_instructions() -> str:
         system_instructions = f.read()
 
     return system_instructions
+
+
+def get_secret(secret_id: str) -> str | None:
+    """Retrieves a secret from Google Cloud Secret Manager."""
+    try:
+        project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
+        if not project_id:
+            logger.error("GOOGLE_CLOUD_PROJECT environment variable not set.")
+            return None
+        client = secretmanager.SecretManagerServiceClient()
+        name = f"projects/{project_id}/secrets/{secret_id}/versions/latest"
+        response = client.access_secret_version(name=name)
+        return response.payload.data.decode("UTF-8")
+    except Exception as e:
+        logger.error("Failed to retrieve secret '%s': %s", secret_id, e)
+        return None
 
 
 def normalize_name(name: str | None) -> str:
@@ -211,12 +228,17 @@ class RoutingAgent:
                     agent_id, status)
                 continue
 
+            api_key = None
+            if api_key_secret := agent_data.get("api_key_secret"):
+                logger.info("Retrieving API key from secret: %s", api_key_secret)
+                api_key = get_secret(api_key_secret)
+
             try:
                 card = AgentCard.model_validate(card_dict)
                 connection = RemoteAgentConnections(
                     agent_card=card,
                     agent_url=a2a_endpoint,
-                    api_key=None  # API key logic might need adjustment if required
+                    api_key=api_key
                 )
                 if agent_id in rundown_agent_ids:
                     self.all_rundown_agents[agent_id] = connection
@@ -368,6 +390,19 @@ class RoutingAgent:
             if normalized_agent_name in (norm_config_name, norm_card_name):
                 client = rundown_connection
 
+        canonical_id = None
+
+        # 1. Check if the requested agent is the session's preferred rundown agent.
+        preferred_config_name = state.get('rundown_agent_config_name')
+        rundown_connection = state.get('rundown_agent_connection')
+
+        if preferred_config_name and rundown_connection:
+            norm_config_name = normalize_name(preferred_config_name)
+            norm_card_name = normalize_name(rundown_connection.card.name)
+            if normalized_agent_name in (norm_config_name, norm_card_name):
+                client = rundown_connection
+                canonical_id = preferred_config_name
+
         # 2. If it's not the rundown agent, search the general pool of agents.
         if not client:
             matched_connections = []
@@ -375,13 +410,14 @@ class RoutingAgent:
                 norm_conn_id = normalize_name(conn_id)
                 norm_card_name = normalize_name(connection.card.name)
                 if normalized_agent_name in (norm_conn_id, norm_card_name):
-                    matched_connections.append(connection)
+                    # Store the connection and its canonical ID
+                    matched_connections.append((conn_id, connection))
 
             if len(matched_connections) == 1:
-                client = matched_connections[0]
+                canonical_id, client = matched_connections[0]
             elif len(matched_connections) > 1:
                 # Handle ambiguity
-                matched_names = [c.card.name for c in matched_connections]
+                matched_names = [c.card.name for _, c in matched_connections]
                 error_message = (
                     f"Error: The agent name '{agent_name}' is ambiguous and matches "
                     f"multiple available agents: {matched_names}. Please be more specific."
@@ -406,10 +442,11 @@ class RoutingAgent:
 
         state["active_agent"] = client.card.name
 
-        agent_specific_task_id_key = f"{agent_name}_task_id"
+        # Use the canonical ID for creating state keys to ensure context is maintained
+        agent_specific_task_id_key = f"{canonical_id}_task_id"
         task_id = state.get(agent_specific_task_id_key)
 
-        agent_specific_context_id_key = f"{agent_name}_context_id"
+        agent_specific_context_id_key = f"{canonical_id}_context_id"
         context_id = state.get(agent_specific_context_id_key)
         if not context_id:
             context_id = str(uuid.uuid4())

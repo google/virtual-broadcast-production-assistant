@@ -158,7 +158,12 @@ async def test_send_message_flexible_matching(mocked_agent):
     # Arrange
     agent = mocked_agent
     tool_context = MagicMock()
-    tool_context.state = {}
+    # Mock the state object to allow assertions on its methods
+    def state_get_side_effect(key, default=None):
+        if key == "input_message_metadata":
+            return default if default is not None else {}
+        return None
+    tool_context.state.get.side_effect = state_get_side_effect
 
     # Mock the agent connections
     mock_conn1 = MagicMock()
@@ -175,14 +180,17 @@ async def test_send_message_flexible_matching(mocked_agent):
     # Case-insensitive match on card name
     await agent.send_message("my test agent", "do something", tool_context)
     mock_conn1.send_message.assert_called()
+    tool_context.state.get.assert_any_call("MY_TEST_AGENT_task_id")
 
     # Match on ID with different casing
     await agent.send_message("another_agent", "do something else", tool_context)
     mock_conn2.send_message.assert_called()
+    tool_context.state.get.assert_any_call("ANOTHER_AGENT_task_id")
 
     # Match with spaces instead of underscore in ID
     await agent.send_message("MY TEST AGENT", "do a third thing", tool_context)
     mock_conn1.send_message.assert_called()
+    tool_context.state.get.assert_any_call("MY_TEST_AGENT_task_id")
 
 
 @pytest.mark.asyncio
@@ -193,7 +201,11 @@ async def test_send_message_ambiguous_match(mocked_agent):
     # Arrange
     agent = mocked_agent
     tool_context = MagicMock()
-    tool_context.state = {}
+    def state_get_side_effect(key, default=None):
+        if key == "input_message_metadata":
+            return default if default is not None else {}
+        return None
+    tool_context.state.get.side_effect = state_get_side_effect
 
     # Mock connections with ambiguous names
     mock_conn1 = MagicMock()
@@ -209,3 +221,73 @@ async def test_send_message_ambiguous_match(mocked_agent):
 
     # Assert
     assert "Error: The agent name 'conflict agent' is ambiguous" in result[0]
+
+
+@pytest.mark.asyncio
+@patch("orchestrator.agent.broadcast_orchestrator.agent.RemoteAgentConnections")
+@patch("orchestrator.agent.broadcast_orchestrator.agent.get_secret")
+@patch("orchestrator.agent.broadcast_orchestrator.agent.get_all_agents")
+async def test_load_agents_from_firestore_with_api_key(
+    mock_get_all_agents, mock_get_secret, mock_remote_agent_connections, mocked_agent, mock_agent_card
+):
+    """
+    Tests that _load_agents_from_firestore correctly retrieves and uses an API key.
+    """
+    # Arrange
+    agent = mocked_agent
+    mock_get_secret.return_value = "super-secret-key"
+    mock_get_all_agents.return_value = [
+        {
+            "id": "MOMENTSLAB_AGENT",
+            "status": "online",
+            "card": mock_agent_card.model_dump(),
+            "a2a_endpoint": "http://momentslab.com/a2a",
+            "api_key_secret": "momentslab-api-key-secret"
+        }
+    ]
+
+    # Act
+    await agent._load_agents_from_firestore()
+
+    # Assert
+    mock_get_secret.assert_called_once_with("momentslab-api-key-secret")
+    mock_remote_agent_connections.assert_called_once()
+
+    # Check the api_key argument in the constructor call
+    args, kwargs = mock_remote_agent_connections.call_args
+    assert kwargs.get("api_key") == "super-secret-key"
+
+
+@pytest.mark.asyncio
+@patch("orchestrator.agent.broadcast_orchestrator.agent.RemoteAgentConnections")
+@patch("orchestrator.agent.broadcast_orchestrator.agent.get_secret")
+@patch("orchestrator.agent.broadcast_orchestrator.agent.get_all_agents")
+async def test_load_agents_from_firestore_with_api_key(
+    mock_get_all_agents, mock_get_secret, mock_remote_agent_connections, mocked_agent, mock_agent_card
+):
+    """
+    Tests that _load_agents_from_firestore correctly retrieves and uses an API key.
+    """
+    # Arrange
+    agent = mocked_agent
+    mock_get_secret.return_value = "super-secret-key"
+    mock_get_all_agents.return_value = [
+        {
+            "id": "MOMENTSLAB_AGENT",
+            "status": "online",
+            "card": mock_agent_card.model_dump(),
+            "a2a_endpoint": "http://momentslab.com/a2a",
+            "api_key_secret": "momentslab-api-key-secret"
+        }
+    ]
+
+    # Act
+    await agent._load_agents_from_firestore()
+
+    # Assert
+    mock_get_secret.assert_called_once_with("momentslab-api-key-secret")
+    mock_remote_agent_connections.assert_called_once()
+
+    # Check the api_key argument in the constructor call
+    args, kwargs = mock_remote_agent_connections.call_args
+    assert kwargs.get("api_key") == "super-secret-key"
