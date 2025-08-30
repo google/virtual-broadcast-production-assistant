@@ -286,10 +286,10 @@ export default function Live() {
 
       {/* Right Panel - Telemetry & Agents - Hidden on mobile, collapsible on tablet */}
       <div className="hidden md:flex w-full md:w-80 lg:w-80 bg-[#1C1A22] border-t md:border-t-0 md:border-l border-white/8 flex-col">
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden min-h-0">
           <TelemetryPanel />
         </div>
-        <div className="border-t border-white/8">
+        <div className="border-t border-white/8 max-h-80 overflow-y-auto">
           <AgentStatusList />
         </div>
       </div>
