@@ -16,18 +16,10 @@ def agent():
     """Provides a RoutingAgent with a mocked firestore client."""
     with patch("broadcast_orchestrator.agent.firestore_async"), patch(
             "broadcast_orchestrator.firestore_observer.firestore_async"):
-        with patch(
-                "broadcast_orchestrator.agent.load_remote_agents_config",
-                return_value=[],
-        ):
-            with patch(
-                    "broadcast_orchestrator.agent.load_system_instructions",
-                    return_value="",
-            ):
-                agent_instance = RoutingAgent()
-                agent_instance.get_agent = MagicMock()
-                agent_instance.get_agent.return_value.name = "Routing_agent"
-                yield agent_instance
+        agent_instance = RoutingAgent()
+        agent_instance.get_agent = MagicMock()
+        agent_instance.get_agent.return_value.name = "Routing_agent"
+        yield agent_instance
 
 
 def test_convert_user_message_event(agent: RoutingAgent):
