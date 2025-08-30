@@ -138,3 +138,74 @@ async def test_before_agent_callback_handles_rundown_agent(
     assert "CUEZ_RUNDOWN_AGENT" not in mock_callback_context.state["available_agents_list"]
     assert "SOFIE_AGENT" not in mock_callback_context.state["available_agents_list"]
     assert "some_other_agent" in mock_callback_context.state["available_agents_list"]
+
+
+@pytest.fixture
+def mocked_agent():
+    """Provides a RoutingAgent with its dependencies mocked."""
+    with patch("orchestrator.agent.broadcast_orchestrator.agent.load_system_instructions"), \
+         patch("firebase_admin.firestore_async.client"), \
+         patch("firebase_admin.initialize_app"):
+        agent = RoutingAgent()
+        yield agent
+
+
+@pytest.mark.asyncio
+async def test_send_message_flexible_matching(mocked_agent):
+    """
+    Tests that send_message can find agents with flexible, case-insensitive matching.
+    """
+    # Arrange
+    agent = mocked_agent
+    tool_context = MagicMock()
+    tool_context.state = {}
+
+    # Mock the agent connections
+    mock_conn1 = MagicMock()
+    mock_conn1.card.name = "My Test Agent"
+    mock_conn1.send_message = AsyncMock(return_value=MagicMock())
+    agent.remote_agent_connections["MY_TEST_AGENT"] = mock_conn1
+
+    mock_conn2 = MagicMock()
+    mock_conn2.card.name = "Another Agent"
+    mock_conn2.send_message = AsyncMock(return_value=MagicMock())
+    agent.remote_agent_connections["ANOTHER_AGENT"] = mock_conn2
+
+    # Act & Assert
+    # Case-insensitive match on card name
+    await agent.send_message("my test agent", "do something", tool_context)
+    mock_conn1.send_message.assert_called()
+
+    # Match on ID with different casing
+    await agent.send_message("another_agent", "do something else", tool_context)
+    mock_conn2.send_message.assert_called()
+
+    # Match with spaces instead of underscore in ID
+    await agent.send_message("MY TEST AGENT", "do a third thing", tool_context)
+    mock_conn1.send_message.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_send_message_ambiguous_match(mocked_agent):
+    """
+    Tests that send_message returns an error for ambiguous agent names.
+    """
+    # Arrange
+    agent = mocked_agent
+    tool_context = MagicMock()
+    tool_context.state = {}
+
+    # Mock connections with ambiguous names
+    mock_conn1 = MagicMock()
+    mock_conn1.card.name = "Conflict Agent"
+    agent.remote_agent_connections["CONFLICT_AGENT_1"] = mock_conn1
+
+    mock_conn2 = MagicMock()
+    mock_conn2.card.name = "Conflict Agent"
+    agent.remote_agent_connections["CONFLICT_AGENT_2"] = mock_conn2
+
+    # Act
+    result = await agent.send_message("conflict agent", "do something", tool_context)
+
+    # Assert
+    assert "Error: The agent name 'conflict agent' is ambiguous" in result[0]

@@ -64,6 +64,13 @@ def load_system_instructions() -> str:
     return system_instructions
 
 
+def normalize_name(name: str | None) -> str:
+    """Normalizes an agent name for flexible, case-insensitive matching."""
+    if not name:
+        return ""
+    return name.lower().replace(" ", "").replace("_", "")
+
+
 def convert_part(part: Part):
     """Converts an A2A Part to a string."""
     if isinstance(part.root, TextPart):
@@ -274,7 +281,15 @@ class RoutingAgent:
         # 3. Build the list of available agents for the prompt
         available_agents = []
         for n, c in self.remote_agent_connections.items():
-            description_lines = [f"* `{n}`: {c.card.description}"]
+            description_lines = []
+            display_name = c.card.name
+            # Show the registered ID if it's different from the display name
+            if n.lower() != display_name.lower():
+                description_lines.append(
+                    f"* `{display_name}` (ID: `{n}`): {c.card.description}")
+            else:
+                description_lines.append(f"* `{display_name}`: {c.card.description}")
+
             if c.card.skills:
                 description_lines.append("  Skills:")
                 for skill in c.card.skills:
@@ -338,36 +353,58 @@ class RoutingAgent:
             A list of strings from the remote agent's response. Complex objects
             are returned as JSON strings.
         """
-        logger.info("Sending task to %s: %s", agent_name, task)
+        logger.info("Sending task to agent '%s': %s", agent_name, task)
         state = tool_context.state
-
-        # Determine if the target agent is the preferred rundown agent for this session
-        is_rundown_agent = False
-        preferred_config_name = state.get('rundown_agent_config_name')
-        if preferred_config_name and agent_name.lower() == preferred_config_name.lower():
-            is_rundown_agent = True
-
         client = None
-        if is_rundown_agent:
-            client = state.get('rundown_agent_connection')
-            if not client:
+        normalized_agent_name = normalize_name(agent_name)
+
+        # 1. Check if the requested agent is the session's preferred rundown agent.
+        preferred_config_name = state.get('rundown_agent_config_name')
+        rundown_connection = state.get('rundown_agent_connection')
+
+        if preferred_config_name and rundown_connection:
+            norm_config_name = normalize_name(preferred_config_name)
+            norm_card_name = normalize_name(rundown_connection.card.name)
+            if normalized_agent_name in (norm_config_name, norm_card_name):
+                client = rundown_connection
+
+        # 2. If it's not the rundown agent, search the general pool of agents.
+        if not client:
+            matched_connections = []
+            for conn_id, connection in self.remote_agent_connections.items():
+                norm_conn_id = normalize_name(conn_id)
+                norm_card_name = normalize_name(connection.card.name)
+                if normalized_agent_name in (norm_conn_id, norm_card_name):
+                    matched_connections.append(connection)
+
+            if len(matched_connections) == 1:
+                client = matched_connections[0]
+            elif len(matched_connections) > 1:
+                # Handle ambiguity
+                matched_names = [c.card.name for c in matched_connections]
                 error_message = (
-                    f"Error: Preferred rundown agent '{agent_name}' is not available for this session."
+                    f"Error: The agent name '{agent_name}' is ambiguous and matches "
+                    f"multiple available agents: {matched_names}. Please be more specific."
                 )
                 logger.error(error_message)
                 return [error_message]
-        else:
-            # Look for the agent in the general pool of loaded agents
-            client = self.remote_agent_connections.get(agent_name)
 
+        # 3. If no agent was found, return an error.
         if not client:
-            available_agents = list(self.remote_agent_connections.keys())
-            error_message = (f"Error: Agent '{agent_name}' not found or is not online. "
-                             f"Available agents are: {available_agents}")
+            available_agents = [
+                c.card.name for c in self.remote_agent_connections.values()
+            ]
+            if rundown_connection:
+                available_agents.append(rundown_connection.card.name)
+
+            error_message = (
+                f"Error: Agent '{agent_name}' not found or is not online. "
+                f"Available agents are: {', '.join(available_agents)}"
+            )
             logger.error(error_message)
             return [error_message]
 
-        state["active_agent"] = agent_name
+        state["active_agent"] = client.card.name
 
         agent_specific_task_id_key = f"{agent_name}_task_id"
         task_id = state.get(agent_specific_task_id_key)
