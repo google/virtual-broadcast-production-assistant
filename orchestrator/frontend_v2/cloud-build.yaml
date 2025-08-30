@@ -3,7 +3,6 @@
 
 steps:
   # 1. Install npm dependencies
-  # This step uses a standard cloud builder for Node.js to install the project dependencies.
   - name: 'gcr.io/cloud-builders/npm'
     id: 'Install dependencies'
     entrypoint: 'npm'
@@ -31,11 +30,7 @@ steps:
       - 'VITE_FIREBASE_MESSAGING_SENDER_ID=$_VITE_FIREBASE_MESSAGING_SENDER_ID'
       - 'VITE_FIREBASE_APP_ID=$_VITE_FIREBASE_APP_ID'
 
-
-  # 2. Build the static assets with Vite
-  # This step runs the Vite build process. It injects the necessary environment
-  # variables (prefixed with VITE_) into the build, so they are available in the frontend code.
-  # These variables are passed into the build as substitutions (_VARIABLE_NAME).
+  # 4. Build the static assets with Vite
   - name: 'gcr.io/cloud-builders/npm'
     id: 'Build static assets'
     entrypoint: 'npm'
@@ -50,49 +45,42 @@ steps:
       - 'VITE_FIREBASE_MESSAGING_SENDER_ID=$_VITE_FIREBASE_MESSAGING_SENDER_ID'
       - 'VITE_FIREBASE_APP_ID=$_VITE_FIREBASE_APP_ID'
 
-  # 3. Build the Docker image
-  # This step builds the Docker image using the provided Dockerfile. The resulting static
-  # assets from the 'dist' directory are copied into the Nginx server image.
-  # The image is tagged with the commit SHA for easy version tracking.
+  # 5. Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Build Docker image'
     dir: 'orchestrator/frontend_v2'
     args:
       - 'build'
       - '-t'
-      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:${COMMIT_SHA}'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/frontend-v2/app:${COMMIT_SHA}'
       - '.'
 
-  # 4. Push the Docker image to Google Artifact Registry
-  # The built image is pushed to Artifact Registry, Google's recommended container registry.
+  # 6. Push the Docker image to Google Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Push Docker image'
     dir: 'orchestrator/frontend_v2'
-    args: ['push', '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:${COMMIT_SHA}']
+    args: ['push', '${_REGION}-docker.pkg.dev/$PROJECT_ID/frontend-v2/app:${COMMIT_SHA}']
 
-  # 5. Deploy the image to Cloud Run
-  # This final step deploys the container image to Cloud Run, making the frontend live.
-  # It uses the service name and region provided as substitutions.
-  # --allow-unauthenticated makes the web app publicly accessible.
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Deploy to Cloud Run'
-    dir: 'orchestrator/frontend_v2'
-    entrypoint: 'gcloud'
+  # 7. Create a Cloud Deploy release
+  # This step creates a new release in the 'frontend-v2-delivery' pipeline.
+  # This will trigger a deployment to the first stage of the pipeline (staging).
+  - name: 'gcr.io/google-appengine/exec-wrapper'
+    id: 'Create Cloud Deploy release'
+    entrypoint: '/bin/bash'
     args:
-      - 'run'
-      - 'deploy'
-      - '${_SERVICE_NAME}'
-      - '--image'
-      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:${COMMIT_SHA}'
-      - '--region'
-      - '${_REGION}'
-      - '--platform'
-      - 'managed'
-      - '--allow-unauthenticated'
+    - -c
+    - |
+      gcloud deploy releases create "release-$SHORT_SHA" \
+        --delivery-pipeline="frontend-v2-delivery" \
+        --region="${_REGION}" \
+        --source="." \
+        --images="frontend-v2-image=${_REGION}-docker.pkg.dev/$PROJECT_ID/frontend-v2/app:${COMMIT_SHA}"
+    dir: 'orchestrator/frontend_v2'
+
 
 # Store the final image in Artifact Registry.
 images:
-  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:${COMMIT_SHA}'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/frontend-v2/app:${COMMIT_SHA}'
 
 # Configure build options to resolve potential logging permission issues.
 # This instructs Cloud Build to send logs directly to Cloud Logging.
