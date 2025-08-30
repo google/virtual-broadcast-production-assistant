@@ -12,8 +12,3 @@ output "orchestrator_nat_ip_address" {
   description = "The static outbound IP address of the orchestrator Cloud Run service."
   value       = module.orchestrator.nat_ip_address
 }
-
-output "activity_agent_service_account_email" {
-  description = "The email of the service account for the activity agent."
-  value       = module.activity_agent.service_account_email
-}
