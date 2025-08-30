@@ -28,9 +28,6 @@ frontend_container_image_staging = "europe-west1-docker.pkg.dev/your-gcp-project
 # This service account is used by all orchestrator environments.
 orchestrator_service_account_email = "orchestrator-sa@your-gcp-project-id.iam.gserviceaccount.com"
 
-# Activity Agent
-activity_agent_service_name = "activity-agent"
-
 # DNS Configuration
 # The root domain and managed zone for creating DNS 'A' records for the custom domains.
 dns_zone_name = "your-domain-com"

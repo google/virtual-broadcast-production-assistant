@@ -247,13 +247,37 @@ resource "google_compute_router_nat" "nat" {
 # via NEGs. This load balancer has a single static global IP address, providing
 # a consistent ingress IP for external services to whitelist.
 
-module "cloud_deploy" {
+resource "google_clouddeploy_target" "targets" {
   for_each = var.environments
-  source   = "../cloud-deploy"
+  project  = var.project_id
+  location = var.region
+  name     = "${each.value.service_name}-target"
 
-  project_id             = var.project_id
-  region                 = var.region
-  pipeline_name          = "${each.value.service_name}-pipeline"
-  target_name            = "${each.value.service_name}-target"
-  execution_service_account_email = "cloud-build-runner@${var.project_id}.iam.gserviceaccount.com"
+  run {
+    location = "projects/${var.project_id}/locations/${var.region}"
+  }
+
+  execution_configs {
+    usages          = ["RENDER", "DEPLOY"]
+    service_account = var.service_account_email # Use the orchestrator service account
+  }
+}
+
+resource "google_clouddeploy_delivery_pipeline" "pipeline" {
+  project  = var.project_id
+  location = var.region
+  name     = "orchestrator-agent-delivery"
+
+  serial_pipeline {
+    stages {
+      target_id = google_clouddeploy_target.targets["staging"].name
+      profiles  = []
+    }
+    stages {
+      target_id = google_clouddeploy_target.targets["stable"].name
+      profiles  = []
+    }
+  }
+
+  depends_on = [google_clouddeploy_target.targets]
 }
