@@ -6,23 +6,38 @@ provider "google" {
 module "orchestrator" {
   source = "./modules/orchestrator"
 
-  project_id    = var.project_id
-  region        = var.region
-  service_name  = var.orchestrator_service_name
-  custom_domain = var.orchestrator_custom_domain
-  dns_zone_name = var.dns_zone_name
+  project_id            = var.project_id
+  region                = var.region
+  environments          = var.orchestrator_environments
+  dns_zone_name         = var.dns_zone_name
   root_domain           = var.root_domain
-  container_image       = var.orchestrator_container_image
   service_account_email = var.orchestrator_service_account_email
 }
 
+module "frontend_stable" {
+  source = "./modules/frontend"
+
+  project_id      = var.project_id
+  region          = var.region
+  service_name    = "frontend-v2-stable"
+  container_image = var.frontend_container_image_stable
+}
+
+module "frontend_staging" {
+  source = "./modules/frontend"
+
+  project_id      = var.project_id
+  region          = var.region
+  service_name    = "frontend-v2-staging"
+  container_image = var.frontend_container_image_staging
+}
 
 module "agent_health_checker" {
   source = "./modules/agent-health-checker"
 
-  project_id                          = var.project_id
-  region                              = var.region
-  vpc_access_connector_id             = module.orchestrator.vpc_access_connector_id
+  project_id              = var.project_id
+  region                  = var.region
+  vpc_access_connector_id = module.orchestrator.vpc_access_connector_id
 }
 
 module "activity_agent" {
