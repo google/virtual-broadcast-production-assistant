@@ -1,15 +1,37 @@
-project_id = "peerless-kit-450316-g1"
-region     = "europe-west1"
+project_id = "your-gcp-project-id"
+region     = "your-gcp-region"
 
-# Orchestrator
-orchestrator_service_name  = "orchestrator-agent"
-orchestrator_custom_domain = "orchestrator.example.com"
-orchestrator_container_image = "container-image-path"
-orchestrator_service_account_email = "orchestrator-service-account@project_id.iam.gserviceaccount.com"
+# Orchestrator Environments
+# Define the stable and staging environments for the orchestrator agent.
+# The 'stable' environment should be the one that was previously production.
+# The 'staging' environment is the new one. The staging agent will share the same
+# static inbound and outbound IP addresses as the stable one.
+orchestrator_environments = {
+  stable = {
+    service_name    = "orchestrator-agent-stable"
+    container_image = "europe-west1-docker.pkg.dev/your-gcp-project-id/orchestrator/agent:stable"
+    custom_domain   = "orchestrator.your-domain.com"
+  },
+  staging = {
+    service_name    = "orchestrator-agent-staging"
+    container_image = "europe-west1-docker.pkg.dev/your-gcp-project-id/orchestrator/agent:staging"
+    custom_domain   = "staging-orchestrator.your-domain.com"
+  }
+}
+
+# Frontend Container Images
+# The frontend is deployed as a simple Cloud Run service with a public URL.
+frontend_container_image_stable  = "europe-west1-docker.pkg.dev/your-gcp-project-id/orchestrator/frontend-v2:stable"
+frontend_container_image_staging = "europe-west1-docker.pkg.dev/your-gcp-project-id/orchestrator/frontend-v2:staging"
+
+# Service Account for Orchestrator
+# This service account is used by all orchestrator environments.
+orchestrator_service_account_email = "orchestrator-sa@your-gcp-project-id.iam.gserviceaccount.com"
 
 # Activity Agent
 activity_agent_service_name = "activity-agent"
 
-# DNS
-dns_zone_name = "example-com"
-root_domain   = "example.com"
+# DNS Configuration
+# The root domain and managed zone for creating DNS 'A' records for the custom domains.
+dns_zone_name = "your-domain-com"
+root_domain   = "your-domain.com"
