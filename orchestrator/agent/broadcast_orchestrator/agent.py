@@ -136,6 +136,7 @@ class RoutingAgent:
         """Initializes the RoutingAgent."""
         self.task_callback = task_callback
         self.remote_agent_connections: dict[str, RemoteAgentConnections] = {}
+        self.all_rundown_agents: dict[str, RemoteAgentConnections] = {}
         self.cards: dict[str, AgentCard] = {}
         self.agents: str = ""
         self._agent: Agent | None = None
@@ -183,8 +184,13 @@ class RoutingAgent:
     async def _load_agents_from_firestore(self):
         """Loads agent configurations from Firestore and sets up connections."""
         self.remote_agent_connections = {}
+        self.all_rundown_agents = {}
         self.cards = {}
         all_agents_data = await get_all_agents()
+
+        rundown_agent_ids = {
+            config['config_name'] for config in AUTOMATION_SYSTEMS.values()
+        }
 
         for agent_data in all_agents_data:
             agent_id = agent_data.get("id")
@@ -205,7 +211,11 @@ class RoutingAgent:
                     agent_url=a2a_endpoint,
                     api_key=None  # API key logic might need adjustment if required
                 )
-                self.remote_agent_connections[agent_id] = connection
+                if agent_id in rundown_agent_ids:
+                    self.all_rundown_agents[agent_id] = connection
+                else:
+                    self.remote_agent_connections[agent_id] = connection
+
                 self.cards[agent_id] = card
                 logger.info("Successfully loaded agent: %s", agent_id)
             except Exception as e:
@@ -244,7 +254,7 @@ class RoutingAgent:
 
         if preferred_config:
             config_name = preferred_config.get('config_name')
-            rundown_conn = self.remote_agent_connections.get(config_name)
+            rundown_conn = self.all_rundown_agents.get(config_name)
 
             if rundown_conn:
                 callback_context.state['rundown_agent_connection'] = rundown_conn
@@ -264,11 +274,6 @@ class RoutingAgent:
         # 3. Build the list of available agents for the prompt
         available_agents = []
         for n, c in self.remote_agent_connections.items():
-            # Don't list the rundown agent separately if it's the preferred one
-            if preferred_config and n == preferred_config.get('config_name'):
-                 # It will be described via the rundown_instructions
-                continue
-
             description_lines = [f"* `{n}`: {c.card.description}"]
             if c.card.skills:
                 description_lines.append("  Skills:")
