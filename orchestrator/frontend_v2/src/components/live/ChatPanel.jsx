@@ -2,6 +2,15 @@ import { useRef, useEffect } from "react";
 import { format } from "date-fns";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Link } from "lucide-react";
+
+const LinkRenderer = ({ href }) => {
+  return (
+    <a href={href} title={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center">
+      <Link className="w-4 h-4" />
+    </a>
+  );
+};
 
 export default function ChatPanel({ messages, isAgentReplying }) {
   const scrollRef = useRef(null);
@@ -34,7 +43,13 @@ export default function ChatPanel({ messages, isAgentReplying }) {
                   ? 'bg-[#FF2D86] text-white'
                   : 'bg-white/10 text-[#E6E1E5]'
               }`}>
-                <ReactMarkdown className="text-sm prose dark:prose-invert" remarkPlugins={[remarkGfm]}>{messageText}</ReactMarkdown>
+                <ReactMarkdown
+                  className="text-sm prose dark:prose-invert"
+                  remarkPlugins={[remarkGfm]}
+                  components={{ a: LinkRenderer }}
+                >
+                  {messageText}
+                </ReactMarkdown>
                 <div className="text-xs opacity-70 mt-1">
                   {format(new Date(message.timestamp), 'HH:mm')}
                 </div>
