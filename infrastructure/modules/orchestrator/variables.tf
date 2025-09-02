@@ -1,40 +1,32 @@
 variable "project_id" {
   description = "The project ID to deploy to."
   type        = string
-  default     = "peerless-kit-450316-g1"
 }
 
 variable "region" {
   description = "The region to deploy to."
   type        = string
-  default     = "europe-west1"
-}
-
-variable "base_resource_name" {
-  description = "The base name to use for shared resources, to preserve existing infrastructure. Should match the original service name."
-  type        = string
 }
 
 variable "environments" {
-  description = "A map of environments to deploy, e.g. stable, staging."
-  type = map(object({
-    service_name    = string
-    container_image = string
-    custom_domain   = optional(string)
-  }))
+  description = "A map of environments to deploy to."
+  type        = any
+  default     = {}
+}
+
+variable "base_resource_name" {
+  description = "The base name for resources."
+  type        = string
 }
 
 variable "dns_zone_name" {
-  description = "The name of the Cloud DNS managed zone. Must be a unique name within the project, e.g. 'your-domain-com'."
+  description = "The name of the DNS managed zone."
   type        = string
-  default     = ""
 }
 
 variable "root_domain" {
   description = "The root domain for the DNS zone."
   type        = string
-  # e.g. your-domain.com
-  default     = ""
 }
 
 variable "service_account_email" {
@@ -52,4 +44,9 @@ variable "vpc_subnet_name" {
   description = "The name of the VPC subnetwork."
   type        = string
   default     = "orchestrator-subnet"
+}
+
+variable "build_runner_service_account_email" {
+  description = "The email of the service account for the Cloud Build runner."
+  type        = string
 }
