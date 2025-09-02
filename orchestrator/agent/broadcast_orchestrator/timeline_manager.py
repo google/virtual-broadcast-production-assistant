@@ -114,6 +114,13 @@ async def process_tool_output_for_timeline(**kwargs):
                     "timeOffsetSec": 0,
                     "details": details
                 }
+
+                source_ref_id = metadata.get("moment_id") or metadata.get("id")
+                if source_ref_id:
+                    event_data["source_agent_ref_id"] = source_ref_id
+                else:
+                    logger.warning("Could not find a source reference ID ('moment_id' or 'id') in file part metadata.")
+                
                 list_of_events.append(event_data)
 
             # --- Save all events to Firestore concurrently ---

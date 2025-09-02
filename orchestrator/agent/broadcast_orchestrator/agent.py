@@ -44,6 +44,7 @@ from .agent_repository import get_all_agents
 from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
 from .firestore_observer import FirestoreAgentObserver
 from .timeline_manager import process_tool_output_for_timeline
+from .timeline_tool import get_uri_by_source_ref_id
 
 load_dotenv()
 
@@ -184,7 +185,7 @@ class RoutingAgent:
             description=(
                 "This Routing agent orchestrates requests for the user "
                 "to assist in live news or sports broadcast control"),
-            tools=[self.send_message],
+            tools=[self.send_message, get_uri_by_source_ref_id],
         )
         return self._agent
 
@@ -420,8 +421,7 @@ class RoutingAgent:
                 matched_names = [c.card.name for _, c in matched_connections]
                 error_message = (
                     f"Error: The agent name '{agent_name}' is ambiguous and matches "
-                    f"multiple available agents: {matched_names}. Please be more specific."
-                )
+                    f"multiple available agents: {matched_names}. Please be more specific.")
                 logger.error(error_message)
                 return [error_message]
 
@@ -435,8 +435,7 @@ class RoutingAgent:
 
             error_message = (
                 f"Error: Agent '{agent_name}' not found or is not online. "
-                f"Available agents are: {', '.join(available_agents)}"
-            )
+                f"Available agents are: {', '.join(available_agents)}")
             logger.error(error_message)
             return [error_message]
 
