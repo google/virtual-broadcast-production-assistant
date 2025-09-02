@@ -42,20 +42,21 @@ resource "google_compute_managed_ssl_certificate" "ssl_certificate" {
   managed {
     domains = local.all_domains
   }
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "google_compute_backend_service" "backend_service" {
+  for_each  = var.environments
   project   = var.project_id
-  name      = "${var.base_resource_name}-backend-service"
+  name      = "${each.value.service_name}-backend-service"
   protocol  = "HTTP"
   port_name = "http"
   load_balancing_scheme = "EXTERNAL_MANAGED"
 
-  dynamic "backend" {
-    for_each = google_compute_region_network_endpoint_group.serverless_neg
-    content {
-      group = backend.value.id
-    }
+  backend {
+    group = google_compute_region_network_endpoint_group.serverless_neg[each.key].id
   }
 
   connection_draining_timeout_sec = 600
@@ -88,7 +89,33 @@ resource "google_compute_region_network_endpoint_group" "serverless_neg" {
 resource "google_compute_url_map" "url_map" {
   project         = var.project_id
   name            = "${var.base_resource_name}-url-map"
-  default_service = google_compute_backend_service.backend_service.id
+  default_service = google_compute_backend_service.backend_service["stable"].id
+
+  host_rule {
+    hosts        = [var.environments["staging"].custom_domain]
+    path_matcher = "staging-matcher"
+  }
+  host_rule {
+    hosts        = [var.environments["stable"].custom_domain]
+    path_matcher = "stable-matcher"
+  }
+
+  path_matcher {
+    name            = "staging-matcher"
+    default_service = google_compute_backend_service.backend_service["staging"].id
+    path_rule {
+      paths   = ["/*"]
+      service = google_compute_backend_service.backend_service["staging"].id
+    }
+  }
+  path_matcher {
+    name            = "stable-matcher"
+    default_service = google_compute_backend_service.backend_service["stable"].id
+    path_rule {
+      paths   = ["/*"]
+      service = google_compute_backend_service.backend_service["stable"].id
+    }
+  }
 }
 
 resource "google_compute_target_https_proxy" "https_proxy" {
@@ -96,6 +123,9 @@ resource "google_compute_target_https_proxy" "https_proxy" {
   name             = "${var.base_resource_name}-https-proxy"
   url_map          = google_compute_url_map.url_map.id
   ssl_certificates = [google_compute_managed_ssl_certificate.ssl_certificate.id]
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "google_compute_global_forwarding_rule" "forwarding_rule" {
@@ -105,6 +135,9 @@ resource "google_compute_global_forwarding_rule" "forwarding_rule" {
   ip_address            = google_compute_global_address.static_ip.address
   port_range            = "443"
   load_balancing_scheme = "EXTERNAL_MANAGED"
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "google_dns_managed_zone" "dns_zone" {
@@ -134,6 +167,7 @@ resource "google_cloud_run_v2_service" "orchestrator_agent" {
   project  = var.project_id
   name     = each.value.service_name
   location = var.region
+  deletion_protection = false
 
   template {
     containers {
@@ -168,6 +202,7 @@ resource "google_cloud_run_v2_service" "orchestrator_agent" {
   }
 
   lifecycle {
+    create_before_destroy = true
     ignore_changes = [
       template[0].containers[0].image,
     ]

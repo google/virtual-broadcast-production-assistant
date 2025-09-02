@@ -2,6 +2,7 @@ resource "google_cloud_run_v2_service" "frontend" {
   project  = var.project_id
   name     = var.service_name
   location = var.region
+  deletion_protection = false
 
   template {
     containers {
@@ -19,6 +20,7 @@ resource "google_cloud_run_v2_service" "frontend" {
   }
 
   lifecycle {
+    create_before_destroy = true
     ignore_changes = [
       template[0].containers[0].image,
     ]
