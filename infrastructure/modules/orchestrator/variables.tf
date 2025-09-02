@@ -10,6 +10,11 @@ variable "region" {
   default     = "europe-west1"
 }
 
+variable "base_resource_name" {
+  description = "The base name to use for shared resources, to preserve existing infrastructure. Should match the original service name."
+  type        = string
+}
+
 variable "environments" {
   description = "A map of environments to deploy, e.g. stable, staging."
   type = map(object({

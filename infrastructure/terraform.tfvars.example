@@ -19,6 +19,11 @@ orchestrator_environments = {
   }
 }
 
+# Base name for shared orchestrator resources.
+# IMPORTANT: To prevent recreation of existing resources (like static IPs), set this
+# to the name of the original orchestrator Cloud Run service.
+orchestrator_base_resource_name = "orchestrator-agent"
+
 # Frontend Container Images
 # The frontend is deployed as a simple Cloud Run service with a public URL.
 frontend_container_image_stable  = "europe-west1-docker.pkg.dev/your-gcp-project-id/orchestrator/frontend-v2:stable"

@@ -17,6 +17,11 @@ variable "orchestrator_environments" {
   }))
 }
 
+variable "orchestrator_base_resource_name" {
+  description = "The original service name of the orchestrator, used to construct resource names and preserve existing infrastructure like static IPs. e.g., 'orchestrator-agent'."
+  type        = string
+}
+
 variable "frontend_container_image_stable" {
   description = "The container image for the stable frontend service."
   type        = string

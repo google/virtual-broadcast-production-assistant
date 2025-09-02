@@ -33,12 +33,12 @@ resource "google_project_service" "apis" {
 
 resource "google_compute_global_address" "static_ip" {
   project = var.project_id
-  name    = "orchestrator-agent-static-ip"
+  name    = "${var.base_resource_name}-static-ip"
 }
 
 resource "google_compute_managed_ssl_certificate" "ssl_certificate" {
   project = var.project_id
-  name    = "orchestrator-agent-ssl-certificate"
+  name    = "${var.base_resource_name}-ssl-certificate"
   managed {
     domains = local.all_domains
   }
@@ -46,7 +46,7 @@ resource "google_compute_managed_ssl_certificate" "ssl_certificate" {
 
 resource "google_compute_backend_service" "backend_service" {
   project   = var.project_id
-  name      = "orchestrator-agent-backend-service"
+  name      = "${var.base_resource_name}-backend-service"
   protocol  = "HTTP"
   port_name = "http"
   load_balancing_scheme = "EXTERNAL_MANAGED"
@@ -87,20 +87,20 @@ resource "google_compute_region_network_endpoint_group" "serverless_neg" {
 
 resource "google_compute_url_map" "url_map" {
   project         = var.project_id
-  name            = "orchestrator-agent-url-map"
+  name            = "${var.base_resource_name}-url-map"
   default_service = google_compute_backend_service.backend_service.id
 }
 
 resource "google_compute_target_https_proxy" "https_proxy" {
   project          = var.project_id
-  name             = "orchestrator-agent-https-proxy"
+  name             = "${var.base_resource_name}-https-proxy"
   url_map          = google_compute_url_map.url_map.id
   ssl_certificates = [google_compute_managed_ssl_certificate.ssl_certificate.id]
 }
 
 resource "google_compute_global_forwarding_rule" "forwarding_rule" {
   project               = var.project_id
-  name                  = "orchestrator-agent-forwarding-rule"
+  name                  = "${var.base_resource_name}-forwarding-rule"
   target                = google_compute_target_https_proxy.https_proxy.id
   ip_address            = google_compute_global_address.static_ip.address
   port_range            = "443"
@@ -213,20 +213,20 @@ resource "google_vpc_access_connector" "connector" {
 
 resource "google_compute_router" "router" {
   project = var.project_id
-  name    = "orchestrator-agent-router"
+  name    = "${var.base_resource_name}-router"
   region  = var.region
   network = google_compute_network.vpc_network.id
 }
 
 resource "google_compute_address" "nat_ip" {
   project = var.project_id
-  name    = "orchestrator-agent-nat-ip"
+  name    = "${var.base_resource_name}-nat-ip"
   region  = var.region
 }
 
 resource "google_compute_router_nat" "nat" {
   project                            = var.project_id
-  name                               = "orchestrator-agent-nat"
+  name                               = "${var.base_resource_name}-nat"
   router                             = google_compute_router.router.name
   region                             = var.region
   source_subnetwork_ip_ranges_to_nat = "LIST_OF_SUBNETWORKS"

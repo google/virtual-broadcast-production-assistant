@@ -9,6 +9,7 @@ module "orchestrator" {
   project_id            = var.project_id
   region                = var.region
   environments          = var.orchestrator_environments
+  base_resource_name    = var.orchestrator_base_resource_name
   dns_zone_name         = var.dns_zone_name
   root_domain           = var.root_domain
   service_account_email = var.orchestrator_service_account_email
