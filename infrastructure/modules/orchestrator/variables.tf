@@ -10,17 +10,18 @@ variable "region" {
   default     = "europe-west1"
 }
 
-variable "service_name" {
-  description = "The name of the Cloud Run service."
+variable "base_resource_name" {
+  description = "The base name to use for shared resources, to preserve existing infrastructure. Should match the original service name."
   type        = string
-  default     = "orchestrator-agent"
 }
 
-variable "custom_domain" {
-  description = "The custom domain for the service."
-  type        = string
-  # e.g. orchestrator.your-domain.com
-  default     = ""
+variable "environments" {
+  description = "A map of environments to deploy, e.g. stable, staging."
+  type = map(object({
+    service_name    = string
+    container_image = string
+    custom_domain   = optional(string)
+  }))
 }
 
 variable "dns_zone_name" {
@@ -34,11 +35,6 @@ variable "root_domain" {
   type        = string
   # e.g. your-domain.com
   default     = ""
-}
-
-variable "container_image" {
-  description = "The container image for the Cloud Run service."
-  type        = string
 }
 
 variable "service_account_email" {
@@ -57,4 +53,3 @@ variable "vpc_subnet_name" {
   type        = string
   default     = "orchestrator-subnet"
 }
-
