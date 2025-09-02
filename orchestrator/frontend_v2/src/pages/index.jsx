@@ -61,10 +61,14 @@ function PagesContent() {
 }
 
 export default function Pages() {
-    const { currentUser, loading } = useAuth();
+    const { currentUser, loading, isUpgrading } = useAuth();
 
     if (loading) {
         return <div>Loading...</div>; // Or a spinner component
+    }
+
+    if (isUpgrading) {
+        return <Auth />;
     }
 
     return (

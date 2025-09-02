@@ -12,9 +12,20 @@ export function AuthProvider({ children }) {
   const [isUpgrading, setIsUpgrading] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is signed in.
+        setCurrentUser(user);
+        setLoading(false);
+      } else {
+        // User is signed out.
+        // Try to sign in anonymously.
+        signInAnonymously(auth).catch((error) => {
+          console.error('Anonymous sign-in failed:', error);
+          // Still set loading to false so the app doesn't hang.
+          setLoading(false);
+        });
+      }
     });
 
     return unsubscribe;
