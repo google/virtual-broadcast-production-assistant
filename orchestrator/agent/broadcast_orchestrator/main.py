@@ -16,7 +16,6 @@ import warnings
 import firebase_admin
 import yaml
 from broadcast_orchestrator.agent import RoutingAgent
-from dotenv import load_dotenv
 from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect, status
 from firebase_admin import auth, firestore, firestore_async
 from google.adk.agents import LiveRequestQueue
@@ -34,9 +33,6 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
-
-# Load Gemini API Key
-load_dotenv()
 
 
 def seed_agent_status():
@@ -108,7 +104,9 @@ async def lifespan(fastapi_app: FastAPI):
         logger.info("Firebase Admin SDK already initialized.")
     seed_agent_status()
     # Create and store the agent instance in the app state
-    fastapi_app.state.routing_agent = RoutingAgent()
+    routing_agent = RoutingAgent()
+    await routing_agent.startup_load_agents()
+    fastapi_app.state.routing_agent = routing_agent
 
     yield
 

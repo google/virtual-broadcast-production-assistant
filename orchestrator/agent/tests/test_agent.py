@@ -247,7 +247,7 @@ async def test_load_agents_from_firestore_with_api_key(
     ]
 
     # Act
-    await agent._load_agents_from_firestore()
+    await agent.startup_load_agents()
 
     # Assert
     mock_get_secret.assert_called_once_with("momentslab-api-key-secret")
@@ -282,7 +282,7 @@ async def test_load_agents_from_firestore_with_api_key(
     ]
 
     # Act
-    await agent._load_agents_from_firestore()
+    await agent.startup_load_agents()
 
     # Assert
     mock_get_secret.assert_called_once_with("momentslab-api-key-secret")

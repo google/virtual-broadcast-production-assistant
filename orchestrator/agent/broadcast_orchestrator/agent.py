@@ -6,7 +6,6 @@ import os
 import logging
 import uuid
 from typing import Any
-from dotenv import load_dotenv
 import httpx
 from a2a.client import A2ACardResolver
 from a2a.client.errors import A2AClientTimeoutError, A2AClientHTTPError
@@ -44,8 +43,6 @@ from .agent_repository import get_all_agents
 from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
 from .firestore_observer import FirestoreAgentObserver
 from .timeline_manager import process_tool_output_for_timeline
-
-load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -165,6 +162,7 @@ class RoutingAgent:
         self.agents: str = ""
         self._agent: Agent | None = None
         self.observer = FirestoreAgentObserver()
+        self.agents_loaded = False
 
     def get_agent(self) -> Agent:
         """Creates and returns the ADK Agent instance if it doesn't exist."""
@@ -205,8 +203,12 @@ class RoutingAgent:
         system_config = AUTOMATION_SYSTEMS.get(rundown_system_preference, {})
         return system_config.get("instructions", DEFAULT_INSTRUCTIONS)
 
-    async def _load_agents_from_firestore(self):
+    async def startup_load_agents(self):
         """Loads agent configurations from Firestore and sets up connections."""
+        if self.agents_loaded:
+            logger.info("Agents already loaded, skipping reload.")
+            return
+
         self.remote_agent_connections = {}
         self.all_rundown_agents = {}
         self.cards = {}
@@ -250,11 +252,14 @@ class RoutingAgent:
             except Exception as e:
                 logger.error("Failed to load agent '%s': %s", agent_id, e)
 
+        self.agents_loaded = True
+
     # pylint: disable=too-many-locals
     async def before_agent_callback(self, callback_context: CallbackContext):
         """A callback executed before the agent is called."""
         print("!!! AGENT.PY: before_agent_callback IS RUNNING !!!")
-        await self._load_agents_from_firestore()
+        if not self.agents_loaded:
+            await self.startup_load_agents()
 
         user_id = callback_context.state.get("user_id")
         logger.info("before_agent_callback called for user: %s", user_id)
