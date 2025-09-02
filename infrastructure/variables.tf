@@ -22,23 +22,32 @@ variable "orchestrator_base_resource_name" {
   type        = string
 }
 
-variable "frontend_container_image_stable" {
-  description = "The container image for the stable frontend service."
+variable "frontend_environments" {
+  description = "A map of environments for the frontend service."
+  type = map(object({
+    service_name    = string
+    container_image = string
+    custom_domain   = optional(string)
+  }))
+}
+
+variable "orchestrator_dns_zone_name" {
+  description = "The name of the Cloud DNS managed zone for the orchestrator."
   type        = string
 }
 
-variable "frontend_container_image_staging" {
-  description = "The container image for the staging frontend service."
+variable "orchestrator_root_domain" {
+  description = "The root domain for the DNS zone for the orchestrator."
   type        = string
 }
 
-variable "dns_zone_name" {
-  description = "The name of the Cloud DNS managed zone."
+variable "frontend_dns_zone_name" {
+  description = "The name of the Cloud DNS managed zone for the frontend."
   type        = string
 }
 
-variable "root_domain" {
-  description = "The root domain for the DNS zone."
+variable "frontend_root_domain" {
+  description = "The root domain for the DNS zone for the frontend."
   type        = string
 }
 
@@ -47,3 +56,7 @@ variable "orchestrator_service_account_email" {
   type        = string
 }
 
+variable "orchestrator_build_runner_service_account_email" {
+  description = "The email of the service account for the orchestrator Cloud Build runner."
+  type        = string
+}

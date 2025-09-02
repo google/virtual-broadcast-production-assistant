@@ -33,6 +33,10 @@ frontend_container_image_staging = "europe-west1-docker.pkg.dev/your-gcp-project
 # This service account is used by all orchestrator environments.
 orchestrator_service_account_email = "orchestrator-sa@your-gcp-project-id.iam.gserviceaccount.com"
 
+# Service Account for Cloud Build
+# This service account is used by Cloud Build to run the deployment pipeline.
+orchestrator_build_runner_service_account_email = "cloud-build-runner@your-gcp-project-id.iam.gserviceaccount.com"
+
 # DNS Configuration
 # The root domain and managed zone for creating DNS 'A' records for the custom domains.
 dns_zone_name = "your-domain-com"
