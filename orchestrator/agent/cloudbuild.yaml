@@ -32,7 +32,7 @@ steps:
       - 'create'
       - 'release-${SHORT_SHA}'
       - '--delivery-pipeline'
-      - '${_SERVICE_NAME}-pipeline'
+      - 'orchestrator-agent-delivery'
       - '--region'
       - '${_REGION}'
       - '--source'
