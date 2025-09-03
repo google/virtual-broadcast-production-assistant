@@ -2,12 +2,14 @@
 # It is used by Google Cloud Build to automatically build, test, and deploy the application.
 
 steps:
-  # 0. Download environment file from GCS
+  # 0. Download environment files from GCS
   - name: 'gcr.io/cloud-builders/gsutil'
     args:
       - 'cp'
-      - 'gs://${_GCS_BUCKET}/.env.${_APP_ENV}'
-      - '.env'
+      - 'gs://${_GCS_BUCKET}/.env.stable'
+      - '.'
+      - 'gs://${_GCS_BUCKET}/.env.staging'
+      - '.'
     dir: 'orchestrator/frontend_v2'
 
   # 1. Install npm dependencies
