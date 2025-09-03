@@ -64,17 +64,18 @@ steps:
   # 7. Create a Cloud Deploy release
   # This step creates a new release in the 'frontend-v2-delivery' pipeline.
   # This will trigger a deployment to the first stage of the pipeline (staging).
-  - name: 'gcr.io/google-appengine/exec-wrapper'
+  - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Create Cloud Deploy release'
-    entrypoint: '/bin/bash'
+    entrypoint: 'gcloud'
     args:
-    - -c
-    - |
-      gcloud deploy releases create "release-$SHORT_SHA" \
-        --delivery-pipeline="frontend-v2-delivery" \
-        --region="${_REGION}" \
-        --source="." \
-        --images="frontend-v2-image=${_REGION}-docker.pkg.dev/$PROJECT_ID/frontend-v2/app:${COMMIT_SHA}"
+      - 'deploy'
+      - 'releases'
+      - 'create'
+      - 'release-$SHORT_SHA'
+      - '--delivery-pipeline=frontend-v2-delivery'
+      - '--region=${_REGION}'
+      - '--source=.'
+      - '--images=frontend-v2-image=${_REGION}-docker.pkg.dev/$PROJECT_ID/frontend-v2/app:${COMMIT_SHA}'
     dir: 'orchestrator/frontend_v2'
 
 

@@ -1,0 +1,10 @@
+resources:
+- ../../base
+patches:
+- patch: |-
+    - op: replace
+      path: /metadata/name
+      value: frontend-v2-staging
+  target:
+    kind: Service
+    name: frontend-v2
