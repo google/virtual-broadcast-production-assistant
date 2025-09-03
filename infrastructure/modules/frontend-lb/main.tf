@@ -161,6 +161,10 @@ resource "google_cloud_run_v2_service" "frontend" {
       ports {
         container_port = 8080
       }
+      env {
+        name  = "APP_ENV"
+        value = each.key
+      }
       resources {
         limits = {
           cpu    = "1"

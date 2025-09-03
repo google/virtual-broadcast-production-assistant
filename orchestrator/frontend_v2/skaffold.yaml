@@ -1,25 +1,12 @@
 apiVersion: skaffold/v4beta1
 kind: Config
-manifests:
-  rawYaml:
-  - service.yaml
-deploy:
-  cloudrun: {}
+metadata:
+  name: frontend-v2
 build:
   artifacts:
-  - image: frontend-v2-image
-    docker:
-      dockerfile: Dockerfile
-profiles:
-  - name: stable
-    deploy:
-      cloudrun:
-        env:
-        - name: APP_ENV
-          value: "stable"
-  - name: staging
-    deploy:
-      cloudrun:
-        env:
-        - name: APP_ENV
-          value: "staging"
+    - image: ibc-accelerator-frontend-v2
+      docker:
+        dockerfile: Dockerfile
+manifests:
+  rawYaml:
+    - cloud-run.yaml
