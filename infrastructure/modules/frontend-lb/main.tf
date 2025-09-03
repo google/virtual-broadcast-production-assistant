@@ -167,10 +167,6 @@ resource "google_cloud_run_v2_service" "frontend" {
           memory = "1Gi"
         }
       }
-      env {
-        name  = "VITE_WEBSOCKET_URL"
-        value = each.value.websocket_url
-      }
     }
   }
 

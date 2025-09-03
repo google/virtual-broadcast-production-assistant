@@ -1,14 +1,4 @@
 let socket = null;
-let config = null;
-
-const fetchConfig = async () => {
-  if (config) {
-    return config;
-  }
-  const response = await fetch('/config.json');
-  config = await response.json();
-  return config;
-};
 
 export const connectSocket = async (uid, getToken) => {
   if (socket && socket.readyState === WebSocket.OPEN) {
@@ -33,9 +23,7 @@ export const connectSocket = async (uid, getToken) => {
     });
   }
 
-  const appConfig = await fetchConfig();
-  const final_ws_base_url = appConfig.VITE_WEBSOCKET_URL;
-
+  const final_ws_base_url = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:8000';
   const token = await getToken();
   const ws_url = `${final_ws_base_url}/ws/${uid}?is_audio=false`;
 
