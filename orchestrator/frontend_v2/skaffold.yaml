@@ -12,22 +12,20 @@ manifests:
     - service.yaml
 profiles:
   - name: staging
+    manifests:
+      rawYaml:
+      - service.staging.yaml
     patches:
       - op: replace
         path: /metadata/name
         value: frontend-v2-staging
-      - op: add
-        path: /spec/template/spec/containers/0/env/0
-        value:
-          name: APP_ENV
-          value: "staging"
   - name: stable
+    manifests:
+      rawYaml:
+      - service.stable.yaml
     patches:
       - op: replace
         path: /metadata/name
         value: frontend-v2-stable
-      - op: add
-        path: /spec/template/spec/containers/0/env/0
-        value:
-          name: APP_ENV
-          value: "stable"
+deploy:
+  cloudrun: {}
