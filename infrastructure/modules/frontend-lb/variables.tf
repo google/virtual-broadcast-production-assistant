@@ -19,6 +19,7 @@ variable "environments" {
     service_name    = string
     container_image = string
     custom_domain   = optional(string)
+    websocket_url   = optional(string)
   }))
 }
 

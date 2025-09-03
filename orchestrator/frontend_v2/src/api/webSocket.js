@@ -23,7 +23,16 @@ export const connectSocket = async (uid, getToken) => {
     });
   }
 
-  const final_ws_base_url = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:8000';
+  let final_ws_base_url;
+
+  if (import.meta.env.PROD) {
+    // In production (Docker container), use a placeholder that will be replaced by the entrypoint script.
+    final_ws_base_url = '__VITE_WEBSOCKET_URL__';
+  } else {
+    // In development, use the environment variable from .env.local.
+    final_ws_base_url = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:8000';
+  }
+
   const token = await getToken();
   const ws_url = `${final_ws_base_url}/ws/${uid}?is_audio=false`;
 

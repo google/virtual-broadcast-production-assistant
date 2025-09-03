@@ -189,7 +189,7 @@ resource "google_cloud_run_v2_service" "orchestrator_agent" {
     }
     session_affinity    = true
     timeout             = "3600s"
-    service_account     = var.build_runner_service_account_email
+    service_account     = var.service_account_email
     vpc_access {
       connector = google_vpc_access_connector.connector.id
       egress    = "ALL_TRAFFIC"

@@ -1,3 +1,18 @@
+resource "google_project_service" "artifactregistry" {
+  project            = var.project_id
+  service            = "artifactregistry.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_artifact_registry_repository" "frontend_repo" {
+  project       = var.project_id
+  location      = var.region
+  repository_id = "frontend-v2"
+  description   = "Docker repository for the frontend-v2 service"
+  format        = "DOCKER"
+  depends_on    = [google_project_service.artifactregistry]
+}
+
 resource "google_clouddeploy_target" "frontend_targets" {
   for_each = var.frontend_environments
   project  = var.project_id
@@ -22,11 +37,11 @@ resource "google_clouddeploy_delivery_pipeline" "frontend_pipeline" {
   serial_pipeline {
     stages {
       target_id = google_clouddeploy_target.frontend_targets["staging"].name
-      profiles  = []
+      profiles  = ["staging"]
     }
     stages {
       target_id = google_clouddeploy_target.frontend_targets["stable"].name
-      profiles  = []
+      profiles  = ["stable"]
     }
   }
 
