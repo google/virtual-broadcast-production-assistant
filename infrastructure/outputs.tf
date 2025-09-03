@@ -12,3 +12,8 @@ output "orchestrator_nat_ip_address" {
   description = "The static outbound IP address of the orchestrator Cloud Run service."
   value       = module.orchestrator.nat_ip_address
 }
+
+output "frontend_lb_environments" {
+  description = "The environments for the frontend load balancer."
+  value       = module.frontend-lb.environments
+}
