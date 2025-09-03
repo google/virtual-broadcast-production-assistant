@@ -64,7 +64,6 @@ resource "google_compute_backend_service" "orchestrator_backend_service" {
 
   connection_draining_timeout_sec = 300
   enable_cdn = false
-  timeout_sec = 86400
 }
 
 resource "random_id" "neg_suffix" {
