@@ -25,15 +25,19 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 const navigationItems = [
-{ title: "Live", url: createPageUrl("Live"), icon: Radio, description: "Control Room" },
-{ title: "Chat", url: createPageUrl("Console"), icon: MessageSquare, description: "Full Chat" },
-{ title: "Agents", url: createPageUrl("Agents"), icon: Users, description: "AI Agents" },
-{ title: "Tasks", url: createPageUrl("Tasks"), icon: ListChecks, description: "Task History" },
-{ title: "Schedule", url: createPageUrl("Schedule"), icon: CalendarDays, description: "Rundown" },
-{ title: "Media", url: createPageUrl("Media"), icon: Play, description: "Preview" },
-{ title: "Status", url: createPageUrl("Status"), icon: Wifi, description: "System" },
-{ title: "Contacts", url: createPageUrl("Contacts"), icon: BookUser, description: "Teams" },
-{ title: "Settings", url: createPageUrl("Settings"), icon: Settings, description: "Config" }];
+  { title: "Live", url: createPageUrl("Live"), icon: Radio, description: "Control Room" },
+  // { title: "Chat", url: createPageUrl("Console"), icon: MessageSquare, description: "Full Chat" },
+  // { title: "Agents", url: createPageUrl("Agents"), icon: Users, description: "AI Agents" },
+  // { title: "Tasks", url: createPageUrl("Tasks"), icon: ListChecks, description: "Task History" },
+  // { title: "Schedule", url: createPageUrl("Schedule"), icon: CalendarDays, description: "Rundown" },
+  // { title: "Media", url: createPageUrl("Media"), icon: Play, description: "Preview" },
+  // { title: "Status", url: createPageUrl("Status"), icon: Wifi, description: "System" },
+  // { title: "Contacts", url: createPageUrl("Contacts"), icon: BookUser, description: "Teams" },
+  { title: "Settings", url: createPageUrl("Settings"), icon: Settings, description: "Config" }
+];
+
+const visibleNavItems = navigationItems.filter(item => item.title !== 'Settings');
+const settingsNavItem = navigationItems.find(item => item.title === 'Settings');
 
 
 export default function Layout({ children }) {
@@ -67,7 +71,7 @@ export default function Layout({ children }) {
 
             {/* Desktop Navigation - Hidden on screens < 1044px */}
             <nav className="hidden 2xl:flex items-center gap-1 ml-8">
-              {navigationItems.map((item) =>
+              {visibleNavItems.map((item) =>
               <Link
                 key={item.title}
                 to={item.url}
@@ -95,6 +99,20 @@ export default function Layout({ children }) {
               />
               <Label htmlFor="rundown-system-toggle" className={rundownSystem === 'sofie' ? 'text-green-400 font-bold' : 'text-gray-400'}>SOFIE</Label>
             </div>
+
+            {settingsNavItem &&
+              <Link
+                key={settingsNavItem.title}
+                to={settingsNavItem.url}
+                className={`hidden 2xl:flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 group ${
+                location.pathname === settingsNavItem.url ?
+                "bg-[#FF2D86]/20 text-[#FF2D86]" :
+                "text-[#A6A0AA] hover:text-[#E6E1E5] hover:bg-white/5"}`
+                }>
+                  <settingsNavItem.icon className="w-4 h-4" />
+                  <span className="text-sm font-medium whitespace-nowrap">{settingsNavItem.title}</span>
+                </Link>
+            }
 
             {currentUser && currentUser.isAnonymous && (
               <Button
