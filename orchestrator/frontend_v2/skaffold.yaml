@@ -17,7 +17,7 @@ profiles:
         path: /metadata/name
         value: frontend-v2-staging
       - op: add
-        path: /spec/template/spec/containers/0/env/-
+        path: /spec/template/spec/containers/0/env/0
         value:
           name: APP_ENV
           value: "staging"
@@ -27,7 +27,7 @@ profiles:
         path: /metadata/name
         value: frontend-v2-stable
       - op: add
-        path: /spec/template/spec/containers/0/env/-
+        path: /spec/template/spec/containers/0/env/0
         value:
           name: APP_ENV
           value: "stable"
