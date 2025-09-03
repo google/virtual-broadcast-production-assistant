@@ -1,7 +1,7 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: frontend-v2
+  name: frontend-v2-stable
   annotations:
     run.googleapis.com/ingress: all
     run.googleapis.com/invoker-iam-disabled: 'true'

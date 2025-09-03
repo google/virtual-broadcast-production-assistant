@@ -1,7 +1,5 @@
 apiVersion: skaffold/v4beta7
 kind: Config
-metadata:
-  name: frontend-v2
 build:
   artifacts:
     - image: frontend-v2-image
@@ -15,17 +13,9 @@ profiles:
     manifests:
       rawYaml:
       - service.staging.yaml
-    patches:
-      - op: replace
-        path: /metadata/name
-        value: frontend-v2-staging
   - name: stable
     manifests:
       rawYaml:
       - service.stable.yaml
-    patches:
-      - op: replace
-        path: /metadata/name
-        value: frontend-v2-stable
 deploy:
   cloudrun: {}
