@@ -10,3 +10,6 @@ build:
   - image: frontend-v2-image
     docker:
       dockerfile: Dockerfile
+profiles:
+  - name: stable
+  - name: staging
