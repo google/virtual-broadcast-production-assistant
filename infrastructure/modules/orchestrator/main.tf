@@ -306,11 +306,11 @@ resource "google_clouddeploy_delivery_pipeline" "pipeline" {
   serial_pipeline {
     stages {
       target_id = google_clouddeploy_target.targets["staging"].name
-      profiles  = []
+      profiles  = ["staging"]
     }
     stages {
       target_id = google_clouddeploy_target.targets["stable"].name
-      profiles  = []
+      profiles  = ["stable"]
     }
   }
 
