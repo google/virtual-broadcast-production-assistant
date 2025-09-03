@@ -6,7 +6,19 @@ build:
     docker:
       dockerfile: Dockerfile
 manifests:
-  rawYaml:
-  - service.yaml
+  kustomize:
+    paths:
+      - base
 deploy:
   cloudrun: {}
+profiles:
+  - name: stable
+    manifests:
+      kustomize:
+        paths:
+          - overlays/stable
+  - name: staging
+    manifests:
+      kustomize:
+        paths:
+          - overlays/staging

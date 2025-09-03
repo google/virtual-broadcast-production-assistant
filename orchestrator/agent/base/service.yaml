@@ -1,6 +1,7 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
+  name: orchestrator-agent
   annotations:
     run.googleapis.com/ingress: all
     run.googleapis.com/invoker-iam-disabled: 'true'
@@ -11,11 +12,11 @@ spec:
         run.googleapis.com/sessionAffinity: "true"
         autoscaling.knative.dev/minScale: "1"
     spec:
+      timeoutSeconds: 3600
       containers:
       - image: orchestrator-agent
         ports:
         - containerPort: 8080
-        timeoutSeconds: 3600
         resources:
           limits:
             cpu: "2"
