@@ -167,8 +167,10 @@ resource "google_cloud_run_v2_service" "frontend" {
           memory = "1Gi"
         }
       }
-      command = ["/bin/sh"]
-      args    = ["-c", "export VITE_WEBSOCKET_URL=${each.value.websocket_url} && /entrypoint.sh"]
+      env {
+        name  = "VITE_WEBSOCKET_URL"
+        value = each.value.websocket_url
+      }
     }
   }
 

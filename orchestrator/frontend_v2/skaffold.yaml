@@ -1,22 +1,10 @@
 apiVersion: skaffold/v4beta1
 kind: Config
 manifests:
-  kustomize:
-    paths:
-      - base
+  rawYaml:
+  - service.yaml
 deploy:
   cloudrun: {}
-profiles:
-- name: stable
-  manifests:
-    kustomize:
-      paths:
-        - overlays/stable
-- name: staging
-  manifests:
-    kustomize:
-      paths:
-        - overlays/staging
 build:
   artifacts:
   - image: frontend-v2-image
