@@ -4,9 +4,30 @@ metadata:
   name: frontend-v2
 build:
   artifacts:
-    - image: ibc-accelerator-frontend-v2
+    - image: frontend-v2-image
       docker:
         dockerfile: Dockerfile
 manifests:
   rawYaml:
-    - cloud-run.yaml
+    - service.yaml
+profiles:
+  - name: staging
+    patches:
+      - op: replace
+        path: /metadata/name
+        value: frontend-v2-staging
+      - op: add
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: APP_ENV
+            value: "staging"
+  - name: stable
+    patches:
+      - op: replace
+        path: /metadata/name
+        value: frontend-v2-stable
+      - op: add
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: APP_ENV
+            value: "stable"
