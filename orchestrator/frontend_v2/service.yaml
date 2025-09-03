@@ -10,3 +10,7 @@ spec:
         image: frontend-v2-image
         ports:
         - containerPort: 8080
+        resources:
+          limits:
+            cpu: "1"
+            memory: "1Gi"
