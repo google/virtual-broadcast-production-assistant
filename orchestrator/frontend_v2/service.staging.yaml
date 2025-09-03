@@ -1,7 +1,7 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: frontend-v2
+  name: frontend-v2-staging
   annotations:
     run.googleapis.com/ingress: all
     run.googleapis.com/invoker-iam-disabled: 'true'
@@ -16,4 +16,6 @@ spec:
           limits:
             cpu: "1"
             memory: "1Gi"
-        env: []
+        env:
+          - name: APP_ENV
+            value: "staging"
