@@ -17,3 +17,8 @@ output "frontend_lb_environments" {
   description = "The environments for the frontend load balancer."
   value       = module.frontend-lb.environments
 }
+
+output "frontend_environments_with_websocket_debug" {
+  description = "Debug output for frontend_environments_with_websocket."
+  value       = local.frontend_environments_with_websocket
+}

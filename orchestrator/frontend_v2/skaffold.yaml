@@ -10,3 +10,16 @@ build:
   - image: frontend-v2-image
     docker:
       dockerfile: Dockerfile
+profiles:
+  - name: stable
+    deploy:
+      cloudrun:
+        env:
+        - name: APP_ENV
+          value: "stable"
+  - name: staging
+    deploy:
+      cloudrun:
+        env:
+        - name: APP_ENV
+          value: "staging"
