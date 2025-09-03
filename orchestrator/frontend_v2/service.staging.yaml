@@ -2,12 +2,14 @@ apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
   name: frontend-v2
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/invoker-iam-disabled: 'true'
 spec:
   template:
     spec:
       containers:
-      - name: app
-        image: frontend-v2-image
+      - image: frontend-v2-image
         ports:
         - containerPort: 8080
         resources:
