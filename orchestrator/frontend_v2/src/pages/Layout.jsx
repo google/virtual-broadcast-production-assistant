@@ -7,15 +7,9 @@ import { useRundown } from "@/contexts/useRundown";
 import { createPageUrl } from "@/utils";
 import {
   Radio,
-  Users,
-  MessageSquare,
-  Play,
-  ListChecks,
   Settings,
   Wifi,
   WifiOff,
-  CalendarDays,
-  BookUser,
   Menu,
   X
 } from "lucide-react";
