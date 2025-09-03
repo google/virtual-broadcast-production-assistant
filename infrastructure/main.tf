@@ -3,14 +3,6 @@ provider "google" {
   region  = var.region
 }
 
-locals {
-  frontend_environments_with_websocket = {
-    for key, env in var.frontend_environments : key => merge(env, {
-      websocket_url = "wss://${var.orchestrator_environments[key].custom_domain}"
-    })
-  }
-}
-
 module "orchestrator" {
   source = "./modules/orchestrator"
 
@@ -29,7 +21,7 @@ module "frontend-lb" {
 
   project_id         = var.project_id
   region             = var.region
-  environments       = local.frontend_environments_with_websocket
+  environments       = var.frontend_environments
   base_resource_name = "frontend-v2"
   dns_zone_name      = var.frontend_dns_zone_name
   root_domain        = var.frontend_root_domain

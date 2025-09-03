@@ -6,6 +6,7 @@ spec:
   template:
     spec:
       containers:
-      - image: frontend-v2-image
+      - name: app
+        image: frontend-v2-image
         ports:
         - containerPort: 8080

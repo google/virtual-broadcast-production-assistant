@@ -1,4 +1,14 @@
 let socket = null;
+let config = null;
+
+const fetchConfig = async () => {
+  if (config) {
+    return config;
+  }
+  const response = await fetch('/config.json');
+  config = await response.json();
+  return config;
+};
 
 export const connectSocket = async (uid, getToken) => {
   if (socket && socket.readyState === WebSocket.OPEN) {
@@ -23,15 +33,8 @@ export const connectSocket = async (uid, getToken) => {
     });
   }
 
-  let final_ws_base_url;
-
-  if (import.meta.env.PROD) {
-    // In production (Docker container), use a placeholder that will be replaced by the entrypoint script.
-    final_ws_base_url = '__VITE_WEBSOCKET_URL__';
-  } else {
-    // In development, use the environment variable from .env.local.
-    final_ws_base_url = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:8000';
-  }
+  const appConfig = await fetchConfig();
+  const final_ws_base_url = appConfig.VITE_WEBSOCKET_URL;
 
   const token = await getToken();
   const ws_url = `${final_ws_base_url}/ws/${uid}?is_audio=false`;
