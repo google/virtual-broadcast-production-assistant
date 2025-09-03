@@ -86,6 +86,18 @@ export default function Console() {
         playAudio(message.data);
       }
 
+      if (message.mime_type === 'user_transcription') {
+        const newMessage = {
+          id: `user-message-${Date.now()}`,
+          role: 'user',
+          text: message.data,
+          timestamp: Date.now(),
+          partial: false,
+        };
+        setMessages((prevMessages) => [...prevMessages, newMessage]);
+        return;
+      }
+
       if (message.mime_type === 'text/plain') {
         setMessages((prevMessages) => {
           const existingMsg = prevMessages.find(msg => msg.id === currentMessageIdRef.current);

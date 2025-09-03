@@ -174,6 +174,22 @@ async def agent_to_client_messaging(websocket: WebSocket, live_events,
                 )
                 continue
 
+            if event.content and event.content.role == "user":
+                user_text = event.content.parts[0].text
+                message = {"mime_type": "user_transcription", "data": user_text}
+                await websocket.send_text(json.dumps(message))
+                logger.info("[AGENT TO CLIENT]: user_transcription: %s", user_text)
+
+                # Log the user's message to Firestore.
+                event_data = {
+                    "type": "USER_MESSAGE",
+                    "timestamp": firestore.SERVER_TIMESTAMP,
+                    "text": user_text,
+                }
+                await (db.collection("chat_sessions").document(
+                    session_id).collection("events").add(event_data))
+                continue
+
             if event.turn_complete or event.interrupted:
                 if full_response:
                     event_data = {
