@@ -28,6 +28,7 @@ from a2a.types import (
 from firebase_admin import firestore_async
 from google.cloud.exceptions import GoogleCloudError
 from google.adk import Agent
+from google.adk.models import Gemini
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools.tool_context import ToolContext
@@ -174,8 +175,13 @@ class RoutingAgent:
 
         initial_instructions = load_system_instructions()
 
-        self._agent = Agent(
+        gemini_model = Gemini(
             model="gemini-live-2.5-flash-preview",
+            request_options={"timeout": 120.0},
+        )
+
+        self._agent = Agent(
+            model=gemini_model,
             name="Routing_agent",
             instruction=initial_instructions,
             before_agent_callback=self.before_agent_callback,
