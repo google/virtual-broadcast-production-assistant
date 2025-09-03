@@ -1,4 +1,10 @@
-bases:
+resources:
 - ../../base
-patchesStrategicMerge:
-- name-patch.yaml
+patches:
+- patch: |-
+    - op: replace
+      path: /metadata/name
+      value: orchestrator-agent-staging
+  target:
+    kind: Service
+    name: orchestrator-agent
