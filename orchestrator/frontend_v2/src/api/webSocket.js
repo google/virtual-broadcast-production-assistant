@@ -23,7 +23,15 @@ export const connectSocket = async (uid, getToken) => {
     });
   }
 
-  const final_ws_base_url = '__VITE_WEBSOCKET_URL__';
+  let final_ws_base_url;
+  if (import.meta.env.DEV) {
+    // In development, use the value from .env.local
+    final_ws_base_url = import.meta.env.VITE_WEBSOCKET_URL;
+  } else {
+    // In production, use a relative path
+    final_ws_base_url = '';
+  }
+
   const token = await getToken();
   const ws_url = `${final_ws_base_url}/ws/${uid}?is_audio=false`;
 

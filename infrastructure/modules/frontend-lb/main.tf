@@ -50,6 +50,23 @@ resource "google_compute_backend_service" "backend_service" {
   session_affinity                = "CLIENT_IP"
 }
 
+resource "google_compute_backend_service" "orchestrator_backend_service" {
+  for_each  = var.environments
+  project   = var.project_id
+  name      = "orchestrator-agent-backend-service-${each.key}"
+  protocol  = "HTTP"
+  port_name = "http"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+
+  backend {
+    group = google_compute_region_network_endpoint_group.orchestrator_neg[each.key].id
+  }
+
+  connection_draining_timeout_sec = 300
+  enable_cdn = false
+  timeout_sec = 86400
+}
+
 resource "random_id" "neg_suffix" {
   for_each = var.environments
   byte_length = 4
@@ -73,6 +90,17 @@ resource "google_compute_region_network_endpoint_group" "serverless_neg" {
   }
 }
 
+resource "google_compute_region_network_endpoint_group" "orchestrator_neg" {
+  for_each              = var.environments
+  project               = var.project_id
+  name                  = "orchestrator-agent-neg-${each.key}"
+  region                = var.region
+  network_endpoint_type = "SERVERLESS"
+  cloud_run {
+    service = "orchestrator-agent-${each.key}"
+  }
+}
+
 resource "google_compute_url_map" "url_map" {
   project         = var.project_id
   name            = "${var.base_resource_name}-url-map"
@@ -91,6 +119,10 @@ resource "google_compute_url_map" "url_map" {
     name            = "staging-matcher"
     default_service = google_compute_backend_service.backend_service["staging"].id
     path_rule {
+      paths   = ["/ws/*"]
+      service = google_compute_backend_service.orchestrator_backend_service["staging"].id
+    }
+    path_rule {
       paths   = ["/*"]
       service = google_compute_backend_service.backend_service["staging"].id
     }
@@ -98,6 +130,10 @@ resource "google_compute_url_map" "url_map" {
   path_matcher {
     name            = "stable-matcher"
     default_service = google_compute_backend_service.backend_service["stable"].id
+    path_rule {
+      paths   = ["/ws/*"]
+      service = google_compute_backend_service.orchestrator_backend_service["stable"].id
+    }
     path_rule {
       paths   = ["/*"]
       service = google_compute_backend_service.backend_service["stable"].id
