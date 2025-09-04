@@ -32,7 +32,7 @@ google-cloud-speech==2.33.0
 google-cloud-storage==2.19.0
 google-cloud-trace==1.16.2
 google-crc32c==1.7.1
-google-genai==1.28.0
+google-generativeai
 google-resumable-media==2.7.2
 googleapis-common-protos==1.70.0
 graphviz==0.21
