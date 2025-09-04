@@ -37,9 +37,9 @@ export default function IssueCard({ issue }) {
   const categoryColorClass = categoryColors[issue.category] || categoryColors.CHECKS;
   const severityColor = severityColors[issue.severity] || severityColors.info;
   const actions = actionLabels[issue.category] || actionLabels.CHECKS;
-  console.log(issue);
+
   const handleCorrect = async () => {
-    const prompt = `Please correct the spelling of '${issue.details.original_word}' to '${issue.details.suggested_correction}' in the content identified by UID ${issue.details.context_uid}.`;
+    const prompt = `Please correct the spelling of '${issue.details.original_word}' to '${issue.details.suggested_correction}'.`;
     sendMessage({
       mime_type: 'text/plain',
       data: prompt,

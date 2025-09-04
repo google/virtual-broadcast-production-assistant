@@ -1,7 +1,4 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useAuth } from '@/contexts/useAuth';
 import IssueCard from "./IssueCard";
 
 // Time slots are defined by their boundaries in seconds relative to the current time.
@@ -13,40 +10,19 @@ const timeSlots = [
   { label: "5 minutes ago", min: -900, max: -300 }, // 5 to 15 minutes ago
 ];
 
-export default function TimelineView() {
-  const [issues, setIssues] = useState([]);
+export default function TimelineView({ issues }) {
   const [now, setNow] = useState(new Date());
-  const { currentUser } = useAuth();
 
   useEffect(() => {
-    if (!currentUser) return;
-
-    const q = query(
-      collection(db, "timeline_events"),
-      where("user_id", "==", currentUser.uid),
-      where("session_id", "==", currentUser.uid),
-      where("status", "in", ["pending", "working", "corrected", "default"]),
-      orderBy("timestamp", "desc")
-    );
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const fetchedIssues = [];
-      querySnapshot.forEach((doc) => {
-        fetchedIssues.push({ id: doc.id, ...doc.data() });
-      });
-      setIssues(fetchedIssues);
-    });
-
     const interval = setInterval(() => {
         setNow(new Date());
     }, 5000); // Update every 5 seconds
 
     // Cleanup subscription on unmount
     return () => {
-        unsubscribe();
         clearInterval(interval);
     }
-  }, [currentUser]);
+  }, []);
 
   const getIssuesForTimeSlot = (slot) => {
     return issues.filter(issue => {
