@@ -45,7 +45,7 @@ export default function IssueCard({ issue }) {
       data: prompt,
     });
     const issueRef = doc(db, "timeline_events", issue.id);
-    await updateDoc(issueRef, { status: "working" });
+    await updateDoc(issueRef, { status: "corrected" });
     toast.info("Sent correction request to the agent.");
   };
 
