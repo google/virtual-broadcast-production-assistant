@@ -6,7 +6,7 @@ import {
   Send,
   ChevronDown,
 } from "lucide-react";
-import { collection, query, where, orderBy, getDocs, deleteDoc } from "firebase/firestore";
+import { collection, query, where, orderBy, getDocs, deleteDoc, onSnapshot, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 
@@ -26,6 +26,8 @@ export default function Live() {
   const [micEnabled, setMicEnabled] = useState(false);
   const [currentMessage, setCurrentMessage] = useState("");
   const [messages, setMessages] = useState([]);
+  const [issues, setIssues] = useState([]);
+  const [uidMap, setUidMap] = useState(new Map());
   const [isAgentReplying, setIsAgentReplying] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
   const { currentUser } = useAuth();
@@ -63,6 +65,36 @@ export default function Live() {
     reconnect();
   };
 
+  // Effect for fetching timeline issues
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const q = query(
+      collection(db, "timeline_events"),
+      where("user_id", "==", currentUser.uid),
+      where("session_id", "==", currentUser.uid),
+      where("status", "in", ["pending", "working", "corrected", "default"]),
+      orderBy("timestamp", "desc")
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const fetchedIssues = [];
+      const newUidMap = new Map();
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        fetchedIssues.push({ id: doc.id, ...data });
+        if (data.details && data.details.context_uid) {
+          newUidMap.set(data.details.context_uid, doc.id);
+        }
+      });
+      setIssues(fetchedIssues);
+      setUidMap(newUidMap);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  // Effect for fetching chat history
   useEffect(() => {
     if (!currentUser) return;
 
@@ -93,6 +125,7 @@ export default function Live() {
     fetchHistory();
   }, [currentUser]);
 
+  // Effect for handling WebSocket messages
   useEffect(() => {
     if (!currentUser || historyLoading) return;
 
@@ -118,6 +151,31 @@ export default function Live() {
       }
 
       if (message.mime_type === 'text/plain') {
+        // Check for correction confirmation message
+        const correctionRegex = /corrected the spelling of '.*?' to '.*?' for the item ".* \(UID: (.*?)\)"/;
+        const match = message.data.match(correctionRegex);
+
+        if (match) {
+          const contextUid = match[1];
+          const firestoreId = uidMap.get(contextUid);
+
+          if (firestoreId) {
+            // Update the status of the issue in the local state
+            setIssues(prevIssues =>
+              prevIssues.map(issue =>
+                issue.id === firestoreId ? { ...issue, status: 'corrected' } : issue
+              )
+            );
+
+            // Also update the status in Firestore for persistence
+            const issueRef = doc(db, "timeline_events", firestoreId);
+            updateDoc(issueRef, { status: "corrected" });
+
+            // We've handled this message, so we don't need to display it in the chat
+            return;
+          }
+        }
+
         setIsAgentReplying(false);
         setMessages((prevMessages) => {
           const existingMsg = prevMessages.find(msg => msg.id === currentMessageIdRef.current);
@@ -181,7 +239,7 @@ export default function Live() {
       cleanupOpen();
       cleanupClose();
     };
-  }, [currentUser, historyLoading, rundownSystem, addEventListener]);
+  }, [currentUser, historyLoading, rundownSystem, addEventListener, uidMap]);
 
   const handleSendMessage = () => {
     if (!currentMessage.trim()) return;
@@ -281,7 +339,7 @@ export default function Live() {
 
       {/* Center Panel - Timeline - Responsive */}
       <div className="flex-1 overflow-auto min-h-[400px] lg:min-h-0">
-        <TimelineView />
+        <TimelineView issues={issues} />
       </div>
 
       {/* Right Panel - Telemetry & Agents - Hidden on mobile, collapsible on tablet */}

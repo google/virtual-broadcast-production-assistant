@@ -12,6 +12,7 @@ import google.auth
 from google import genai
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 load_dotenv()
 
@@ -33,8 +34,6 @@ try:
         gemini_client = genai.Client(api_key=api_key)
         logging.info("Gemini client configured with GEMINI_API_KEY.")
     else:
-        # If GEMINI_API_KEY is not set, google-genai will look for GOOGLE_API_KEY
-        # or use Application Default Credentials.
         gemini_client = genai.Client(vertexai=True,
                                      location=location,
                                      project=project_id)
@@ -48,13 +47,6 @@ except Exception as e:
 async def update_timeline_event_status(event_id: str, status: str) -> str:
     """
     Updates the status of a timeline event in Firestore.
-
-    Args:
-        event_id: The ID of the event to update.
-        status: The new status (e.g., 'corrected', 'acknowledged').
-
-    Returns:
-        A string indicating the result of the operation.
     """
     logger.info("Updating timeline event %s to status %s", event_id, status)
     try:
@@ -70,51 +62,45 @@ async def update_timeline_event_status(event_id: str, status: str) -> str:
 
 async def _parse_spelling_errors_from_text(text: str) -> list[dict]:
     """
-    Uses a Gemini model to parse a natural language string and extract spelling errors.
-
-    Args:
-        text: The text from the Posture Agent's response.
-
-    Returns:
-        A list of dictionaries, where each dictionary represents a spelling error.
-        Returns an empty list if no errors are found or if parsing fails.
+    Uses a Gemini model to strictly parse a spelling report from another agent.
     """
-    logger.info("Parsing text for spelling errors with Gemini...")
+    logger.info("Parsing potential spelling report with Gemini...")
     if not gemini_client:
-        logger.error(
-            "Gemini client not initialized. Cannot parse spelling errors.")
+        logger.error("Gemini client not initialized. Cannot parse.")
         return []
     try:
         prompt = """
-        You are an expert text parser. Analyze the following text and identify all instances where a word or phrase is marked as misspelled.
-        Extract the original incorrect word/phrase, the suggested correction, and the full sentence that provides context.
+        You are a strict text parser. Your task is to analyze the following text, which is a report from a proofreading agent.
+        Your job is to find all explicitly mentioned spelling or grammar corrections.
+        For each correction, extract the original incorrect word/phrase, the suggested correction, and the full sentence that provides context.
         Return the result as a JSON array of objects. Each object must have the keys "original", "suggestion", and "context".
-        If no misspellings are found, return an empty array. Do not return items that are marked as correct.
+        If the text does not contain any explicit corrections, return an empty array.
 
-        Example input:
-        "Okay, I've reviewed the text you provided. Here's what I found:\n\n*   \"Winter Olypics to be held in French Alps in 2031\" - \"Olypics\" is misspelled, it should be \"Olympics\".\n\n*   \"Measles Outbreak at ITN\" - This is correct."
+        Example Input:
+        "Okay, I've reviewed the text and here are the corrections:\n\n* \"Quen Elizabeth II in traditional Scottish attire with bapipes\" - This should be \"Queen Elizabeth II in traditional Scottish attire with bagpipes\".\n* \"Witer Olympics to be held in French Alps in 2031\" - This should be \"Winter Olympics to be held in French Alps in 2031\"."
 
-        Example output:
+        Example Output:
         [
             {
-                "original": "Olypics",
-                "suggestion": "Olympics",
-                "context": "Winter Olypics to be held in French Alps in 2031"
+                "original": "Quen Elizabeth II in traditional Scottish attire with bapipes",
+                "suggestion": "Queen Elizabeth II in traditional Scottish attire with bagpipes",
+                "context": "Quen Elizabeth II in traditional Scottish attire with bapipes"
+            },
+            {
+                "original": "Witer Olympics",
+                "suggestion": "Winter Olympics",
+                "context": "Witer Olympics to be held in French Alps in 2031"
             }
-        ]
-        ---
-        """
+        ]"""
 
-        full_prompt = f"{prompt}\n{text}"
+        full_prompt = f"{prompt}\n\nNow, parse the following text:\n---\n{text}"
         response = await gemini_client.aio.models.generate_content(
             model="gemini-2.5-flash-lite", contents=full_prompt)
 
-        # Clean up the response from markdown and parse JSON
         cleaned_response = response.text.strip().replace(
             "```json", "").replace("```", "").strip()
 
         if not cleaned_response or cleaned_response == "[]":
-            logger.info("Gemini parsing returned no spelling errors.")
             return []
 
         errors = json.loads(cleaned_response)
@@ -122,10 +108,6 @@ async def _parse_spelling_errors_from_text(text: str) -> list[dict]:
                     len(errors))
         return [e for e in errors if e.get("original") and e.get("suggestion")]
 
-    except json.JSONDecodeError as e:
-        logger.error("Gemini returned invalid JSON: %s. Response text: %s", e,
-                     cleaned_response)
-        return []
     except Exception as e:
         logger.error("Failed to parse spelling errors with Gemini: %s",
                      e,
@@ -141,6 +123,10 @@ async def process_tool_output_for_timeline(**kwargs):
     logger.info("Processing tool output for timeline...")
     tool = kwargs.get("tool")
     tool_context = kwargs.get("tool_context")
+    remote_agent_name = None
+    args = kwargs.get("args")
+    if args:
+        remote_agent_name = args.get("agent_name").lower()
 
     if not tool or not tool_context:
         logger.warning(
@@ -150,13 +136,9 @@ async def process_tool_output_for_timeline(**kwargs):
     if tool.name != "send_message":
         return
 
-    logger.info(
-        "'send_message' tool output detected. Parsing for timeline events.")
     try:
         full_a2a_response_string = tool_context.state.get("last_a2a_response")
         if not full_a2a_response_string:
-            logger.warning(
-                "Could not find 'last_a2a_response' in tool context state.")
             return
 
         response_data = json.loads(full_a2a_response_string)
@@ -167,22 +149,36 @@ async def process_tool_output_for_timeline(**kwargs):
 
         list_of_events = []
 
-        # --- 1. Process Text Parts for Spelling Errors ---
-        text_parts = [p.get("text") for p in all_parts if p.get("text")]
-        for text_content in text_parts:
-            # Heuristic to check if the text might contain spelling results
-            if "misspelled" in text_content.lower(
-            ) or "spelling" in text_content.lower():
-                logger.info(
-                    "Potential spelling report found. Parsing with Gemini...")
+        # Check if the response is from the posture agent before processing for spelling.
+        if "posture" in remote_agent_name:
+            logger.info(
+                "Posture agent response detected. Parsing for spelling reports..."
+            )
+            for part in all_parts:
+                text_content = part.get("text")
+                if not text_content:
+                    continue
+
                 parsed_errors = await _parse_spelling_errors_from_text(
                     text_content)
 
-                for error in parsed_errors:
-                    # TODO: Find a real context_uid. Using a placeholder for now.
-                    context_uid = tool_context.state.get(
-                        "last_checked_uid", "uid-not-found")
+                if not parsed_errors:
+                    continue
 
+                metadata = part.get("metadata", {})
+                logging.info(metadata)
+                context_uid = metadata.get("uid") or metadata.get(
+                    "id") or metadata.get("context_uid")
+
+                if not context_uid:
+                    context_uid = tool_context.state.get("last_checked_uid")
+
+                if not context_uid:
+                    logger.warning(
+                        "Could not determine context_uid for a spelling error from metadata or chat state."
+                    )
+
+                for error in parsed_errors:
                     event_data = {
                         "id": str(uuid.uuid4()),
                         "type": "SPELLING_ERROR",
@@ -200,7 +196,7 @@ async def process_tool_output_for_timeline(**kwargs):
                     }
                     list_of_events.append(event_data)
 
-        # --- 2. Process File Parts for Video Clips ---
+        # Video clip processing can run for any agent
         file_parts_to_log = [p for p in all_parts if p.get("file")]
         if file_parts_to_log:
             logger.info("Found %d file parts to log. Transforming...",
@@ -246,10 +242,7 @@ async def process_tool_output_for_timeline(**kwargs):
 
                 list_of_events.append(event_data)
 
-        # --- 3. Save all collected events to Firestore ---
         if not list_of_events:
-            logger.info(
-                "No timeline events were generated from the tool output.")
             return
 
         user_id = tool_context.state.get("user_id", "unknown_user")
@@ -261,7 +254,6 @@ async def process_tool_output_for_timeline(**kwargs):
             event_data['user_id'] = user_id
             event_data['session_id'] = session_id
             event_data['timestamp'] = datetime.now(timezone.utc)
-
             doc_ref = db.collection("timeline_events").document(
                 event_data['id'])
             tasks.append(doc_ref.set(event_data))
@@ -271,7 +263,7 @@ async def process_tool_output_for_timeline(**kwargs):
         logger.info("Successfully saved %d timeline events to Firestore.",
                     len(tasks))
 
-    except (json.JSONDecodeError, IndexError, KeyError) as e:
-        logger.error("Failed to parse or process tool_output for timeline: %s",
+    except Exception as e:
+        logger.error("Error in process_tool_output_for_timeline: %s",
                      e,
                      exc_info=True)
