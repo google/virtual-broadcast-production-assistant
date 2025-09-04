@@ -178,8 +178,8 @@ resource "google_cloud_run_v2_service" "orchestrator_agent" {
       }
       resources {
         limits = {
-          cpu    = "2"
-          memory = "2Gi"
+          cpu    = "4"
+          memory = "4Gi"
         }
       }
     }
