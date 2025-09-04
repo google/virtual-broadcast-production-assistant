@@ -23,8 +23,9 @@ from typing import Any, Dict, List, Optional
 from google.cloud import firestore
 from google.cloud.firestore_v1.async_client import AsyncClient
 from google.cloud.firestore_v1.base_query import FieldFilter
-from google.adk.events import Event, LLMResponse, UserMessage
+from google.adk.events import Event
 from google.adk.sessions import BaseSessionService, Session
+from google.genai.types import Content, Part as AdkPart
 
 
 class FirestoreSessionService(BaseSessionService):
@@ -39,6 +40,50 @@ class FirestoreSessionService(BaseSessionService):
         """Initializes the FirestoreSessionService."""
         self.db: AsyncClient = firestore.AsyncClient(project=project_id)
         self.collection = self.db.collection(collection_name)
+
+    def _convert_firestore_doc_to_adk_event(
+        self, event_data: dict
+    ) -> Optional[Event]:
+        """Converts a Firestore event document to an ADK Event object."""
+        event_type = event_data.get("type")
+        content_data = event_data.get("content")
+
+        if not event_type or not isinstance(content_data, dict):
+            return None
+
+        text = content_data.get("text")
+        if text is None:
+            return None
+
+        author = "unknown"
+        if event_type == "user_message":
+            author = "user"
+        elif event_type == "llm_response":
+            author = "agent"
+
+        if author == "unknown":
+            return None
+
+        content = Content(parts=[AdkPart(text=text)])
+        return Event(author=author, content=content)
+
+    def _convert_adk_event_to_firestore_doc(self, event: Event) -> dict:
+        """Converts an ADK Event object to a Firestore document."""
+        event_type = "unknown"
+        if event.author == "user":
+            event_type = "user_message"
+        elif event.author == "agent":
+            event_type = "llm_response"
+
+        text = ""
+        if event.content and event.content.parts:
+            text = event.content.parts[0].text
+
+        return {
+            "type": event_type,
+            "content": {"text": text},
+            "timestamp": datetime.datetime.now(datetime.timezone.utc),
+        }
 
     async def create_session(
         self,
@@ -61,7 +106,6 @@ class FirestoreSessionService(BaseSessionService):
 
         await doc_ref.set(session_data)
 
-        # Return a Session object without events, as they are in a subcollection
         return Session(
             id=session_id,
             app_name=app_name,
@@ -82,24 +126,13 @@ class FirestoreSessionService(BaseSessionService):
 
         session_data = doc.to_dict()
 
-        # Fetch events from the subcollection
         events = []
         events_ref = doc_ref.collection("events").order_by("timestamp").stream()
         async for event_doc in events_ref:
             event_data = event_doc.to_dict()
-            # The event type is not directly available in the model dump,
-            # so we have to rely on the structure of the event data to
-            # determine the type. This is not ideal, but it is the best
-            # we can do without a more robust serialization format.
-            if "content" in event_data and "author" in event_data:
-                if event_data["author"] == "user":
-                    events.append(UserMessage(**event_data))
-                elif event_data["author"] == "agent":
-                    events.append(LLMResponse(**event_data))
-                else:
-                    events.append(Event(**event_data))
-            else:
-                events.append(Event(**event_data))
+            adk_event = self._convert_firestore_doc_to_adk_event(event_data)
+            if adk_event:
+                events.append(adk_event)
 
         return Session(
             id=session_data["id"],
@@ -114,16 +147,10 @@ class FirestoreSessionService(BaseSessionService):
     ) -> None:
         """Appends an event as a new document in the events subcollection."""
         session_ref = self.collection.document(session_id)
-        event_ref = session_ref.collection(
-            "events"
-        ).document()  # Auto-generate event ID
+        event_ref = session_ref.collection("events").document()
 
-        event_dict = event.model_dump()
-        # Ensure a timestamp exists for ordering
-        if "timestamp" not in event_dict:
-            event_dict["timestamp"] = datetime.datetime.now(datetime.timezone.utc)
+        event_dict = self._convert_adk_event_to_firestore_doc(event)
 
-        # Atomically create the new event and update the session's last update time
         batch = self.db.batch()
         batch.set(event_ref, event_dict)
         batch.update(session_ref, {"last_update_time": event_dict["timestamp"]})
@@ -145,15 +172,12 @@ class FirestoreSessionService(BaseSessionService):
     async def delete_session(
         self, app_name: str, user_id: str, session_id: str
     ) -> None:
-        """
-        Deletes a session document and its subcollections.
-        """
+        """Deletes a session document and its subcollections."""
         await self.delete_session_recursively(session_id)
 
     async def delete_session_recursively(self, session_id: str, batch_size: int = 500):
         """
         Deletes a document and all of its subcollections recursively.
-        This is a helper method and not part of the BaseSessionService interface.
         """
         coll_ref = self.collection.document(session_id).collection("events")
         docs = await coll_ref.limit(batch_size).get()
