@@ -24,7 +24,7 @@ from google.adk.events import Event
 from google.adk.sessions import Session
 from google.genai.types import Content, Part as AdkPart
 
-from orchestrator.agent.broadcast_orchestrator.firestore_session_service import (
+from broadcast_orchestrator.firestore_session_service import (
     FirestoreSessionService,
 )
 
@@ -33,7 +33,7 @@ class TestFirestoreSessionService(unittest.TestCase):
     """Unit tests for the FirestoreSessionService."""
 
     @patch(
-        "orchestrator.agent.broadcast_orchestrator.firestore_session_service.firestore.AsyncClient"
+        "broadcast_orchestrator.firestore_session_service.firestore.AsyncClient"
     )
     def test_create_session(self, mock_async_client):
         """Test that a session is created correctly."""
@@ -62,7 +62,7 @@ class TestFirestoreSessionService(unittest.TestCase):
         asyncio.run(run_test())
 
     @patch(
-        "orchestrator.agent.broadcast_orchestrator.firestore_session_service.firestore.AsyncClient"
+        "broadcast_orchestrator.firestore_session_service.firestore.AsyncClient"
     )
     def test_get_session(self, mock_async_client):
         """Test that a session is retrieved correctly."""
@@ -118,7 +118,7 @@ class TestFirestoreSessionService(unittest.TestCase):
         asyncio.run(run_test())
 
     @patch(
-        "orchestrator.agent.broadcast_orchestrator.firestore_session_service.firestore.AsyncClient"
+        "broadcast_orchestrator.firestore_session_service.firestore.AsyncClient"
     )
     def test_append_event(self, mock_async_client):
         """Test that an event is appended correctly."""
@@ -139,13 +139,24 @@ class TestFirestoreSessionService(unittest.TestCase):
             )
 
             service = FirestoreSessionService()
+
+            # Create a mock session object to pass to the method
+            mock_session = Session(
+                id="test_session",
+                app_name="test_app",
+                user_id="test_user",
+                state={},
+                events=[]
+            )
+
             content = Content(parts=[AdkPart(text="Hi")])
             event = Event(author="user", content=content)
 
             # Act
-            await service.append_event("test_app", "test_user", "test_session", event)
+            await service.append_event(session=mock_session, event=event)
 
             # Assert
+            mock_collection.document.assert_called_once_with("test_session")
             mock_batch.commit.assert_called_once()
             args, _ = mock_batch.set.call_args
             self.assertEqual(args[0], mock_event_ref)
@@ -155,7 +166,7 @@ class TestFirestoreSessionService(unittest.TestCase):
         asyncio.run(run_test())
 
     @patch(
-        "orchestrator.agent.broadcast_orchestrator.firestore_session_service.firestore.AsyncClient"
+        "broadcast_orchestrator.firestore_session_service.firestore.AsyncClient"
     )
     def test_list_sessions(self, mock_async_client):
         """Test that sessions are listed correctly."""
@@ -191,7 +202,7 @@ class TestFirestoreSessionService(unittest.TestCase):
         asyncio.run(run_test())
 
     @patch(
-        "orchestrator.agent.broadcast_orchestrator.firestore_session_service.firestore.AsyncClient"
+        "broadcast_orchestrator.firestore_session_service.firestore.AsyncClient"
     )
     def test_delete_session_recursively(self, mock_async_client):
         """Test that a session is deleted recursively."""
@@ -231,10 +242,10 @@ class TestFirestoreSessionService(unittest.TestCase):
         asyncio.run(run_test())
 
     @patch(
-        "orchestrator.agent.broadcast_orchestrator.firestore_session_service.firestore.AsyncClient"
+        "broadcast_orchestrator.firestore_session_service.firestore.AsyncClient"
     )
     @patch(
-        "orchestrator.agent.broadcast_orchestrator.firestore_session_service.FirestoreSessionService.delete_session_recursively"
+        "broadcast_orchestrator.firestore_session_service.FirestoreSessionService.delete_session_recursively"
     )
     def test_delete_session(self, mock_delete_recursively, mock_async_client):
         """Test that delete_session calls delete_session_recursively."""

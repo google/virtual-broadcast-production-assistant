@@ -25,6 +25,7 @@ from google.adk.runners import InMemoryRunner
 from google.genai.types import Blob, Content, Part
 
 from broadcast_orchestrator.history import load_chat_history
+from broadcast_orchestrator.in_firestore_runner import InFirestoreRunner
 
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
@@ -127,7 +128,7 @@ async def start_agent_session(user_id: str,
 
     routing_agent = app_instance.state.routing_agent
     agent = routing_agent.get_agent()
-    runner = InMemoryRunner(
+    runner = InFirestoreRunner(
         app_name=APP_NAME,
         agent=agent,
     )
@@ -231,6 +232,7 @@ async def client_to_agent_messaging(websocket: WebSocket, live_request_queue,
     try:
         while True:
             message_json = await websocket.receive_text()
+            logger.info(f"[CLIENT TO AGENT] Received raw message: {message_json}")
             user_has_spoken.set()
             message = json.loads(message_json)
             mime_type = message["mime_type"]

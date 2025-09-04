@@ -142,11 +142,9 @@ class FirestoreSessionService(BaseSessionService):
             events=events,
         )
 
-    async def append_event(
-        self, app_name: str, user_id: str, session_id: str, event: Event
-    ) -> None:
+    async def append_event(self, *, session: Session, event: Event) -> None:
         """Appends an event as a new document in the events subcollection."""
-        session_ref = self.collection.document(session_id)
+        session_ref = self.collection.document(session.id)
         event_ref = session_ref.collection("events").document()
 
         event_dict = self._convert_adk_event_to_firestore_doc(event)
