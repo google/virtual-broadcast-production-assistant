@@ -7,6 +7,19 @@ steps:
       - '.env'
     dir: 'orchestrator/agent'
 
+  # NEW: Install dependencies and run tests
+  - name: 'python:3.11-slim'
+    entrypoint: 'bash'
+    dir: 'orchestrator/agent'
+    args:
+      - '-c'
+      - |
+        python -m venv venv
+        source venv/bin/activate
+        pip install -r requirements.txt
+        export PYTHONPATH=.
+        pytest
+
   # 1. Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args:
@@ -51,3 +64,4 @@ images:
 # Cloud Build options
 options:
   logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
