@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from orchestrator.agent.broadcast_orchestrator import agent_repository
+from broadcast_orchestrator import agent_repository
 
 @pytest.mark.asyncio
 @patch("firebase_admin.firestore_async.client")

@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from a2a.types import AgentCard
 
-from orchestrator.agent.broadcast_orchestrator.agent import RoutingAgent
+from broadcast_orchestrator.agent import RoutingAgent
 
 @pytest.fixture
 def mock_agent_card():
@@ -26,8 +26,8 @@ def mock_callback_context():
     return context
 
 @pytest.mark.asyncio
-@patch("orchestrator.agent.broadcast_orchestrator.agent.load_system_instructions")
-@patch("orchestrator.agent.broadcast_orchestrator.agent.get_all_agents")
+@patch("broadcast_orchestrator.agent.load_system_instructions")
+@patch("broadcast_orchestrator.agent.get_all_agents")
 @patch("firebase_admin.firestore_async.client")
 async def test_before_agent_callback_loads_agents_successfully(
     mock_firestore_client, mock_get_all_agents, mock_load_instructions, mock_agent_card, mock_callback_context
@@ -73,8 +73,8 @@ async def test_before_agent_callback_loads_agents_successfully(
 
 
 @pytest.mark.asyncio
-@patch("orchestrator.agent.broadcast_orchestrator.agent.load_system_instructions")
-@patch("orchestrator.agent.broadcast_orchestrator.agent.get_all_agents")
+@patch("broadcast_orchestrator.agent.load_system_instructions")
+@patch("broadcast_orchestrator.agent.get_all_agents")
 @patch("firebase_admin.firestore_async.client")
 async def test_before_agent_callback_handles_rundown_agent(
     mock_firestore_client, mock_get_all_agents, mock_load_instructions, mock_agent_card, mock_callback_context
@@ -143,7 +143,7 @@ async def test_before_agent_callback_handles_rundown_agent(
 @pytest.fixture
 def mocked_agent():
     """Provides a RoutingAgent with its dependencies mocked."""
-    with patch("orchestrator.agent.broadcast_orchestrator.agent.load_system_instructions"), \
+    with patch("broadcast_orchestrator.agent.load_system_instructions"), \
          patch("firebase_admin.firestore_async.client"), \
          patch("firebase_admin.initialize_app"):
         agent = RoutingAgent()
@@ -224,9 +224,9 @@ async def test_send_message_ambiguous_match(mocked_agent):
 
 
 @pytest.mark.asyncio
-@patch("orchestrator.agent.broadcast_orchestrator.agent.RemoteAgentConnections")
-@patch("orchestrator.agent.broadcast_orchestrator.agent.get_secret")
-@patch("orchestrator.agent.broadcast_orchestrator.agent.get_all_agents")
+@patch("broadcast_orchestrator.agent.RemoteAgentConnections")
+@patch("broadcast_orchestrator.agent.get_secret")
+@patch("broadcast_orchestrator.agent.get_all_agents")
 async def test_load_agents_from_firestore_with_api_key(
     mock_get_all_agents, mock_get_secret, mock_remote_agent_connections, mocked_agent, mock_agent_card
 ):
@@ -259,9 +259,9 @@ async def test_load_agents_from_firestore_with_api_key(
 
 
 @pytest.mark.asyncio
-@patch("orchestrator.agent.broadcast_orchestrator.agent.RemoteAgentConnections")
-@patch("orchestrator.agent.broadcast_orchestrator.agent.get_secret")
-@patch("orchestrator.agent.broadcast_orchestrator.agent.get_all_agents")
+@patch("broadcast_orchestrator.agent.RemoteAgentConnections")
+@patch("broadcast_orchestrator.agent.get_secret")
+@patch("broadcast_orchestrator.agent.get_all_agents")
 async def test_load_agents_from_firestore_with_api_key(
     mock_get_all_agents, mock_get_secret, mock_remote_agent_connections, mocked_agent, mock_agent_card
 ):
