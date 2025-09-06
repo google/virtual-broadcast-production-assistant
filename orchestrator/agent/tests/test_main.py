@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch, AsyncMock, MagicMock
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 from broadcast_orchestrator.main import app
@@ -30,7 +30,11 @@ def client_fixture():
 def test_websocket_valid_token(mock_verify_id_token, mock_start_agent_session, client):
     """Test that a WebSocket connection is accepted with a valid token."""
     mock_verify_id_token.return_value = {"uid": "test_user"}
-    mock_start_agent_session.return_value = (AsyncMock(), AsyncMock(), "test_session")
+    
+    mock_queue = MagicMock()
+    mock_queue.close = MagicMock()
+
+    mock_start_agent_session.return_value = (AsyncMock(), mock_queue, "test_session")
     with client.websocket_connect(
         "/ws/test_user?is_audio=false", subprotocols=["valid_token"]
     ) as websocket:

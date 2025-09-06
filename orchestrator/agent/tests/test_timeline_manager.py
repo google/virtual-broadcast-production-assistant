@@ -162,9 +162,8 @@ async def test_save_timeline_events(mock_firestore_client, mock_tool_context):
 @patch("broadcast_orchestrator.timeline_manager._save_timeline_events", new_callable=AsyncMock)
 @patch("broadcast_orchestrator.timeline_manager._process_video_clips", new_callable=AsyncMock)
 @patch("broadcast_orchestrator.timeline_manager._process_spelling_errors", new_callable=AsyncMock)
-@patch("broadcast_orchestrator.timeline_manager._extract_parts_from_response", new_callable=AsyncMock)
 async def test_process_tool_output_orchestration_for_posture_agent(
-    mock_extract, mock_process_spelling, mock_process_video, mock_save, mock_tool_context
+    mock_process_spelling, mock_process_video, mock_save, mock_tool_context
 ):
     """Tests that the main function correctly orchestrates calls for the posture agent."""
     # Arrange
@@ -172,30 +171,30 @@ async def test_process_tool_output_orchestration_for_posture_agent(
     mock_tool.name = "send_message"
     mock_args = {"agent_name": "Posture Agent"}
     
-    # The agent name is no longer in the response, but in the args
-    posture_agent_response = {"some_key": "some_value"} 
-    mock_tool_context.state["last_a2a_response"] = json.dumps(posture_agent_response)
+    mock_tool_response = [json.dumps({"text": "a part"})]
 
-    mock_extract.return_value = [{"text": "a part"}]
     mock_process_spelling.return_value = [{"id": "spell_event"}]
     mock_process_video.return_value = [{"id": "video_event"}]
 
     # Act
-    await process_tool_output_for_timeline(tool=mock_tool, tool_context=mock_tool_context, args=mock_args)
+    await process_tool_output_for_timeline(
+        tool=mock_tool, 
+        tool_context=mock_tool_context, 
+        args=mock_args,
+        tool_response=mock_tool_response
+    )
 
     # Assert
-    mock_extract.assert_called_once()
-    mock_process_spelling.assert_called_once()
-    mock_process_video.assert_called_once()
+    mock_process_spelling.assert_called_once_with([{"text": "a part"}], mock_tool_context)
+    mock_process_video.assert_called_once_with([{"text": "a part"}])
     mock_save.assert_called_once_with([{"id": "spell_event"}, {"id": "video_event"}], mock_tool_context)
 
 
 @patch("broadcast_orchestrator.timeline_manager._save_timeline_events", new_callable=AsyncMock)
 @patch("broadcast_orchestrator.timeline_manager._process_video_clips", new_callable=AsyncMock)
 @patch("broadcast_orchestrator.timeline_manager._process_spelling_errors", new_callable=AsyncMock)
-@patch("broadcast_orchestrator.timeline_manager._extract_parts_from_response", new_callable=AsyncMock)
 async def test_process_tool_output_orchestration_for_other_agent(
-    mock_extract, mock_process_spelling, mock_process_video, mock_save, mock_tool_context
+    mock_process_spelling, mock_process_video, mock_save, mock_tool_context
 ):
     """Tests that spelling check is skipped for other agents."""
     # Arrange
@@ -203,22 +202,19 @@ async def test_process_tool_output_orchestration_for_other_agent(
     mock_tool.name = "send_message"
     mock_args = {"agent_name": "Other Agent"}
 
-    other_agent_response = {"some_key": "some_value"}
-    mock_tool_context.state["last_a2a_response"] = json.dumps(other_agent_response)
-
-    mock_extract.return_value = []
+    mock_tool_response = [json.dumps({"text": "a part"})]
+    
     mock_process_video.return_value = []
 
     # Act
-    await process_tool_output_for_timeline(tool=mock_tool, tool_context=mock_tool_context, args=mock_args)
+    await process_tool_output_for_timeline(
+        tool=mock_tool, 
+        tool_context=mock_tool_context, 
+        args=mock_args,
+        tool_response=mock_tool_response
+    )
 
     # Assert
-    mock_extract.assert_called_once()
     mock_process_spelling.assert_not_called()  # The key assertion
-    mock_process_video.assert_called_once()
-    
-    # Since video events are now processed, save might be called with an empty video list
-    if mock_process_video.return_value:
-        mock_save.assert_called_once_with(mock_process_video.return_value, mock_tool_context)
-    else:
-        mock_save.assert_not_called()
+    mock_process_video.assert_called_once_with([{"text": "a part"}])
+    mock_save.assert_not_called()
