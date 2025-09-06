@@ -43,8 +43,9 @@ async def test_get_uri_by_source_ref_id_cache_hit(mock_firestore_db, mock_gcs_up
     mock_firestore_db.collection.return_value.document.return_value.get = AsyncMock(return_value=mock_cached_doc)
 
     # Act
-    result_str = await get_uri_by_source_ref_id(asset_id)
-    result = json.loads(result_str)
+    with patch.dict(os.environ, {"GCS_BUCKET_NAME": "test-bucket"}):
+        result_str = await get_uri_by_source_ref_id(asset_id)
+        result = json.loads(result_str)
 
     # Assert
     mock_firestore_db.collection.assert_called_once_with("media_assets")
