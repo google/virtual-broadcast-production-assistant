@@ -307,10 +307,20 @@ resource "google_clouddeploy_delivery_pipeline" "pipeline" {
     stages {
       target_id = google_clouddeploy_target.targets["staging"].name
       profiles  = ["staging"]
+      deploy_parameters {
+        values = {
+          "RUN_SERVICE_ACCOUNT_EMAIL" = var.service_account_email
+        }
+      }
     }
     stages {
       target_id = google_clouddeploy_target.targets["stable"].name
       profiles  = ["stable"]
+      deploy_parameters {
+        values = {
+          "RUN_SERVICE_ACCOUNT_EMAIL" = var.service_account_email
+        }
+      }
     }
   }
 
