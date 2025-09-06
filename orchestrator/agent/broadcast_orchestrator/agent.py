@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 import json
 import os
 import logging
+import re
 import uuid
 from typing import Any
 from dotenv import load_dotenv
@@ -33,6 +34,8 @@ from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools.tool_context import ToolContext
 from google.genai.types import Content
 
+import hashlib
+
 from .automation_system_instructions import (
     AUTOMATION_SYSTEMS,
     DEFAULT_INSTRUCTIONS,
@@ -49,6 +52,7 @@ from .timeline_tool import get_uri_by_source_ref_id
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def load_system_instructions() -> str:
@@ -185,7 +189,7 @@ class RoutingAgent:
             description=(
                 "This Routing agent orchestrates requests for the user "
                 "to assist in live news or sports broadcast control"),
-            tools=[self.send_message, get_uri_by_source_ref_id],
+            tools=[self.send_message],
         )
         return self._agent
 
@@ -198,8 +202,8 @@ class RoutingAgent:
         return {"active_agent": "None"}
 
     def _get_formatted_instructions(
-            self,
-            rundown_system_preference: str) -> str:
+        self,
+        rundown_system_preference: str) -> str:
         """
         Formats the system instructions based on the selected rundown system.
         """
@@ -214,7 +218,8 @@ class RoutingAgent:
         all_agents_data = await get_all_agents()
 
         rundown_agent_ids = {
-            config['config_name'] for config in AUTOMATION_SYSTEMS.values()
+            config['config_name']
+            for config in AUTOMATION_SYSTEMS.values()
         }
 
         for agent_data in all_agents_data:
@@ -231,16 +236,15 @@ class RoutingAgent:
 
             api_key = None
             if api_key_secret := agent_data.get("api_key_secret"):
-                logger.info("Retrieving API key from secret: %s", api_key_secret)
+                logger.info("Retrieving API key from secret: %s",
+                            api_key_secret)
                 api_key = get_secret(api_key_secret)
 
             try:
                 card = AgentCard.model_validate(card_dict)
-                connection = RemoteAgentConnections(
-                    agent_card=card,
-                    agent_url=a2a_endpoint,
-                    api_key=api_key
-                )
+                connection = RemoteAgentConnections(agent_card=card,
+                                                    agent_url=a2a_endpoint,
+                                                    api_key=api_key)
                 if agent_id in rundown_agent_ids:
                     self.all_rundown_agents[agent_id] = connection
                 else:
@@ -269,7 +273,8 @@ class RoutingAgent:
                 doc = await doc_ref.get()
                 if doc.exists:
                     doc_dict = doc.to_dict()
-                    rundown_system_preference = doc_dict.get('rundown_system', 'cuez')
+                    rundown_system_preference = doc_dict.get(
+                        'rundown_system', 'cuez')
                 logger.info("User '%s' preference set to: %s", user_id,
                             rundown_system_preference)
             except GoogleCloudError as e:
@@ -287,19 +292,24 @@ class RoutingAgent:
             rundown_conn = self.all_rundown_agents.get(config_name)
 
             if rundown_conn:
-                callback_context.state['rundown_agent_connection'] = rundown_conn
-                callback_context.state['rundown_agent_config_name'] = config_name
+                callback_context.state[
+                    'rundown_agent_connection'] = rundown_conn
+                callback_context.state[
+                    'rundown_agent_config_name'] = config_name
                 logger.info("Found preferred rundown agent: %s", config_name)
                 rundown_instructions = self._get_formatted_instructions(
                     rundown_system_preference)
             else:
-                agent_name = preferred_config.get('agent_name', rundown_system_preference)
+                agent_name = preferred_config.get('agent_name',
+                                                  rundown_system_preference)
                 rundown_instructions = (
                     "IMPORTANT: The preferred rundown system agent "
                     f"('{agent_name}') is configured but could not be loaded. "
                     "It might be offline or misconfigured. Inform the user you "
                     "cannot connect to it.")
-                logger.error("Preferred rundown agent '%s' not found or offline.", config_name)
+                logger.error(
+                    "Preferred rundown agent '%s' not found or offline.",
+                    config_name)
 
         # 3. Build the list of available agents for the prompt
         available_agents = []
@@ -311,7 +321,8 @@ class RoutingAgent:
                 description_lines.append(
                     f"* `{display_name}` (ID: `{n}`): {c.card.description}")
             else:
-                description_lines.append(f"* `{display_name}`: {c.card.description}")
+                description_lines.append(
+                    f"* `{display_name}`: {c.card.description}")
 
             if c.card.skills:
                 description_lines.append("  Skills:")
@@ -324,9 +335,12 @@ class RoutingAgent:
             available_agents.append("\n".join(description_lines))
 
         # 4. Update the callback context
-        callback_context.state['rundown_system_instructions'] = rundown_instructions
-        callback_context.state['available_agents_list'] = "\n".join(available_agents)
-        callback_context.state['rundown_system_preference'] = rundown_system_preference
+        callback_context.state[
+            'rundown_system_instructions'] = rundown_instructions
+        callback_context.state['available_agents_list'] = "\n".join(
+            available_agents)
+        callback_context.state[
+            'rundown_system_preference'] = rundown_system_preference
 
     async def after_agent_callback(self, callback_context: CallbackContext):
         """A callback executed after the agent has finished."""
@@ -340,11 +354,49 @@ class RoutingAgent:
                 "Could not process after_tool event: tool_context missing.")
             return
 
-        # Await the primary Firestore observer
-        await self.observer.after_tool(**kwargs)
+        args = kwargs.get("args", {})
+        agent_name = args.get("agent_name", "")
+        tool_response = kwargs.get("tool_response")
 
-        # Create a background task for the timeline processing
-        # so it doesn't block the agent's response to the user.
+        # --- Intelligent Rundown State Caching ---
+        rundown_connection = tool_context.state.get('rundown_agent_connection')
+        is_rundown_agent = False
+        if rundown_connection and agent_name:
+            norm_agent_name = normalize_name(agent_name)
+            norm_config_name = normalize_name(tool_context.state.get('rundown_agent_config_name'))
+            norm_card_name = normalize_name(rundown_connection.card.name)
+            if norm_agent_name in (norm_config_name, norm_card_name):
+                is_rundown_agent = True
+
+        if is_rundown_agent and tool_response and isinstance(tool_response, list):
+            try:
+                new_data = json.loads(tool_response[0])
+                state_data = tool_context.state.get("rundown_data", {})
+
+                is_full = 'blocks' in new_data or 'items' in new_data
+                is_single = 'id' in new_data and not is_full
+
+                if is_full or not state_data:
+                    logger.info("Storing full rundown data in session state.")
+                    tool_context.state["rundown_data"] = new_data
+                elif is_single:
+                    item_key = 'blocks' if 'blocks' in state_data else 'items'
+                    if item_key in state_data:
+                        logger.info(f"Merging item '{new_data['id']}' into state.")
+                        found = False
+                        for i, item in enumerate(state_data[item_key]):
+                            if item.get('id') == new_data['id']:
+                                state_data[item_key][i] = new_data
+                                found = True
+                                break
+                        if not found:
+                            state_data[item_key].append(new_data)
+                    else: # state has no item list
+                        tool_context.state["rundown_data"] = new_data
+            except (json.JSONDecodeError, IndexError, TypeError) as e:
+                logger.warning("Could not parse/merge rundown data: %s", e)
+        
+        await self.observer.after_tool(**kwargs)
         asyncio.create_task(process_tool_output_for_timeline(**kwargs))
 
     async def before_model_callback(self, callback_context: CallbackContext):
@@ -384,18 +436,7 @@ class RoutingAgent:
         # 1. Check if the requested agent is the session's preferred rundown agent.
         preferred_config_name = state.get('rundown_agent_config_name')
         rundown_connection = state.get('rundown_agent_connection')
-
-        if preferred_config_name and rundown_connection:
-            norm_config_name = normalize_name(preferred_config_name)
-            norm_card_name = normalize_name(rundown_connection.card.name)
-            if normalized_agent_name in (norm_config_name, norm_card_name):
-                client = rundown_connection
-
         canonical_id = None
-
-        # 1. Check if the requested agent is the session's preferred rundown agent.
-        preferred_config_name = state.get('rundown_agent_config_name')
-        rundown_connection = state.get('rundown_agent_connection')
 
         if preferred_config_name and rundown_connection:
             norm_config_name = normalize_name(preferred_config_name)
@@ -441,7 +482,7 @@ class RoutingAgent:
 
         state["active_agent"] = client.card.name
 
-        # Use the canonical ID for creating state keys to ensure context is maintained
+        # 4. Use the canonical ID for creating state keys to ensure context is maintained
         agent_specific_task_id_key = f"{canonical_id}_task_id"
         task_id = state.get(agent_specific_task_id_key)
 
@@ -454,40 +495,64 @@ class RoutingAgent:
         message_id = state.get("input_message_metadata",
                                {}).get("message_id", str(uuid.uuid4()))
 
-        payload_parts = []
-        try:
-            task_data = json.loads(task)
-            if isinstance(task_data, dict) and 'file' in task_data:
-                file_info = task_data['file']
-                payload_parts.append({
-                    "type": "file",
-                    "file": {
-                        "uri": file_info['uri'],
-                        "name": file_info.get('filename', ''),
-                        "mime_type": file_info['mime_type']
-                    }
-                })
+        # 5. Construct the message payload
+        message_parts: list[Part] = []
+        text_content = task
+
+        id_pattern = r"id\s+([a-f0-9\-]{10,})"
+        id_match = re.search(id_pattern, task, re.IGNORECASE)
+
+        if id_match:
+            source_ref_id = id_match.group(1)
+            uri = None
+
+            logger.info(
+                "Calling get_uri_by_source_ref_id for ID: %s",
+                source_ref_id)
+            resolved_data_str = await get_uri_by_source_ref_id(
+                source_ref_id)
+            if "Error:" not in resolved_data_str:
+                try:
+                    resolved_data = json.loads(resolved_data_str)
+                    uri = resolved_data.get("uri")
+                except json.JSONDecodeError:
+                    logger.error(
+                        "Failed to decode JSON from get_uri_by_source_ref_id: %s",
+                        resolved_data_str)
+                    return [
+                        f"Error: Could not decode file data for ID {source_ref_id}"
+                    ]
             else:
-                payload_parts.append({'type': 'text', 'text': task})
-        except json.JSONDecodeError:
-            payload_parts.append({'type': 'text', 'text': task})
+                uri = resolved_data_str  # It's an error message
 
-        payload = {
-            "message": {
-                "role": "user",
-                "parts": payload_parts,
-                "messageId": message_id,
-            },
-        }
-        if task_id:
-            payload["message"]["taskId"] = task_id
-        if context_id:
-            payload["message"]["contextId"] = context_id
+            if not uri or "Error:" in uri:
+                logger.error("Failed to resolve ID to URI: %s", uri)
+                return [
+                    uri or
+                    f"Error: Failed to resolve ID {source_ref_id} to a URI."
+                ]
+
+            # Replace the ID with the URI in the text content.
+            text_content = task.replace(id_match.group(0), uri)
+
+        message_parts.append(Part(root=TextPart(text=text_content)))
+
+        # Construct the A2A message objects directly
+        message_to_send = Message(
+            role="user",
+            parts=message_parts,
+            message_id=message_id,
+            task_id=task_id,
+            context_id=context_id,
+        )
+
+        params = MessageSendParams(message=message_to_send)
+        message_request = SendMessageRequest(id=message_id, params=params)
 
         try:
-            message_request = SendMessageRequest(
-                id=message_id,
-                params=MessageSendParams.model_validate(payload))
+            logger.info("Sending A2A payload: %s",
+                        message_request.model_dump_json(indent=2))
+
             send_response: SendMessageResponse = await client.send_message(
                 message_request=message_request)
         except httpx.ConnectError as e:
@@ -537,6 +602,25 @@ class RoutingAgent:
 
         for part in parts_to_process:
             part_dict = part.model_dump(exclude_none=True)
+
+            # Check for FileParts missing an ID and generate a deterministic one.
+            if part_dict.get("kind") == "file":
+                metadata = part_dict.get("metadata")
+                if metadata is None:
+                    metadata = {}
+                    part_dict["metadata"] = metadata
+                
+                if not ("id" in metadata or "moment_id" in metadata):
+                    title = metadata.get("title")
+                    uri = part_dict.get("file", {}).get("uri")
+                    if title and uri:
+                        hash_input = f"{title}{uri}".encode()
+                        deterministic_id = hashlib.md5(hash_input).hexdigest()
+                        metadata["id"] = deterministic_id
+                        logger.info(
+                            "Generated deterministic ID %s for asset with title '%s'",
+                            deterministic_id, title)
+
             output_parts.append(json.dumps(part_dict))
 
         return output_parts

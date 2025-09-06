@@ -182,8 +182,9 @@ async def _process_video_clips(parts: list[dict]) -> list[dict]:
         subtitle = metadata.get("description", "No description available.")
         video_uri = file_part.get("file", {}).get("uri")
         thumbnail_uri = metadata.get("cover_url")
+        file_mime_type = file_part.get("file", {}).get("mime_type")
 
-        details = {"video_uri": video_uri, "thumbnail_uri": thumbnail_uri}
+        details = {"video_uri": video_uri, "thumbnail_uri": thumbnail_uri, "mime_type": file_mime_type}
         if metadata.get("type") == "moment":
             details["tc_in"] = metadata.get("tc_in")
             details["tc_out"] = metadata.get("tc_out")
@@ -238,21 +239,20 @@ async def process_tool_output_for_timeline(**kwargs):
     logger.info("Processing tool output for timeline...")
     tool = kwargs.get("tool")
     tool_context = kwargs.get("tool_context")
-    args = kwargs.get("args")
-    remote_agent_name = None
-    if args:
-        remote_agent_name = args.get("agent_name").lower()
+    tool_response = kwargs.get("tool_response")
+    args = kwargs.get("args", {})
+    remote_agent_name = args.get("agent_name", "").lower()
 
     if not tool or not tool_context or tool.name != "send_message":
         return
 
     try:
-        full_a2a_response_string = tool_context.state.get("last_a2a_response")
-        if not full_a2a_response_string:
+        if not tool_response or not isinstance(tool_response, list):
             return
 
-        response_data = json.loads(full_a2a_response_string)
-        all_parts = await _extract_parts_from_response(response_data)
+        # The tool_response is a list of JSON strings, each representing a part.
+        # We need to parse them into a list of dictionaries.
+        all_parts = [json.loads(item) for item in tool_response]
         all_events = []
 
         if "posture" in remote_agent_name:

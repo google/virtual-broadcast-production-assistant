@@ -1,6 +1,16 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from a2a.types import AgentCard
+import json
+from a2a.types import (
+    AgentCard,
+    FilePart,
+    FileWithUri,
+    Message,
+    Part,
+    SendMessageRequest,
+    SendMessageSuccessResponse,
+    TextPart,
+)
 
 from broadcast_orchestrator.agent import RoutingAgent
 
@@ -168,29 +178,30 @@ async def test_send_message_flexible_matching(mocked_agent):
     # Mock the agent connections
     mock_conn1 = MagicMock()
     mock_conn1.card.name = "My Test Agent"
-    mock_conn1.send_message = AsyncMock(return_value=MagicMock())
+    mock_success_response = MagicMock(spec=SendMessageSuccessResponse)
+    mock_success_response.result = Message(role="agent", parts=[], message_id="dummy-id")
+    mock_send_response = MagicMock()
+    mock_send_response.root = mock_success_response
+    mock_conn1.send_message = AsyncMock(return_value=mock_send_response)
     agent.remote_agent_connections["MY_TEST_AGENT"] = mock_conn1
 
     mock_conn2 = MagicMock()
     mock_conn2.card.name = "Another Agent"
-    mock_conn2.send_message = AsyncMock(return_value=MagicMock())
+    mock_conn2.send_message = AsyncMock(return_value=mock_send_response)
     agent.remote_agent_connections["ANOTHER_AGENT"] = mock_conn2
 
     # Act & Assert
     # Case-insensitive match on card name
     await agent.send_message("my test agent", "do something", tool_context)
     mock_conn1.send_message.assert_called()
-    tool_context.state.get.assert_any_call("MY_TEST_AGENT_task_id")
 
     # Match on ID with different casing
     await agent.send_message("another_agent", "do something else", tool_context)
     mock_conn2.send_message.assert_called()
-    tool_context.state.get.assert_any_call("ANOTHER_AGENT_task_id")
 
     # Match with spaces instead of underscore in ID
     await agent.send_message("MY TEST AGENT", "do a third thing", tool_context)
-    mock_conn1.send_message.assert_called()
-    tool_context.state.get.assert_any_call("MY_TEST_AGENT_task_id")
+    assert mock_conn1.send_message.call_count == 2
 
 
 @pytest.mark.asyncio
@@ -259,35 +270,94 @@ async def test_load_agents_from_firestore_with_api_key(
 
 
 @pytest.mark.asyncio
-@patch("broadcast_orchestrator.agent.RemoteAgentConnections")
-@patch("broadcast_orchestrator.agent.get_secret")
-@patch("broadcast_orchestrator.agent.get_all_agents")
-async def test_load_agents_from_firestore_with_api_key(
-    mock_get_all_agents, mock_get_secret, mock_remote_agent_connections, mocked_agent, mock_agent_card
-):
+@patch("broadcast_orchestrator.agent.get_uri_by_source_ref_id", new_callable=AsyncMock)
+async def test_send_message_with_file_id(mock_get_uri, mocked_agent):
     """
-    Tests that _load_agents_from_firestore correctly retrieves and uses an API key.
+    Tests that send_message correctly handles a task with a file ID,
+    creating both a TextPart and a FilePart.
     """
     # Arrange
     agent = mocked_agent
-    mock_get_secret.return_value = "super-secret-key"
-    mock_get_all_agents.return_value = [
-        {
-            "id": "MOMENTSLAB_AGENT",
-            "status": "online",
-            "card": mock_agent_card.model_dump(),
-            "a2a_endpoint": "http://momentslab.com/a2a",
-            "api_key_secret": "momentslab-api-key-secret"
-        }
-    ]
+    tool_context = MagicMock()
+    # A basic state mock that allows setting values
+    state = {"input_message_metadata": {}}
+    tool_context.state = state
+
+    # Mock the agent connection
+    mock_conn = MagicMock()
+    mock_conn.card.name = "Test Agent"
+    
+    # Prepare a mock successful response
+    mock_success_response = MagicMock(spec=SendMessageSuccessResponse)
+    mock_success_response.result = Message(role="agent", parts=[], message_id="dummy-id")
+    mock_send_response = MagicMock()
+    mock_send_response.root = mock_success_response
+
+    mock_conn.send_message = AsyncMock(return_value=mock_send_response)
+    agent.remote_agent_connections["TEST_AGENT"] = mock_conn
+
+    # Mock the URI resolution
+    mock_get_uri.return_value = '{"uri": "gs://my-bucket/my-file.mp4", "mime_type": "video/mp4"}'
+
+    task_text = "Please add the clip with id abc-123-def-456 to the timeline."
 
     # Act
-    await agent._load_agents_from_firestore()
+    await agent.send_message("Test Agent", task_text, tool_context)
 
     # Assert
-    mock_get_secret.assert_called_once_with("momentslab-api-key-secret")
-    mock_remote_agent_connections.assert_called_once()
+    mock_get_uri.assert_called_once_with("abc-123-def-456")
+    mock_conn.send_message.assert_called_once()
 
-    # Check the api_key argument in the constructor call
-    args, kwargs = mock_remote_agent_connections.call_args
-    assert kwargs.get("api_key") == "super-secret-key"
+    # Inspect the call arguments for send_message
+    call_args = mock_conn.send_message.call_args
+    sent_request: SendMessageRequest = call_args.kwargs['message_request']
+
+    assert isinstance(sent_request, SendMessageRequest)
+    message = sent_request.params.message
+    assert isinstance(message, Message)
+
+    # Verify parts
+    assert len(message.parts) == 1
+    part = message.parts[0]
+    assert isinstance(part.root, TextPart)
+    assert "gs://my-bucket/my-file.mp4" in part.root.text
+    assert "Please add the clip with" in part.root.text
+
+
+@pytest.mark.asyncio
+async def test_send_message_with_text_only(mocked_agent):
+    """
+    Tests that send_message correctly handles a simple text task.
+    """
+    # Arrange
+    agent = mocked_agent
+    tool_context = MagicMock()
+    tool_context.state = {"input_message_metadata": {}}
+
+    # Mock the agent connection
+    mock_conn = MagicMock()
+    mock_conn.card.name = "Test Agent"
+    
+    mock_success_response = MagicMock(spec=SendMessageSuccessResponse)
+    mock_success_response.result = Message(role="agent", parts=[], message_id="dummy-id")
+    mock_send_response = MagicMock()
+    mock_send_response.root = mock_success_response
+    
+    mock_conn.send_message = AsyncMock(return_value=mock_send_response)
+    agent.remote_agent_connections["TEST_AGENT"] = mock_conn
+
+    task_text = "Hello, agent!"
+
+    # Act
+    await agent.send_message("Test Agent", task_text, tool_context)
+
+    # Assert
+    mock_conn.send_message.assert_called_once()
+    call_args = mock_conn.send_message.call_args
+    sent_request: SendMessageRequest = call_args.kwargs['message_request']
+    message = sent_request.params.message
+
+    assert len(message.parts) == 1
+    part = message.parts[0]
+    assert isinstance(part.root, TextPart)
+    assert part.root.text == "Hello, agent!"

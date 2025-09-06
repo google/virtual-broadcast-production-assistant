@@ -56,7 +56,7 @@ class RemoteAgentConnections:
             headers["X-API-Key"] = api_key
             logger.info("Using API Key for agent: %s", agent_card.name)
 
-        self._httpx_client = httpx.AsyncClient(timeout=30, headers=headers)
+        self._httpx_client = httpx.AsyncClient(timeout=100, headers=headers)
         self.agent_client = A2AClient(self._httpx_client,
                                       agent_card,
                                       url=agent_url)
