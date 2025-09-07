@@ -220,6 +220,36 @@ resource "google_cloud_run_v2_service_iam_member" "orchestrator_agent_invoker" {
   member   = "allUsers"
 }
 
+resource "google_project_iam_member" "orchestrator_sa_token_creator" {
+  project = var.project_id
+  role    = "roles/iam.serviceAccountTokenCreator"
+  member  = "serviceAccount:${var.service_account_email}"
+}
+
+resource "google_project_iam_member" "orchestrator_sa_storage_admin" {
+  project = var.project_id
+  role    = "roles/storage.objectAdmin"
+  member  = "serviceAccount:${var.service_account_email}"
+}
+
+resource "google_project_iam_member" "orchestrator_sa_datastore_user" {
+  project = var.project_id
+  role    = "roles/datastore.user"
+  member  = "serviceAccount:${var.service_account_email}"
+}
+
+resource "google_project_iam_member" "orchestrator_sa_secret_accessor" {
+  project = var.project_id
+  role    = "roles/secretmanager.secretAccessor"
+  member  = "serviceAccount:${var.service_account_email}"
+}
+
+resource "google_project_iam_member" "orchestrator_sa_vertex_ai_user" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${var.service_account_email}"
+}
+
 resource "google_compute_network" "vpc_network" {
   project                 = var.project_id
   name                    = var.vpc_network_name
@@ -296,6 +326,10 @@ resource "google_clouddeploy_target" "targets" {
     usages          = ["RENDER", "DEPLOY"]
     service_account = var.build_runner_service_account_email # Use the orchestrator service account
   }
+
+  deploy_parameters = {
+    "RUN_SERVICE_ACCOUNT_EMAIL" = var.service_account_email
+  }
 }
 
 resource "google_clouddeploy_delivery_pipeline" "pipeline" {
@@ -307,22 +341,10 @@ resource "google_clouddeploy_delivery_pipeline" "pipeline" {
     stages {
       target_id = google_clouddeploy_target.targets["staging"].name
       profiles  = ["staging"]
-      deploy_parameters {
-        values = {
-          "RUN_SERVICE_ACCOUNT_EMAIL" = var.service_account_email
-          "DUMMY_PARAM" = "dummy_value"
-        }
-      }
     }
     stages {
       target_id = google_clouddeploy_target.targets["stable"].name
       profiles  = ["stable"]
-      deploy_parameters {
-        values = {
-          "RUN_SERVICE_ACCOUNT_EMAIL" = var.service_account_email
-          "DUMMY_PARAM" = "dummy_value"
-        }
-      }
     }
   }
 
