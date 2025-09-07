@@ -12,7 +12,6 @@ spec:
         run.googleapis.com/sessionAffinity: "true"
         autoscaling.knative.dev/minScale: "1"
     spec:
-      serviceAccountName: placeholder-sa@google.com
       timeoutSeconds: 3600
       containers:
       - image: orchestrator-agent
