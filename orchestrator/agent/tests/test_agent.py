@@ -328,7 +328,7 @@ async def test_uri_sanitization_and_resolution_flow(mock_get_uri, mocked_agent):
 
     real_video_uri = "https://real.uri/video.mp4"
     video_id = "vid-123"
-    video_title = "My Awesome Video"
+    video_title = "My Awesome Video.mp4"
     video_mime = "video/mp4"
 
     # Mock the response from the initial search agent (e.g., Moments Lab)
@@ -357,7 +357,7 @@ async def test_uri_sanitization_and_resolution_flow(mock_get_uri, mocked_agent):
     
     assert sanitized_part["kind"] == "file"
     placeholder_uri = sanitized_part["file"]["uri"]
-    assert placeholder_uri == f"https://invalid.com/{video_id}"
+    assert placeholder_uri == f"https://invalid.com/{video_id}/"
     
     # Assert: Check that the real URI and mime_type were cached in the state
     assert video_id in tool_context.state["video_assets"]
