@@ -10,6 +10,8 @@ import os
 import httpx
 from firebase_admin import firestore_async
 from google.cloud import storage
+import google.auth
+import google.auth.transport.requests
 
 logger = logging.getLogger(__name__)
 
@@ -77,14 +79,27 @@ async def get_gcs_signed_url(gcs_uri: str) -> str | None:
         A signed URL string, or None if an error occurs.
     """
     try:
+        # This will automatically use the service account credentials on Cloud Run
+        credentials, project = await asyncio.to_thread(google.auth.default, scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        
+        # We need to refresh the credentials to get an access token.
+        request = google.auth.transport.requests.Request()
+        await asyncio.to_thread(credentials.refresh, request)
+
         bucket_name, blob_name = gcs_uri.replace("gs://", "").split("/", 1)
         bucket = storage_client.bucket(bucket_name)
         blob = bucket.blob(blob_name)
 
-        # Generate a URL that's valid for 1 hour
         expiration = datetime.timedelta(hours=1)
-        signed_url = await asyncio.to_thread(blob.generate_signed_url, expiration=expiration, version="v4")
+        
+        signed_url = await asyncio.to_thread(
+            blob.generate_signed_url,
+            version="v4",
+            expiration=expiration,
+            service_account_email=credentials.service_account_email,
+            access_token=credentials.token,
+        )
         return signed_url
     except Exception as e:
-        logger.error("Failed to generate signed URL for %s: %s", gcs_uri, e)
+        logger.error("Failed to generate signed URL for %s: %s", gcs_uri, e, exc_info=True)
         return None
