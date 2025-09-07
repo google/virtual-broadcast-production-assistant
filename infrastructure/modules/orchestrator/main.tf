@@ -310,6 +310,7 @@ resource "google_clouddeploy_delivery_pipeline" "pipeline" {
       deploy_parameters {
         values = {
           "RUN_SERVICE_ACCOUNT_EMAIL" = var.service_account_email
+          "DUMMY_PARAM" = "dummy_value"
         }
       }
     }
@@ -319,6 +320,7 @@ resource "google_clouddeploy_delivery_pipeline" "pipeline" {
       deploy_parameters {
         values = {
           "RUN_SERVICE_ACCOUNT_EMAIL" = var.service_account_email
+          "DUMMY_PARAM" = "dummy_value"
         }
       }
     }

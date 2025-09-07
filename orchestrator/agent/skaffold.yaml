@@ -10,8 +10,7 @@ manifests:
     paths:
       - base
 deploy:
-  cloudrun:
-    serviceAccount: ${RUN_SERVICE_ACCOUNT_EMAIL}
+  cloudrun: {}
 profiles:
   - name: stable
     manifests:
