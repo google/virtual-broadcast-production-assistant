@@ -271,7 +271,6 @@ async def test_load_agents_from_firestore_with_api_key(
 
 
 
-
 @pytest.mark.asyncio
 async def test_send_message_with_text_only(mocked_agent):
     """
@@ -408,3 +407,38 @@ async def test_uri_sanitization_and_resolution_flow(mock_get_uri, mocked_agent):
     assert placeholder_uri not in sent_text_part.text
 
 
+
+@pytest.mark.asyncio
+async def test_send_message_with_filename(mocked_agent):
+    """
+    Tests that send_message can extract a filename from the task.
+    """
+    # Arrange
+    agent = mocked_agent
+    tool_context = MagicMock()
+    tool_context.state = {"input_message_metadata": {}}
+
+    # Mock the agent connection
+    mock_conn = MagicMock()
+    mock_conn.card.name = "EVS Agent"
+    
+    mock_success_response = MagicMock(spec=SendMessageSuccessResponse)
+    mock_success_response.result = Message(role="agent", parts=[], message_id="dummy-id")
+    mock_send_response = MagicMock()
+    mock_send_response.root = mock_success_response
+    
+    mock_conn.send_message = AsyncMock(return_value=mock_send_response)
+    agent.remote_agent_connections["EVS_AGENT"] = mock_conn
+
+    task_text = "blur faces in measles_measles_160725_oov_1830bm_1830_16_7_105_22880234.mp4 from 15 seconds for a duration of 10 seconds"
+    filename = "measles_measles_160725_oov_1830bm_1830_16_7_105_22880234.mp4"
+
+    # Mock get_uri_by_source_ref_id to avoid firestore calls
+    with patch("broadcast_orchestrator.agent.get_uri_by_source_ref_id", new_callable=AsyncMock) as mock_get_uri:
+        mock_get_uri.return_value = json.dumps({"uri": "http://real.uri/video.mp4", "mime_type": "video/mp4"})
+        
+        # Act
+        await agent.send_message("EVS Agent", task_text, tool_context)
+
+    # Assert
+    mock_get_uri.assert_called_once_with(filename)
