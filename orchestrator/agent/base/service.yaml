@@ -12,7 +12,9 @@ spec:
         run.googleapis.com/sessionAffinity: "true"
         autoscaling.knative.dev/minScale: "1"
     spec:
-      serviceAccountName: invalid@google.com
+      serviceAccountName: invalid@google.com # from-param: ${RUN_SERVICE_ACCOUNT_EMAIL}
+      autoscaling:
+        minScale: 1
       timeoutSeconds: 3600
       containers:
       - image: orchestrator-agent
