@@ -531,8 +531,8 @@ class RoutingAgent:
         text_content = task
 
         # Pattern 1: Look for our placeholder URI
-        placeholder_pattern = r"https://invalid.com/([a-f0-9\-]+)"
-        placeholder_match = re.search(placeholder_pattern, task, re.IGNORECASE)
+        placeholder_pattern = r'https://invalid\.com/([a-z0-9-]+)'
+        placeholder_match = re.search(placeholder_pattern, task)
 
         # Pattern 2: Fallback for raw ID
         id_pattern = r"id\s+([a-f0-9\-]{10,})"
