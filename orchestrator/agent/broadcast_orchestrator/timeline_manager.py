@@ -250,9 +250,17 @@ async def process_tool_output_for_timeline(**kwargs):
         if not tool_response or not isinstance(tool_response, list):
             return
 
-        # The tool_response is a list of JSON strings, each representing a part.
-        # We need to parse them into a list of dictionaries.
-        all_parts = [json.loads(item) for item in tool_response]
+        # Pre-filter for items that look like JSON objects or arrays to avoid parse errors
+        json_items = [
+            item for item in tool_response 
+            if isinstance(item, str) and item.strip().startswith(('{', '['))
+        ]
+
+        if not json_items:
+            logger.info("No valid JSON items found in tool_response for timeline processing.")
+            return
+
+        all_parts = [json.loads(item) for item in json_items]
         all_events = []
 
         if "posture" in remote_agent_name:
