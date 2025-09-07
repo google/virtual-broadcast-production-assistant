@@ -71,11 +71,18 @@ async def test_cache_asset_to_gcs(
     assert firestore_data["gcs_uri"] == f"gs://{bucket_name}/{asset_id}"
     assert firestore_data["source_url"] == source_url
 
-async def test_get_gcs_signed_url(mock_storage_client):
+@patch("google.auth.transport.requests.Request")
+@patch("broadcast_orchestrator.gcs_uploader.google.auth.default")
+async def test_get_gcs_signed_url(mock_auth_default, mock_request, mock_storage_client):
     """Tests the generation of a GCS signed URL."""
     from broadcast_orchestrator.gcs_uploader import get_gcs_signed_url
 
     # Arrange
+    mock_credentials = MagicMock()
+    mock_credentials.service_account_email = "test-sa@example.com"
+    mock_credentials.token = "test-token"
+    mock_auth_default.return_value = (mock_credentials, "test-project")
+
     gcs_uri = "gs://test-bucket/test-asset-123"
 
     # Act
@@ -83,6 +90,8 @@ async def test_get_gcs_signed_url(mock_storage_client):
 
     # Assert
     assert signed_url == "http://signed.url/test.mp4"
-    mock_storage_client.bucket.assert_called_once_with("test-bucket")
-    mock_storage_client.bucket.return_value.blob.assert_called_once_with("test-asset-123")
-    mock_storage_client.bucket.return_value.blob.return_value.generate_signed_url.assert_called_once()
+    
+    # Verify that the signing was delegated using the correct service account
+    generate_url_kwargs = mock_storage_client.bucket.return_value.blob.return_value.generate_signed_url.call_args.kwargs
+    assert generate_url_kwargs['service_account_email'] == "test-sa@example.com"
+    assert generate_url_kwargs['access_token'] == "test-token"
