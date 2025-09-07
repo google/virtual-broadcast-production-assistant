@@ -5,9 +5,6 @@ patches:
     - op: replace
       path: /metadata/name
       value: orchestrator-agent-stable
-    - op: replace
-      path: /spec/template/spec/serviceAccountName
-      value: invalid@google.com # from-param: ${RUN_SERVICE_ACCOUNT_EMAIL}
   target:
     kind: Service
     name: orchestrator-agent
