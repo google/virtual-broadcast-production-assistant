@@ -3,6 +3,7 @@ import os
 import asyncio
 
 import uvicorn
+import sentry_sdk
 
 from .agent import create_agent, mcp_toolset
 from .agent_executor import ADKAgentExecutor
@@ -22,12 +23,32 @@ from a2a.types import (
 )
 
 
-load_dotenv()
+# Load .env file if it exists (for local development)
+# In production, environment variables should be set by the platform
+if os.path.exists('.env'):
+    load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 
+# Initialize Sentry SDK
+sentry_sdk.init(
+    dsn="https://8982994a7a59673e7fbbe1ed3d419431@o182678.ingest.us.sentry.io/4509923209314304",
+    # Add data like request headers and IP for users
+    send_default_pii=False,
+    # Enable sending logs to Sentry
+    enable_logs=True,
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for tracing.
+    traces_sample_rate=1.0,
+)
+
 
 def main(host: str, port: int):
+    # Debug environment variables
+    logging.info("Environment check:")
+    logging.info(f"GOOGLE_GENAI_USE_VERTEXAI: {os.getenv('GOOGLE_GENAI_USE_VERTEXAI')}")
+    logging.info(f"GOOGLE_API_KEY present: {'Yes' if os.getenv('GOOGLE_API_KEY') else 'No'}")
+    
     # Verify an API key is set.
     # Not required if using Vertex AI APIs.
     if os.getenv("GOOGLE_GENAI_USE_VERTEXAI") != "TRUE" and not os.getenv(
@@ -51,9 +72,9 @@ def main(host: str, port: int):
             logging.info(f"  - {skill.id}: {skill.name}")
 
     agent_card = AgentCard(
-        name="Cuez Agent",
-        description="Helps with the cuez rundown",
-        url=f"http://{host}:{port}/",
+        name="Cuez Rundown Agent",
+        description="Can help you with the Cuez Rundown.",
+        url=f"https://cuez-rundown-agent-pzk5b.ondigitalocean.app",
         version="1.0.0",
         defaultInputModes=["text"],
         defaultOutputModes=["text"],
@@ -83,4 +104,4 @@ def main(host: str, port: int):
 
 
 if __name__ == "__main__":
-    main(host="0.0.0.0", port=8001)
+    main(host="0.0.0.0", port=4111)
