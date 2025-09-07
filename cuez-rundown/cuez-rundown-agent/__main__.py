@@ -74,7 +74,7 @@ def main(host: str, port: int):
     agent_card = AgentCard(
         name="Cuez Rundown Agent",
         description="Can help you with the Cuez Rundown.",
-        url=f"https://cuez-rundown-agent-pzk5b.ondigitalocean.app",
+        url=os.getenv("AGENT_URL", "https://cuez-rundown-agent-pzk5b.ondigitalocean.app"),
         version="1.0.0",
         defaultInputModes=["text"],
         defaultOutputModes=["text"],
