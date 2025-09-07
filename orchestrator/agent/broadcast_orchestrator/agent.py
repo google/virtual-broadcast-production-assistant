@@ -47,7 +47,7 @@ from .agent_repository import get_all_agents
 from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
 from .firestore_observer import FirestoreAgentObserver
 from .timeline_manager import process_tool_output_for_timeline
-from .timeline_tool import get_uri_by_source_ref_id
+from .timeline_tool import get_uri_by_source_ref_id, get_uri_by_title
 
 load_dotenv()
 
@@ -148,6 +148,23 @@ def create_send_message_payload(
     if context_id:
         payload["message"]["contextId"] = context_id
     return payload
+
+
+def infer_mime_type(filename: str | None) -> str:
+    """Infers the MIME type from a filename based on its extension."""
+    if not filename:
+        return "application/octet-stream"
+    
+    filename = filename.lower()
+    if filename.endswith(".mp4"):
+        return "video/mp4"
+    if filename.endswith(".jpg") or filename.endswith(".jpeg"):
+        return "image/jpeg"
+    if filename.endswith(".png"):
+        return "image/png"
+    # Add other common types as needed
+    
+    return "application/octet-stream"
 
 
 # pylint: disable=too-many-instance-attributes
@@ -370,7 +387,7 @@ class RoutingAgent:
                     if item.get("kind") == "file":
                         placeholder_uri = item.get("file", {}).get("uri", "")
                         if placeholder_uri.startswith("https://invalid.com/"):
-                            asset_id = placeholder_uri.split("/")[-1]
+                            asset_id = placeholder_uri.split("/")[-2]
                             if asset_id in part_cache:
                                 # Replace the entire sanitized part with the original full part
                                 rehydrated_response.append(json.dumps(part_cache[asset_id]))
@@ -428,7 +445,7 @@ class RoutingAgent:
                 logger.warning("Could not parse/merge rundown data: %s", e)
         
         await self.observer.after_tool(**final_kwargs)
-        asyncio.create_task(process_tool_output_for_timeline(**final_kwargs))
+        await process_tool_output_for_timeline(**final_kwargs)
 
     async def before_model_callback(self, callback_context: CallbackContext):
         """A callback executed before the model is called."""
@@ -531,11 +548,11 @@ class RoutingAgent:
         text_content = task
 
         # Pattern 1: Look for our placeholder URI
-        placeholder_pattern = r'https://invalid\.com/([a-z0-9-]+)'
+        placeholder_pattern = r'https://invalid\.com/([a-z0-9_-]+)/'
         placeholder_match = re.search(placeholder_pattern, task)
 
-        # Pattern 2: Fallback for raw ID
-        id_pattern = r"id\s+([a-f0-9\-]{10,})"
+        # Pattern 2: Fallback for raw ID-like strings
+        id_pattern = r"id\s+([\w\-_.]+)"
         id_match = re.search(id_pattern, task, re.IGNORECASE)
 
         source_ref_id = None
@@ -554,49 +571,81 @@ class RoutingAgent:
             real_uri = None
             mime_type = "application/octet-stream"  # Default
 
-            # First, try the state cache
+            # --- Primary Lookup: By ID ---
             if "video_assets" in tool_context.state and source_ref_id in tool_context.state["video_assets"]:
                 cached_asset = tool_context.state["video_assets"][source_ref_id]
                 real_uri = cached_asset.get("uri")
                 mime_type = cached_asset.get("mime_type", mime_type)
                 logger.info("Resolved asset from state cache for ID: %s", source_ref_id)
 
-            # If not in cache, go to Firestore via the tool
             if not real_uri:
                 logger.info("URI not in cache. Calling get_uri_by_source_ref_id for ID: %s", source_ref_id)
                 resolved_data_str = await get_uri_by_source_ref_id(source_ref_id)
-                if "Error:" not in resolved_data_str:
+                if resolved_data_str and "Error:" not in resolved_data_str:
                     try:
                         resolved_data = json.loads(resolved_data_str)
                         real_uri = resolved_data.get("uri")
                         mime_type = resolved_data.get("mime_type", mime_type)
                     except json.JSONDecodeError:
-                        logger.error("Failed to decode JSON from get_uri_by_source_ref_id: %s", resolved_data_str)
-                        return [f"Error: Could not decode file data for ID {source_ref_id}"]
+                        logger.warning("Could not decode file data for ID %s", source_ref_id)
+                        real_uri = None
                 else:
-                    logger.error("Error from get_uri_by_source_ref_id: %s", resolved_data_str)
-                    return [resolved_data_str]
+                    real_uri = None
+
+            # --- Secondary Lookup: By Title ---
+            if not real_uri:
+                logger.warning("Could not resolve '%s' as an ID. Attempting fallback lookup by title.", source_ref_id)
+                video_assets_cache = tool_context.state.get("video_assets", {})
+                found_by_title = False
+                for asset_id, asset_details in video_assets_cache.items():
+                    if asset_details.get("title") and asset_details.get("title") in source_ref_id:
+                        logger.info("Fallback successful: Found match by title in cache for asset ID %s", asset_id)
+                        real_uri = asset_details.get("uri")
+                        mime_type = asset_details.get("mime_type", mime_type)
+                        found_by_title = True
+                        break
+                
+                if not found_by_title:
+                    logger.info("Asset not found in cache by title, checking Firestore.")
+                    session_id = tool_context.state.get("session_id")
+                    if session_id:
+                        resolved_data_str = await get_uri_by_title(source_ref_id, session_id)
+                        if resolved_data_str and "Error:" not in resolved_data_str:
+                            try:
+                                resolved_data = json.loads(resolved_data_str)
+                                real_uri = resolved_data.get("video_uri")
+                                mime_type = resolved_data.get("mime_type", mime_type)
+                            except json.JSONDecodeError:
+                                logger.warning("Could not decode file data for title %s", source_ref_id)
 
             if real_uri:
+                # Infer mime_type from the title, as the cached one might be null
+                asset_title = ""
+                if "video_assets" in tool_context.state and source_ref_id in tool_context.state["video_assets"]:
+                     asset_title = tool_context.state["video_assets"][source_ref_id].get("title")
+                
+                final_mime_type = infer_mime_type(asset_title)
+
                 # Replace the placeholder with the real URI in the text content
                 text_content = task.replace(pattern_to_replace, real_uri)
                 
-                # Also create a separate FilePart
-                file_part = Part(root=FilePart(file=FileWithUri(uri=real_uri, mime_type=mime_type)))
-                message_parts.append(file_part)
-                logger.info("Adding FilePart and updated TextPart for URI: %s", real_uri)
-            else:
-                logger.error("Failed to resolve ID to URI: %s", source_ref_id)
-                return [f"Error: Failed to resolve ID {source_ref_id} to a URI."]
+                # Also create a separate FilePart, but not for Cuez
+                if "cuez" not in agent_name.lower():
+                    file_part = Part(root=FilePart(file=FileWithUri(uri=real_uri, mime_type=final_mime_type)))
+                    message_parts.append(file_part)
+                    logger.info("Adding FilePart with inferred mime_type '%s' for non-Cuez agent.", final_mime_type)
 
-        # Always add the (potentially modified) text part
+                logger.info("Updated TextPart with real URI: %s", text_content)
+            else:
+                logger.error("Failed to resolve ID or Title to URI: %s", source_ref_id)
+                return [f"Error: Failed to resolve asset '{source_ref_id}' to a URI."]
+
         if text_content:
             message_parts.append(Part(root=TextPart(text=text_content)))
 
         if not message_parts:
             return ["Error: Could not construct a message to send."]
 
-        # Construct the A2A message objects directly
         message_to_send = Message(
             role="user",
             parts=message_parts,
@@ -639,14 +688,12 @@ class RoutingAgent:
             logger.warning("received unexpected response. Aborting get task ")
             return [f"Received an unexpected response type: {type(result)}"]
 
-        # Store the full response in the context for the after_tool hook to process.
         response_json_string = result.model_dump_json(exclude_none=True)
         tool_context.state["last_a2a_response"] = response_json_string
 
         if isinstance(result, Task) and result.id:
             state[agent_specific_task_id_key] = result.id
 
-        # Create and return a representation of all parts for the LLM.
         output_parts = []
         parts_to_process = []
 
@@ -672,20 +719,18 @@ class RoutingAgent:
                 if asset_id and real_uri:
                     logger.info("Sanitizing URI for asset ID %s", asset_id)
                     
-                    # 1. Cache the real URI and mime_type in state
                     if "video_assets" not in tool_context.state:
                         tool_context.state["video_assets"] = {}
                     
                     real_mime_type = file_details.get("mime_type") or file_details.get("mimeType") or "application/octet-stream"
                     tool_context.state["video_assets"][asset_id] = {
                         "uri": real_uri,
-                        "mime_type": real_mime_type
+                        "mime_type": real_mime_type,
+                        "title": metadata.get("title")
                     }
                     
-                    # 2. Replace the URI with the placeholder
-                    part_dict["file"]["uri"] = f"https://invalid.com/{asset_id}"
+                    part_dict["file"]["uri"] = f"https://invalid.com/{asset_id}/"
                     
-                    # 3. Cache the full original part for the timeline
                     if "part_cache" not in tool_context.state:
                         tool_context.state["part_cache"] = {}
                     original_part = part.model_dump(exclude_none=True)

@@ -87,3 +87,25 @@ async def get_uri_by_source_ref_id(source_ref_id: str) -> str:
     except Exception as e:
         logger.error("Error in get_uri_by_source_ref_id: %s", e, exc_info=True)
         return f"Error retrieving URI: {e}"
+
+async def get_uri_by_title(title: str, session_id: str) -> str | None:
+    """
+    Retrieves a URI from a timeline event by matching the asset title and session ID.
+    """
+    logger.info("Resolving URI for title: '%s' in session: %s", title, session_id)
+    try:
+        db = firestore_async.client()
+        events_ref = db.collection("timeline_events")
+        query = events_ref.where("session_id", "==", session_id).where("title", "==", title).order_by("timestamp", direction="DESCENDING").limit(1)
+        query_snapshot = await query.get()
+
+        if not query_snapshot:
+            logger.warning("No timeline event found with title: %s", title)
+            return None
+
+        event_data = query_snapshot[0].to_dict()
+        details = event_data.get("details", {})
+        return json.dumps(details) # Return the whole details dict
+    except Exception as e:
+        logger.error("Error in get_uri_by_title: %s", e)
+        return None
