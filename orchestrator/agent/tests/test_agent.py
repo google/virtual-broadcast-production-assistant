@@ -269,59 +269,7 @@ async def test_load_agents_from_firestore_with_api_key(
     assert kwargs.get("api_key") == "super-secret-key"
 
 
-@pytest.mark.asyncio
-@patch("broadcast_orchestrator.agent.get_uri_by_source_ref_id", new_callable=AsyncMock)
-async def test_send_message_with_file_id(mock_get_uri, mocked_agent):
-    """
-    Tests that send_message correctly handles a task with a file ID,
-    creating both a TextPart and a FilePart.
-    """
-    # Arrange
-    agent = mocked_agent
-    tool_context = MagicMock()
-    # A basic state mock that allows setting values
-    state = {"input_message_metadata": {}}
-    tool_context.state = state
 
-    # Mock the agent connection
-    mock_conn = MagicMock()
-    mock_conn.card.name = "Test Agent"
-    
-    # Prepare a mock successful response
-    mock_success_response = MagicMock(spec=SendMessageSuccessResponse)
-    mock_success_response.result = Message(role="agent", parts=[], message_id="dummy-id")
-    mock_send_response = MagicMock()
-    mock_send_response.root = mock_success_response
-
-    mock_conn.send_message = AsyncMock(return_value=mock_send_response)
-    agent.remote_agent_connections["TEST_AGENT"] = mock_conn
-
-    # Mock the URI resolution
-    mock_get_uri.return_value = '{"uri": "gs://my-bucket/my-file.mp4", "mime_type": "video/mp4"}'
-
-    task_text = "Please add the clip with id abc-123-def-456 to the timeline."
-
-    # Act
-    await agent.send_message("Test Agent", task_text, tool_context)
-
-    # Assert
-    mock_get_uri.assert_called_once_with("abc-123-def-456")
-    mock_conn.send_message.assert_called_once()
-
-    # Inspect the call arguments for send_message
-    call_args = mock_conn.send_message.call_args
-    sent_request: SendMessageRequest = call_args.kwargs['message_request']
-
-    assert isinstance(sent_request, SendMessageRequest)
-    message = sent_request.params.message
-    assert isinstance(message, Message)
-
-    # Verify parts
-    assert len(message.parts) == 1
-    part = message.parts[0]
-    assert isinstance(part.root, TextPart)
-    assert "gs://my-bucket/my-file.mp4" in part.root.text
-    assert "Please add the clip with" in part.root.text
 
 
 @pytest.mark.asyncio
@@ -361,3 +309,102 @@ async def test_send_message_with_text_only(mocked_agent):
     part = message.parts[0]
     assert isinstance(part.root, TextPart)
     assert part.root.text == "Hello, agent!"
+
+
+
+@pytest.mark.asyncio
+@patch("broadcast_orchestrator.agent.get_uri_by_source_ref_id", new_callable=AsyncMock)
+async def test_uri_sanitization_and_resolution_flow(mock_get_uri, mocked_agent):
+    """
+    Tests the full flow of receiving a video, sanitizing its URI for the LLM,
+    and then correctly resolving the sanitized URI to a real one for a downstream agent.
+    """
+    # --- Part 1: Ingress and Sanitization ---
+
+    # Arrange for receiving a response from a search agent
+    agent = mocked_agent
+    tool_context = MagicMock()
+    tool_context.state = {"input_message_metadata": {}}
+
+    real_video_uri = "https://real.uri/video.mp4"
+    video_id = "vid-123"
+    video_title = "My Awesome Video"
+    video_mime = "video/mp4"
+
+    # Mock the response from the initial search agent (e.g., Moments Lab)
+    search_agent_response_part = Part(root=FilePart(
+        file=FileWithUri(uri=real_video_uri, mime_type=video_mime, name="video.mp4"),
+        metadata={"id": video_id, "title": video_title}
+    ))
+    search_agent_message = Message(role="agent", parts=[search_agent_response_part], message_id="remote-msg-id")
+    
+    mock_success_response = MagicMock(spec=SendMessageSuccessResponse)
+    mock_success_response.result = search_agent_message
+    mock_send_response = MagicMock()
+    mock_send_response.root = mock_success_response
+
+    mock_search_conn = MagicMock()
+    mock_search_conn.card.name = "Search Agent"
+    mock_search_conn.send_message = AsyncMock(return_value=mock_send_response)
+    agent.remote_agent_connections["SEARCH_AGENT"] = mock_search_conn
+
+    # Act: Call send_message to process the search agent's response
+    output_parts_str = await agent.send_message("Search Agent", "find video", tool_context)
+
+    # Assert: Check that the URI was sanitized for the LLM
+    assert len(output_parts_str) == 1
+    sanitized_part = json.loads(output_parts_str[0])
+    
+    assert sanitized_part["kind"] == "file"
+    placeholder_uri = sanitized_part["file"]["uri"]
+    assert placeholder_uri == f"https://invalid.com/{video_id}"
+    
+    # Assert: Check that the real URI and mime_type were cached in the state
+    assert video_id in tool_context.state["video_assets"]
+    assert tool_context.state["video_assets"][video_id]["uri"] == real_video_uri
+    assert tool_context.state["video_assets"][video_id]["mime_type"] == video_mime
+
+    # --- Part 2: Egress and Resolution ---
+
+    # Arrange for sending a task to a processing agent
+    # The LLM sees the placeholder_uri and uses it in the next task
+    task_for_processor = f"Blur the face in {placeholder_uri} at 15s"
+
+    mock_processor_conn = MagicMock()
+    mock_processor_conn.card.name = "Processing Agent"
+    # This mock will just receive the final message, we don't need it to respond
+    mock_processor_conn.send_message = AsyncMock(return_value=mock_send_response)
+    agent.remote_agent_connections["PROCESSING_AGENT"] = mock_processor_conn
+
+    # Act: Call send_message to send the task to the processor
+    await agent.send_message("Processing Agent", task_for_processor, tool_context)
+
+    # Assert: Check that the message sent to the processor contained the REAL URI
+    mock_processor_conn.send_message.assert_called_once()
+    call_args = mock_processor_conn.send_message.call_args
+    sent_request: SendMessageRequest = call_args.kwargs['message_request']
+    sent_message = sent_request.params.message
+
+    assert len(sent_message.parts) == 2
+    
+    # Find the FilePart and TextPart
+    sent_file_part = None
+    sent_text_part = None
+    for part in sent_message.parts:
+        if isinstance(part.root, FilePart):
+            sent_file_part = part.root
+        if isinstance(part.root, TextPart):
+            sent_text_part = part.root
+
+    assert sent_file_part is not None
+    assert sent_text_part is not None
+
+    # Assert that the FilePart has the real URI
+    assert sent_file_part.file.uri == real_video_uri
+    assert sent_file_part.file.mime_type == video_mime
+
+    # Assert that the TextPart also has the real URI
+    assert real_video_uri in sent_text_part.text
+    assert placeholder_uri not in sent_text_part.text
+
+

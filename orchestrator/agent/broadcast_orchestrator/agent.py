@@ -354,11 +354,42 @@ class RoutingAgent:
                 "Could not process after_tool event: tool_context missing.")
             return
 
-        args = kwargs.get("args", {})
-        agent_name = args.get("agent_name", "")
-        tool_response = kwargs.get("tool_response")
+        # Create a mutable copy of kwargs to modify for downstream processors.
+        final_kwargs = kwargs.copy()
+        
+        # Rehydrate the tool response for the timeline and observer.
+        llm_response = kwargs.get("tool_response", [])
+        part_cache = tool_context.state.get("part_cache", {})
+        
+        rehydrated_response = []
+        if llm_response and isinstance(llm_response, list):
+            for item_str in llm_response:
+                try:
+                    item = json.loads(item_str)
+                    # If this is a sanitized file part, replace it with the original from the cache
+                    if item.get("kind") == "file":
+                        placeholder_uri = item.get("file", {}).get("uri", "")
+                        if placeholder_uri.startswith("https://invalid.com/"):
+                            asset_id = placeholder_uri.split("/")[-1]
+                            if asset_id in part_cache:
+                                # Replace the entire sanitized part with the original full part
+                                rehydrated_response.append(json.dumps(part_cache[asset_id]))
+                                logger.info("Rehydrated full part for asset ID %s", asset_id)
+                                continue # Continue to next item_str
+                    
+                    # If it wasn't a sanitized part that we replaced, append it as is.
+                    rehydrated_response.append(item_str)
+                except (json.JSONDecodeError, TypeError):
+                    rehydrated_response.append(item_str)
+        
+        final_kwargs["tool_response"] = rehydrated_response
 
         # --- Intelligent Rundown State Caching ---
+        # This logic should run on the rehydrated data.
+        args = final_kwargs.get("args", {})
+        agent_name = args.get("agent_name", "")
+        tool_response = final_kwargs.get("tool_response")
+
         rundown_connection = tool_context.state.get('rundown_agent_connection')
         is_rundown_agent = False
         if rundown_connection and agent_name:
@@ -396,8 +427,8 @@ class RoutingAgent:
             except (json.JSONDecodeError, IndexError, TypeError) as e:
                 logger.warning("Could not parse/merge rundown data: %s", e)
         
-        await self.observer.after_tool(**kwargs)
-        asyncio.create_task(process_tool_output_for_timeline(**kwargs))
+        await self.observer.after_tool(**final_kwargs)
+        asyncio.create_task(process_tool_output_for_timeline(**final_kwargs))
 
     async def before_model_callback(self, callback_context: CallbackContext):
         """A callback executed before the model is called."""
@@ -428,7 +459,7 @@ class RoutingAgent:
             A list of strings from the remote agent's response. Complex objects
             are returned as JSON strings.
         """
-        logger.info("Sending task to agent '%s': %s", agent_name, task)
+        logger.info("RAW task from LLM for agent '%s': '%s'", agent_name, task)
         state = tool_context.state
         client = None
         normalized_agent_name = normalize_name(agent_name)
@@ -495,47 +526,75 @@ class RoutingAgent:
         message_id = state.get("input_message_metadata",
                                {}).get("message_id", str(uuid.uuid4()))
 
-        # 5. Construct the message payload
+        # 5. Construct the message payload, resolving any asset IDs to real URIs
         message_parts: list[Part] = []
         text_content = task
 
+        # Pattern 1: Look for our placeholder URI
+        placeholder_pattern = r"https://invalid.com/([a-f0-9\-]+)"
+        placeholder_match = re.search(placeholder_pattern, task, re.IGNORECASE)
+
+        # Pattern 2: Fallback for raw ID
         id_pattern = r"id\s+([a-f0-9\-]{10,})"
         id_match = re.search(id_pattern, task, re.IGNORECASE)
 
-        if id_match:
+        source_ref_id = None
+        pattern_to_replace = None
+
+        if placeholder_match:
+            source_ref_id = placeholder_match.group(1)
+            pattern_to_replace = placeholder_match.group(0)
+            logger.info("Found placeholder URI with ID: %s", source_ref_id)
+        elif id_match:
             source_ref_id = id_match.group(1)
-            uri = None
+            pattern_to_replace = id_match.group(0)
+            logger.info("Found raw asset ID: %s", source_ref_id)
 
-            logger.info(
-                "Calling get_uri_by_source_ref_id for ID: %s",
-                source_ref_id)
-            resolved_data_str = await get_uri_by_source_ref_id(
-                source_ref_id)
-            if "Error:" not in resolved_data_str:
-                try:
-                    resolved_data = json.loads(resolved_data_str)
-                    uri = resolved_data.get("uri")
-                except json.JSONDecodeError:
-                    logger.error(
-                        "Failed to decode JSON from get_uri_by_source_ref_id: %s",
-                        resolved_data_str)
-                    return [
-                        f"Error: Could not decode file data for ID {source_ref_id}"
-                    ]
+        if source_ref_id and pattern_to_replace:
+            real_uri = None
+            mime_type = "application/octet-stream"  # Default
+
+            # First, try the state cache
+            if "video_assets" in tool_context.state and source_ref_id in tool_context.state["video_assets"]:
+                cached_asset = tool_context.state["video_assets"][source_ref_id]
+                real_uri = cached_asset.get("uri")
+                mime_type = cached_asset.get("mime_type", mime_type)
+                logger.info("Resolved asset from state cache for ID: %s", source_ref_id)
+
+            # If not in cache, go to Firestore via the tool
+            if not real_uri:
+                logger.info("URI not in cache. Calling get_uri_by_source_ref_id for ID: %s", source_ref_id)
+                resolved_data_str = await get_uri_by_source_ref_id(source_ref_id)
+                if "Error:" not in resolved_data_str:
+                    try:
+                        resolved_data = json.loads(resolved_data_str)
+                        real_uri = resolved_data.get("uri")
+                        mime_type = resolved_data.get("mime_type", mime_type)
+                    except json.JSONDecodeError:
+                        logger.error("Failed to decode JSON from get_uri_by_source_ref_id: %s", resolved_data_str)
+                        return [f"Error: Could not decode file data for ID {source_ref_id}"]
+                else:
+                    logger.error("Error from get_uri_by_source_ref_id: %s", resolved_data_str)
+                    return [resolved_data_str]
+
+            if real_uri:
+                # Replace the placeholder with the real URI in the text content
+                text_content = task.replace(pattern_to_replace, real_uri)
+                
+                # Also create a separate FilePart
+                file_part = Part(root=FilePart(file=FileWithUri(uri=real_uri, mime_type=mime_type)))
+                message_parts.append(file_part)
+                logger.info("Adding FilePart and updated TextPart for URI: %s", real_uri)
             else:
-                uri = resolved_data_str  # It's an error message
+                logger.error("Failed to resolve ID to URI: %s", source_ref_id)
+                return [f"Error: Failed to resolve ID {source_ref_id} to a URI."]
 
-            if not uri or "Error:" in uri:
-                logger.error("Failed to resolve ID to URI: %s", uri)
-                return [
-                    uri or
-                    f"Error: Failed to resolve ID {source_ref_id} to a URI."
-                ]
+        # Always add the (potentially modified) text part
+        if text_content:
+            message_parts.append(Part(root=TextPart(text=text_content)))
 
-            # Replace the ID with the URI in the text content.
-            text_content = task.replace(id_match.group(0), uri)
-
-        message_parts.append(Part(root=TextPart(text=text_content)))
+        if not message_parts:
+            return ["Error: Could not construct a message to send."]
 
         # Construct the A2A message objects directly
         message_to_send = Message(
@@ -603,23 +662,34 @@ class RoutingAgent:
         for part in parts_to_process:
             part_dict = part.model_dump(exclude_none=True)
 
-            # Check for FileParts missing an ID and generate a deterministic one.
             if part_dict.get("kind") == "file":
-                metadata = part_dict.get("metadata")
-                if metadata is None:
-                    metadata = {}
-                    part_dict["metadata"] = metadata
+                metadata = part_dict.get("metadata", {})
+                file_details = part_dict.get("file", {})
                 
-                if not ("id" in metadata or "moment_id" in metadata):
-                    title = metadata.get("title")
-                    uri = part_dict.get("file", {}).get("uri")
-                    if title and uri:
-                        hash_input = f"{title}{uri}".encode()
-                        deterministic_id = hashlib.md5(hash_input).hexdigest()
-                        metadata["id"] = deterministic_id
-                        logger.info(
-                            "Generated deterministic ID %s for asset with title '%s'",
-                            deterministic_id, title)
+                asset_id = metadata.get("id") or metadata.get("moment_id")
+                real_uri = file_details.get("uri")
+
+                if asset_id and real_uri:
+                    logger.info("Sanitizing URI for asset ID %s", asset_id)
+                    
+                    # 1. Cache the real URI and mime_type in state
+                    if "video_assets" not in tool_context.state:
+                        tool_context.state["video_assets"] = {}
+                    
+                    real_mime_type = file_details.get("mime_type") or file_details.get("mimeType") or "application/octet-stream"
+                    tool_context.state["video_assets"][asset_id] = {
+                        "uri": real_uri,
+                        "mime_type": real_mime_type
+                    }
+                    
+                    # 2. Replace the URI with the placeholder
+                    part_dict["file"]["uri"] = f"https://invalid.com/{asset_id}"
+                    
+                    # 3. Cache the full original part for the timeline
+                    if "part_cache" not in tool_context.state:
+                        tool_context.state["part_cache"] = {}
+                    original_part = part.model_dump(exclude_none=True)
+                    tool_context.state["part_cache"][asset_id] = original_part
 
             output_parts.append(json.dumps(part_dict))
 

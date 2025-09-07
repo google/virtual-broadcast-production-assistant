@@ -79,25 +79,19 @@ async def get_gcs_signed_url(gcs_uri: str) -> str | None:
         A signed URL string, or None if an error occurs.
     """
     try:
-        # This will automatically use the service account credentials on Cloud Run
-        credentials, project = await asyncio.to_thread(google.auth.default, scopes=["https://www.googleapis.com/auth/cloud-platform"])
-        
-        # We need to refresh the credentials to get an access token.
-        request = google.auth.transport.requests.Request()
-        await asyncio.to_thread(credentials.refresh, request)
-
         bucket_name, blob_name = gcs_uri.replace("gs://", "").split("/", 1)
         bucket = storage_client.bucket(bucket_name)
         blob = bucket.blob(blob_name)
 
         expiration = datetime.timedelta(hours=1)
-        
+
+        # By not providing service_account_email or access_token, the library
+        # will automatically use the IAM signBlob API if the credentials
+        # (like default service account on Cloud Run) support it.
         signed_url = await asyncio.to_thread(
             blob.generate_signed_url,
             version="v4",
             expiration=expiration,
-            service_account_email=credentials.service_account_email,
-            access_token=credentials.token,
         )
         return signed_url
     except Exception as e:
