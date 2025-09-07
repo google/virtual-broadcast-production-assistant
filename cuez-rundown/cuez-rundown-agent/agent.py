@@ -63,7 +63,11 @@ def create_agent() -> LlmAgent:
     - Double-check UIDs before executing operations to prevent errors
 
     You are working in project with uid 7f18ce41-695f-1c93-e761-1cec6eb53c5b.
-    You are working in episode with uid 7708d041-9fc0-00aa-1db3-444aaae6d5a0.
+
+    If the user provides an episode name or title and you need to find the episode_id, use the "list episodes" tool to retrieve the list of episodes.
+
+    If responding provide human readable titles and their corresponding UIDs in the format: "Title (UID)".
+    For example, "Episode 1 (UID: 12345678-1234-1234-1234-123456789012)".
 
     Take decisive action. Do not ask for confirmation. Execute operations directly through the provided tools."""
         ),
