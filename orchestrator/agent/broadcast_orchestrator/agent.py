@@ -555,6 +555,10 @@ class RoutingAgent:
         id_pattern = r"id\s+([\w\-_.]+)"
         id_match = re.search(id_pattern, task, re.IGNORECASE)
 
+        # Pattern 3: Fallback for raw filenames
+        filename_pattern = r'(\S+\.(?:mp4|mov|wav|jpg|jpeg|png))'
+        filename_match = re.search(filename_pattern, task, re.IGNORECASE)
+
         source_ref_id = None
         pattern_to_replace = None
 
@@ -566,6 +570,10 @@ class RoutingAgent:
             source_ref_id = id_match.group(1)
             pattern_to_replace = id_match.group(0)
             logger.info("Found raw asset ID: %s", source_ref_id)
+        elif filename_match:
+            source_ref_id = filename_match.group(1)
+            pattern_to_replace = filename_match.group(0)
+            logger.info("Found filename: %s", source_ref_id)
 
         if source_ref_id and pattern_to_replace:
             real_uri = None
