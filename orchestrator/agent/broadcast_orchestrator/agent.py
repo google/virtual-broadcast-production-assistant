@@ -459,7 +459,7 @@ class RoutingAgent:
 
     # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements,too-many-locals
     async def send_message(self, agent_name: str, task: str,
-                           tool_context: ToolContext) -> list[str]:
+                           tool_context: ToolContext, **kwargs) -> list[str]:
         """Sends a task to remote seller agent
 
         This will send a message to the remote agent named agent_name.
@@ -476,7 +476,7 @@ class RoutingAgent:
             A list of strings from the remote agent's response. Complex objects
             are returned as JSON strings.
         """
-        logger.info("RAW task from LLM for agent '%s': '%s'", agent_name, task)
+        logger.info("RAW task from LLM for agent '%s': '%s', kwargs: %s", agent_name, task, kwargs)
         state = tool_context.state
         client = None
         normalized_agent_name = normalize_name(agent_name)
@@ -544,38 +544,47 @@ class RoutingAgent:
                                {}).get("message_id", str(uuid.uuid4()))
 
         # 5. Construct the message payload, resolving any asset IDs to real URIs
+        payload = kwargs.copy()
+        payload['task'] = task
+        text_content = task  # Fallback for simple text-based tasks
         message_parts: list[Part] = []
-        text_content = task
-
-        # Pattern 1: Look for our placeholder URI
-        placeholder_pattern = r'https://invalid\.com/([a-z0-9_-]+)/'
-        placeholder_match = re.search(placeholder_pattern, task)
-
-        # Pattern 2: Fallback for raw ID-like strings
-        id_pattern = r"id\s+([\w\-_.]+)"
-        id_match = re.search(id_pattern, task, re.IGNORECASE)
-
-        # Pattern 3: Fallback for raw filenames
-        filename_pattern = r'(\S+\.(?:mp4|mov|wav|jpg|jpeg|png))'
-        filename_match = re.search(filename_pattern, task, re.IGNORECASE)
+        is_structured_task = "input_uri" in payload
 
         source_ref_id = None
-        pattern_to_replace = None
+        real_uri = None
+        pattern_to_replace_in_task_string = None # Only used for string-based tasks
 
-        if placeholder_match:
-            source_ref_id = placeholder_match.group(1)
-            pattern_to_replace = placeholder_match.group(0)
-            logger.info("Found placeholder URI with ID: %s", source_ref_id)
-        elif id_match:
-            source_ref_id = id_match.group(1)
-            pattern_to_replace = id_match.group(0)
-            logger.info("Found raw asset ID: %s", source_ref_id)
-        elif filename_match:
-            source_ref_id = filename_match.group(1)
-            pattern_to_replace = filename_match.group(0)
-            logger.info("Found filename: %s", source_ref_id)
+        # 1. Check for structured URI first
+        if is_structured_task:
+            placeholder_uri = payload.get("input_uri")
+            if placeholder_uri and placeholder_uri.startswith("https://invalid.com/"):
+                match = re.search(r'https://invalid\.com/([a-z0-9_-]+)/', placeholder_uri)
+                if match:
+                    source_ref_id = match.group(1)
+                    logger.info("Found structured placeholder URI with ID: %s", source_ref_id)
 
-        if source_ref_id and pattern_to_replace:
+        # 2. If not found in structured payload, search the raw task string
+        if not source_ref_id:
+            logger.info("No structured URI found, searching for patterns in task string.")
+            placeholder_match = re.search(r'https://invalid\.com/([a-z0-9_-]+)/', task)
+            id_match = re.search(r"id\s+([\w\-_.]+)", task, re.IGNORECASE)
+            filename_match = re.search(r'([^\s/]+\.(?:mp4|mov|wav|jpg|jpeg|png))', task, re.IGNORECASE)
+
+            if placeholder_match:
+                source_ref_id = placeholder_match.group(1)
+                pattern_to_replace_in_task_string = placeholder_match.group(0)
+                logger.info("Found string placeholder URI with ID: %s", source_ref_id)
+            elif id_match:
+                source_ref_id = id_match.group(1)
+                pattern_to_replace_in_task_string = id_match.group(0)
+                logger.info("Found raw asset ID in string: %s", source_ref_id)
+            elif filename_match:
+                source_ref_id = filename_match.group(1)
+                pattern_to_replace_in_task_string = filename_match.group(0)
+                logger.info("Found filename in string: %s", source_ref_id)
+
+        # 3. If we have an ID, resolve it to a real URI
+        if source_ref_id:
             real_uri = None
             mime_type = "application/octet-stream"  # Default
 
@@ -606,7 +615,7 @@ class RoutingAgent:
                 video_assets_cache = tool_context.state.get("video_assets", {})
                 found_by_title = False
                 for asset_id, asset_details in video_assets_cache.items():
-                    if asset_details.get("title") and asset_details.get("title") in source_ref_id:
+                    if asset_details.get("title") and source_ref_id in asset_details.get("title"):
                         logger.info("Fallback successful: Found match by title in cache for asset ID %s", asset_id)
                         real_uri = asset_details.get("uri")
                         mime_type = asset_details.get("mime_type", mime_type)
@@ -626,30 +635,35 @@ class RoutingAgent:
                             except json.JSONDecodeError:
                                 logger.warning("Could not decode file data for title %s", source_ref_id)
 
+            if not real_uri:
+                logger.warning("Failed to resolve ID or Title to URI: %s. Passing original task downstream.", source_ref_id)
+
+        # 4. Construct the final message parts based on task type
+        if is_structured_task:
+            # We had a structured task, so update the payload and send as DataPart
             if real_uri:
-                # Infer mime_type from the title, as the cached one might be null
+                payload["input_uri"] = real_uri
+                logger.info("Updated structured payload with real URI: %s", payload["input_uri"])
+            message_parts.append(Part(root=DataPart(data=payload)))
+            logger.info("Sending structured DataPart payload (URI may be unresolved).")
+        else:
+            # It was a simple string task. Replace the pattern in the string and send as TextPart.
+            text_content = task # Start with the original task
+            if real_uri and pattern_to_replace_in_task_string:
+                text_content = task.replace(pattern_to_replace_in_task_string, real_uri)
+                logger.info("Updated TextPart with real URI: %s", text_content)
+            
+            if text_content:
+                message_parts.append(Part(root=TextPart(text=text_content)))
+            
+            if real_uri and "cuez" not in agent_name.lower():
                 asset_title = ""
                 if "video_assets" in tool_context.state and source_ref_id in tool_context.state["video_assets"]:
                      asset_title = tool_context.state["video_assets"][source_ref_id].get("title")
-                
                 final_mime_type = infer_mime_type(asset_title)
-
-                # Replace the placeholder with the real URI in the text content
-                text_content = task.replace(pattern_to_replace, real_uri)
-                
-                # Also create a separate FilePart, but not for Cuez
-                if "cuez" not in agent_name.lower():
-                    file_part = Part(root=FilePart(file=FileWithUri(uri=real_uri, mime_type=final_mime_type)))
-                    message_parts.append(file_part)
-                    logger.info("Adding FilePart with inferred mime_type '%s' for non-Cuez agent.", final_mime_type)
-
-                logger.info("Updated TextPart with real URI: %s", text_content)
-            else:
-                logger.error("Failed to resolve ID or Title to URI: %s", source_ref_id)
-                return [f"Error: Failed to resolve asset '{source_ref_id}' to a URI."]
-
-        if text_content:
-            message_parts.append(Part(root=TextPart(text=text_content)))
+                file_part = Part(root=FilePart(file=FileWithUri(uri=real_uri, mime_type=final_mime_type)))
+                message_parts.append(file_part)
+                logger.info("Adding supplementary FilePart for non-Cuez agent.")
 
         if not message_parts:
             return ["Error: Could not construct a message to send."]

@@ -41,9 +41,14 @@ cleanup() {
     fi
     echo "Removing log file..."
     rm backend.log
+    # Sometimes the process doesn't let go of the port
+    kill -9  $(lsof -t -i:8080)
+    echo "Force killing any process on port 8080."
     echo "Cleanup complete."
     sleep 1
 }
+
+
 
 # Trap exit signals
 trap cleanup EXIT SIGINT SIGTERM

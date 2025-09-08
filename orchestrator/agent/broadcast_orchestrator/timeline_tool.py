@@ -94,9 +94,8 @@ async def get_uri_by_title(title: str, session_id: str) -> str | None:
     """
     logger.info("Resolving URI for title: '%s' in session: %s", title, session_id)
     try:
-        db = firestore_async.client()
         events_ref = db.collection("timeline_events")
-        query = events_ref.where("session_id", "==", session_id).where("title", "==", title).order_by("timestamp", direction="DESCENDING").limit(1)
+        query = events_ref.where("session_id", "==", session_id).where("title", ">=", title).where("title", "<", title + "\uf8ff").order_by("title").order_by("timestamp", direction="DESCENDING").limit(1)
         query_snapshot = await query.get()
 
         if not query_snapshot:
