@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import json
 from a2a.types import (
     AgentCard,
+    DataPart,
     FilePart,
     FileWithUri,
     Message,
@@ -192,15 +193,15 @@ async def test_send_message_flexible_matching(mocked_agent):
 
     # Act & Assert
     # Case-insensitive match on card name
-    await agent.send_message("my test agent", "do something", tool_context)
+    await agent.send_message("my test agent", "do something", tool_context, **{})
     mock_conn1.send_message.assert_called()
 
     # Match on ID with different casing
-    await agent.send_message("another_agent", "do something else", tool_context)
+    await agent.send_message("another_agent", "do something else", tool_context, **{})
     mock_conn2.send_message.assert_called()
 
     # Match with spaces instead of underscore in ID
-    await agent.send_message("MY TEST AGENT", "do a third thing", tool_context)
+    await agent.send_message("MY TEST AGENT", "do a third thing", tool_context, **{})
     assert mock_conn1.send_message.call_count == 2
 
 
@@ -228,7 +229,7 @@ async def test_send_message_ambiguous_match(mocked_agent):
     agent.remote_agent_connections["CONFLICT_AGENT_2"] = mock_conn2
 
     # Act
-    result = await agent.send_message("conflict agent", "do something", tool_context)
+    result = await agent.send_message("conflict agent", "do something", tool_context, **{})
 
     # Assert
     assert "Error: The agent name 'conflict agent' is ambiguous" in result[0]
@@ -269,8 +270,6 @@ async def test_load_agents_from_firestore_with_api_key(
     assert kwargs.get("api_key") == "super-secret-key"
 
 
-
-
 @pytest.mark.asyncio
 async def test_send_message_with_text_only(mocked_agent):
     """
@@ -296,7 +295,7 @@ async def test_send_message_with_text_only(mocked_agent):
     task_text = "Hello, agent!"
 
     # Act
-    await agent.send_message("Test Agent", task_text, tool_context)
+    await agent.send_message("Test Agent", task_text, tool_context, **{})
 
     # Assert
     mock_conn.send_message.assert_called_once()
@@ -309,6 +308,62 @@ async def test_send_message_with_text_only(mocked_agent):
     assert isinstance(part.root, TextPart)
     assert part.root.text == "Hello, agent!"
 
+
+@pytest.mark.asyncio
+async def test_send_message_with_structured_data(mocked_agent):
+    """
+    Tests that send_message correctly handles a structured data task with kwargs
+    and creates a DataPart.
+    """
+    # Arrange
+    agent = mocked_agent
+    tool_context = MagicMock()
+    tool_context.state = {"input_message_metadata": {}}
+
+    # Mock the agent connection
+    mock_conn = MagicMock()
+    mock_conn.card.name = "EVS Agent"
+    
+    mock_success_response = MagicMock(spec=SendMessageSuccessResponse)
+    mock_success_response.result = Message(role="agent", parts=[], message_id="dummy-id")
+    mock_send_response = MagicMock()
+    mock_send_response.root = mock_success_response
+    
+    mock_conn.send_message = AsyncMock(return_value=mock_send_response)
+    agent.remote_agent_connections["EVS_AGENT"] = mock_conn
+
+    placeholder_uri = "https://invalid.com/vid-123/"
+    real_uri = "http://real.uri/video.mp4"
+    
+    task_kwargs = {
+        "input_uri": placeholder_uri,
+        "prompt": "blur faces",
+        "duration": 10
+    }
+
+    # Mock the resolution logic
+    tool_context.state["video_assets"] = {
+        "vid-123": {"uri": real_uri, "mime_type": "video/mp4"}
+    }
+
+    # Act
+    await agent.send_message("EVS Agent", "blur_subjects", tool_context, **task_kwargs)
+
+    # Assert
+    mock_conn.send_message.assert_called_once()
+    call_args = mock_conn.send_message.call_args
+    sent_request: SendMessageRequest = call_args.kwargs['message_request']
+    message = sent_request.params.message
+
+    assert len(message.parts) == 1
+    part = message.parts[0]
+    assert isinstance(part.root, DataPart)
+    
+    sent_data = part.root.data
+    assert sent_data["task"] == "blur_subjects"
+    assert sent_data["prompt"] == "blur faces"
+    assert sent_data["duration"] == 10
+    assert sent_data["input_uri"] == real_uri # Check that the URI was resolved
 
 
 @pytest.mark.asyncio
@@ -348,7 +403,7 @@ async def test_uri_sanitization_and_resolution_flow(mock_get_uri, mocked_agent):
     agent.remote_agent_connections["SEARCH_AGENT"] = mock_search_conn
 
     # Act: Call send_message to process the search agent's response
-    output_parts_str = await agent.send_message("Search Agent", "find video", tool_context)
+    output_parts_str = await agent.send_message("Search Agent", "find video", tool_context, **{})
 
     # Assert: Check that the URI was sanitized for the LLM
     assert len(output_parts_str) == 1
@@ -376,7 +431,7 @@ async def test_uri_sanitization_and_resolution_flow(mock_get_uri, mocked_agent):
     agent.remote_agent_connections["PROCESSING_AGENT"] = mock_processor_conn
 
     # Act: Call send_message to send the task to the processor
-    await agent.send_message("Processing Agent", task_for_processor, tool_context)
+    await agent.send_message("Processing Agent", task_for_processor, tool_context, **{})
 
     # Assert: Check that the message sent to the processor contained the REAL URI
     mock_processor_conn.send_message.assert_called_once()
@@ -438,7 +493,7 @@ async def test_send_message_with_filename(mocked_agent):
         mock_get_uri.return_value = json.dumps({"uri": "http://real.uri/video.mp4", "mime_type": "video/mp4"})
         
         # Act
-        await agent.send_message("EVS Agent", task_text, tool_context)
+        await agent.send_message("EVS Agent", task_text, tool_context, **{})
 
     # Assert
     mock_get_uri.assert_called_once_with(filename)

@@ -109,4 +109,46 @@ async def test_get_uri_by_source_ref_id_cache_miss(mock_cache_asset, mock_firest
         gcs_bucket_name="test-bucket"
     )
 
+
+async def test_get_uri_by_title_prefix_match(mock_firestore_db):
+    """Tests that get_uri_by_title can find an event with a prefix match."""
+    from broadcast_orchestrator.timeline_tool import get_uri_by_title
+
+    # Arrange
+    title_prefix = "My Video"
+    full_title = "My Video_blur"
+    session_id = "test-session"
+    expected_details = {"video_uri": "http://server.com/blurred.mp4", "title": full_title}
+
+    # Mock timeline event lookup
+    mock_timeline_doc = MagicMock()
+    mock_timeline_doc.to_dict.return_value = {"details": expected_details}
+    mock_timeline_query_snapshot = [mock_timeline_doc]
     
+    # Mock the chained calls for the query
+    mock_where1 = MagicMock()
+    mock_where2 = MagicMock()
+    mock_where3 = MagicMock()
+    mock_order1 = MagicMock()
+    mock_order2 = MagicMock()
+    mock_limit = MagicMock()
+    
+    mock_firestore_db.collection.return_value.where.return_value = mock_where1
+    mock_where1.where.return_value = mock_where2
+    mock_where2.where.return_value = mock_where3
+    mock_where3.order_by.return_value = mock_order1
+    mock_order1.order_by.return_value = mock_order2
+    mock_order2.limit.return_value = mock_limit
+    mock_limit.get = AsyncMock(return_value=mock_timeline_query_snapshot)
+
+    # Act
+    result_str = await get_uri_by_title(title_prefix, session_id)
+    result = json.loads(result_str)
+
+    # Assert
+    # Check that the query was constructed correctly for a prefix search
+    mock_firestore_db.collection.assert_called_once_with("timeline_events")
+    mock_firestore_db.collection.return_value.where.assert_called_with("session_id", "==", session_id)
+    mock_where1.where.assert_called_with("title", ">=", title_prefix)
+    
+    assert result == expected_details
