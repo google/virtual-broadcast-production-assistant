@@ -10,32 +10,51 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [isAuthorised, setIsAuthorised] = useState(null);
 
-  useEffect(() => {
+    useEffect(() => {
+    console.log("AuthContext: Subscribing to onAuthStateChanged.");
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        if (user.email) {
-          const userRef = doc(db, "users", user.email);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
-            setCurrentUser(user);
-            setIsAuthorised(true);
+      console.log("AuthContext: onAuthStateChanged triggered.", { email: user?.email });
+      try {
+        if (user) {
+          if (user.email) {
+            console.log(`AuthContext: User found. Checking allow list for ${user.email}`);
+            const userRef = doc(db, "users", user.email);
+            const userSnap = await getDoc(userRef);
+            
+            if (userSnap.exists()) {
+              console.log("AuthContext: User is in allow list. Setting as authorized.");
+              setCurrentUser(user);
+              setIsAuthorised(true);
+            } else {
+              console.log("AuthContext: User is NOT in allow list. Setting as unauthorized.");
+              setCurrentUser(user);
+              setIsAuthorised(false);
+            }
           } else {
+            console.log("AuthContext: User has no email. Setting as unauthorized.");
             setCurrentUser(user);
             setIsAuthorised(false);
           }
         } else {
-          // User exists but has no email. Treat as unauthorized.
-          setCurrentUser(user);
-          setIsAuthorised(false);
+          console.log("AuthContext: No user signed in.");
+          setCurrentUser(null);
+          setIsAuthorised(null);
         }
-      } else {
-        // No user is signed in.
-        setCurrentUser(null);
-        setIsAuthorised(null);
+      } catch (error) {
+        console.error("AuthContext: Authorization check failed:", error);
+        // If there's an error, treat the user as unauthorized
+        setCurrentUser(user);
+        setIsAuthorised(false);
+      } finally {
+        console.log("AuthContext: Setting loading to false.");
+        setLoading(false);
       }
-      setLoading(false);
     });
-    return unsubscribe;
+
+    return () => {
+      console.log("AuthContext: Unsubscribing from onAuthStateChanged.");
+      unsubscribe();
+    };
   }, []);
 
   const value = {

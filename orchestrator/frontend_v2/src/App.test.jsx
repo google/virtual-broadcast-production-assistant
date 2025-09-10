@@ -1,38 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
+import { BrowserRouter as Router } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { RundownProvider } from './contexts/RundownContext';
 import { SocketProvider } from './contexts/SocketContext';
 import App from './App';
 import { vi, describe, it, beforeEach, expect } from 'vitest';
-
-vi.mock('firebase/firestore', async (importOriginal) => {
-    const actual = await importOriginal();
-    return {
-        ...actual,
-        getFirestore: vi.fn(),
-        doc: vi.fn(),
-        getDoc: vi.fn(() => Promise.resolve({
-            exists: () => true,
-            data: () => ({ rundownSystem: 'cuez' })
-        })),
-        collection: vi.fn(),
-        query: vi.fn(),
-        onSnapshot: vi.fn(() => () => {}),
-    }
-});
-
-vi.mock('firebaseui', () => ({
-  auth: {
-    AuthUI: {
-      getInstance: vi.fn(() => ({
-        start: vi.fn(),
-      })),
-      new: vi.fn(() => ({
-        start: vi.fn()
-      }))
-    },
-  },
-}));
 
 const mockUseAuth = {
   currentUser: {
@@ -59,11 +31,13 @@ vi.mock('@/contexts/useRundown', () => ({
 vi.mock('@/contexts/useSocket', () => ({
   useSocket: () => ({
     connectionStatus: 'connected',
+    addEventListener: () => () => {},
   }),
 }));
 
 describe('App', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     mockUseAuth.isAuthorised = true;
     mockUseAuth.currentUser = {
       uid: 'test-user',
@@ -74,16 +48,20 @@ describe('App', () => {
     mockUseAuth.loading = false;
   });
 
-  it('renders without crashing', () => {
-    render(
-      <AuthProvider>
-        <RundownProvider>
-          <SocketProvider>
-            <App />
-          </SocketProvider>
-        </RundownProvider>
-      </AuthProvider>
-    );
+  it('renders without crashing', async () => {
+    await act(async () => {
+      render(
+        <Router>
+          <AuthProvider>
+            <RundownProvider>
+              <SocketProvider>
+                <App />
+              </SocketProvider>
+            </RundownProvider>
+          </AuthProvider>
+        </Router>
+      );
+    });
   });
 
   describe('when user is not authorized', () => {
@@ -91,30 +69,38 @@ describe('App', () => {
       mockUseAuth.isAuthorised = false;
     });
 
-    it('renders the NotAuthorised page', () => {
-      render(
-        <AuthProvider>
-          <RundownProvider>
-            <SocketProvider>
-              <App />
-            </SocketProvider>
-          </RundownProvider>
-        </AuthProvider>
-      );
+    it('renders the NotAuthorised page', async () => {
+      await act(async () => {
+        render(
+          <Router>
+            <AuthProvider>
+              <RundownProvider>
+                <SocketProvider>
+                  <App />
+                </SocketProvider>
+              </RundownProvider>
+            </AuthProvider>
+          </Router>
+        );
+      });
       expect(screen.getByText('401 Not Authorised')).toBeInTheDocument();
     });
 
-    it('renders the NotAuthorised page when user has no email', () => {
+    it('renders the NotAuthorised page when user has no email', async () => {
         mockUseAuth.currentUser.email = null;
-        render(
-            <AuthProvider>
-                <RundownProvider>
-                <SocketProvider>
-                    <App />
-                </SocketProvider>
-                </RundownProvider>
-            </AuthProvider>
-        );
+        await act(async () => {
+          render(
+              <Router>
+                <AuthProvider>
+                    <RundownProvider>
+                    <SocketProvider>
+                        <App />
+                    </SocketProvider>
+                    </RundownProvider>
+                </AuthProvider>
+              </Router>
+          );
+        });
         expect(screen.getByText('401 Not Authorised')).toBeInTheDocument();
     });
   });

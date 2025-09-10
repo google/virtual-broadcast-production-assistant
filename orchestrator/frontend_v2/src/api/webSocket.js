@@ -44,9 +44,11 @@ export const connectSocket = async (uid, getToken) => {
       resolve(socket);
     };
     const onClose = () => {
-      socket.removeEventListener('open', onOpen);
-      socket.removeEventListener('close', onClose);
-      socket = null;
+      if (socket) {
+        socket.removeEventListener('open', onOpen);
+        socket.removeEventListener('close', onClose);
+        socket = null;
+      }
       reject(new Error('WebSocket connection failed'));
     };
     socket.addEventListener('open', onOpen);
