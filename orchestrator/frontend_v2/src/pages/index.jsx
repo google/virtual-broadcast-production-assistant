@@ -9,7 +9,8 @@ import Settings from "./Settings";
 import Schedule from "./Schedule";
 import Contacts from "./Contacts";
 import Auth from './Auth';
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import NotAuthorised from './NotAuthorised';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/useAuth';
 
 const PAGES = {
@@ -61,15 +62,34 @@ function PagesContent() {
 }
 
 export default function Pages() {
-    const { currentUser, loading } = useAuth();
+    const { currentUser, loading, isAuthorised } = useAuth();
+
+    console.log("Router: Re-rendering with state:", {
+      loading,
+      isAuthorised,
+      userEmail: currentUser?.email,
+    });
 
     if (loading) {
-        return <div>Loading...</div>; // Or a spinner component
+        console.log("Router: Rendering Loading page.");
+        return <div>Loading...</div>;
+    }
+
+    let pageContent;
+    if (currentUser && isAuthorised) {
+        console.log("Router: Rendering main application content.");
+        pageContent = <PagesContent />;
+    } else if (currentUser && isAuthorised === false) {
+        console.log("Router: Rendering NotAuthorised page.");
+        pageContent = <NotAuthorised />;
+    } else {
+        console.log("Router: Rendering Auth page.");
+        pageContent = <Auth />;
     }
 
     return (
-        <Router>
-            {currentUser ? <PagesContent /> : <Auth />}
-        </Router>
+        <>
+            {pageContent}
+        </>
     );
 }
