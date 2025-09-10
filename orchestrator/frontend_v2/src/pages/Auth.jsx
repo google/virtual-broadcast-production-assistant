@@ -6,32 +6,25 @@ import { auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/useAuth';
 
 export default function Auth() {
-  const { isUpgrading, setIsUpgrading, signInAnonymously } = useAuth();
+  const { isAuthorised } = useAuth();
 
   useEffect(() => {
-    if (isUpgrading) {
-      const ui = firebaseui.auth.AuthUI.getInstance() || new firebaseui.auth.AuthUI(auth);
-      ui.start('#firebaseui-auth-container', {
-        signInOptions: [
-          GoogleAuthProvider.PROVIDER_ID,
-        ],
-        callbacks: {
-          signInSuccessWithAuthResult: function () {
-            setIsUpgrading(false);
-            return false;
-          },
+    const ui = firebaseui.auth.AuthUI.getInstance() || new firebaseui.auth.AuthUI(auth);
+    ui.start('#firebaseui-auth-container', {
+      signInOptions: [
+        GoogleAuthProvider.PROVIDER_ID,
+      ],
+      callbacks: {
+        signInSuccessWithAuthResult: function () {
+          return false;
         },
-      });
-    } else {
-        // If not upgrading, sign in anonymously
-        signInAnonymously().catch(error => {
-            console.error("Anonymous sign-in failed:", error);
-        });
-    }
-  }, [isUpgrading, signInAnonymously, setIsUpgrading]);
+      },
+    });
+  }, []);
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <h2>Orchestrator Login</h2>
       <div id="firebaseui-auth-container"></div>
     </div>
   );

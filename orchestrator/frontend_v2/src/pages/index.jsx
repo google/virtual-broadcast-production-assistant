@@ -9,6 +9,7 @@ import Settings from "./Settings";
 import Schedule from "./Schedule";
 import Contacts from "./Contacts";
 import Auth from './Auth';
+import NotAuthorised from './NotAuthorised';
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/useAuth';
 
@@ -61,15 +62,24 @@ function PagesContent() {
 }
 
 export default function Pages() {
-    const { currentUser, loading } = useAuth();
+    const { currentUser, loading, isAuthorised } = useAuth();
 
     if (loading) {
         return <div>Loading...</div>; // Or a spinner component
     }
 
+    let pageContent;
+    if (currentUser && isAuthorised) {
+        pageContent = <PagesContent />;
+    } else if (currentUser && isAuthorised === false) {
+        pageContent = <NotAuthorised />;
+    } else {
+        pageContent = <Auth />;
+    }
+
     return (
         <Router>
-            {currentUser ? <PagesContent /> : <Auth />}
+            {pageContent}
         </Router>
     );
 }
