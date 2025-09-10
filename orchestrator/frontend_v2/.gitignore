@@ -10,3 +10,6 @@ build
 # Deployment scripts and env files
 deploy-cloud-run.sh
 .env*
+
+# Firestore rules (local only)
+firestore.rules

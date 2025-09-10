@@ -1,4 +1,3 @@
-
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter as Router } from 'react-router-dom';
@@ -8,32 +7,6 @@ import { useRundown } from '@/contexts/useRundown';
 import { useSocket } from '@/contexts/useSocket';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-vi.mock('firebase/app', () => ({
-  initializeApp: vi.fn(() => ({})),
-}));
-
-vi.mock('firebase/auth', () => ({
-  getAuth: vi.fn(),
-  onAuthStateChanged: vi.fn(),
-  signInAnonymously: vi.fn(),
-  signOut: vi.fn(),
-}));
-
-vi.mock('firebase/firestore', async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    getFirestore: vi.fn(() => ({})),
-    collection: vi.fn(),
-    query: vi.fn(),
-    where: vi.fn(),
-    orderBy: vi.fn(),
-    getDocs: vi.fn(() => Promise.resolve({ docs: [] })),
-    onSnapshot: vi.fn(() => () => {}), // Return an unsubscribe function
-  };
-});
-
-
 // Mock the hooks
 vi.mock('@/contexts/useAuth');
 vi.mock('@/contexts/useRundown');
@@ -42,7 +15,6 @@ vi.mock('@/contexts/useSocket');
 vi.mock('../components/live/TelemetryPanel', () => ({
   default: () => <div data-testid="telemetry-panel"></div>,
 }));
-
 
 import { getDocs } from 'firebase/firestore';
 
@@ -72,21 +44,21 @@ describe('Live page', () => {
     });
 
     // Reset mocks before each test
-    getDocs.mockClear();
+    if (getDocs) {
+      getDocs.mockClear();
+    }
   });
 
   it('should display "Connection established" message when socket is opened', async () => {
-    render(
-      <Router>
-        <Live />
-      </Router>
-    );
-
     await act(async () => {
-      await Promise.resolve(); // allow fetchHistory to resolve
+      render(
+        <Router>
+          <Live />
+        </Router>
+      );
     });
 
-    act(() => {
+    await act(async () => {
       eventListeners.open();
     });
 
@@ -94,17 +66,15 @@ describe('Live page', () => {
   });
 
   it('should display "Agent connection disconnected" message when socket is closed', async () => {
-    render(
-      <Router>
-        <Live />
-      </Router>
-    );
-
     await act(async () => {
-      await Promise.resolve(); // allow fetchHistory to resolve
+      render(
+        <Router>
+          <Live />
+        </Router>
+      );
     });
 
-    act(() => {
+    await act(async () => {
       eventListeners.close();
     });
 
@@ -118,11 +88,13 @@ describe('Live page', () => {
     ];
     getDocs.mockResolvedValue({ docs: mockHistory });
 
-    render(
-      <Router>
-        <Live />
-      </Router>
-    );
+    await act(async () => {
+      render(
+        <Router>
+          <Live />
+        </Router>
+      );
+    });
 
     await screen.findByText('Hello');
     expect(screen.getByText('Hi there!')).toBeInTheDocument();
@@ -130,11 +102,13 @@ describe('Live page', () => {
 
   it('should toggle microphone on and off and update agent replying status', async () => {
     const user = userEvent.setup();
-    render(
-      <Router>
-        <Live />
-      </Router>
-    );
+    await act(async () => {
+      render(
+        <Router>
+          <Live />
+        </Router>
+      );
+    });
 
     // Initial state: Mic is off, no agent replying indicator
     const micButton = screen.getByRole('button', { name: /mic off/i });
@@ -142,7 +116,9 @@ describe('Live page', () => {
     expect(screen.queryByTestId('agent-replying-indicator')).not.toBeInTheDocument();
 
     // Turn mic on
-    await user.click(micButton);
+    await act(async () => {
+      await user.click(micButton);
+    });
 
     // Mic is on, agent replying indicator should be visible
     const recordingButton = screen.getByRole('button', { name: /recording/i });
@@ -150,7 +126,9 @@ describe('Live page', () => {
     expect(screen.getByTestId('agent-replying-indicator')).toBeInTheDocument();
 
     // Turn mic off
-    await user.click(recordingButton);
+    await act(async () => {
+      await user.click(recordingButton);
+    });
 
     // Mic is off, agent replying indicator should be gone
     const micOffButton = screen.getByRole('button', { name: /mic off/i });
