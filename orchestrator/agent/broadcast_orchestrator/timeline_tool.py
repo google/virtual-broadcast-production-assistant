@@ -11,7 +11,7 @@ from .gcs_uploader import cache_asset_to_gcs, get_gcs_signed_url
 logger = logging.getLogger(__name__)
 db = firestore_async.client()
 
-async def get_uri_by_source_ref_id(source_ref_id: str) -> str:
+async def get_uri_by_source_ref_id(source_ref_id: str) -> str | None:
     """
     Retrieves a usable, short-lived URI for a media asset.
 
@@ -26,12 +26,13 @@ async def get_uri_by_source_ref_id(source_ref_id: str) -> str:
         source_ref_id: The ID of the asset from the source agent (e.g., Moments Lab ID).
 
     Returns:
-        A JSON string containing the URI and mime_type, or an error message.
+        A JSON string containing the URI and mime_type, or None if not found.
     """
     logger.info("Resolving URI for source_ref_id: %s", source_ref_id)
     gcs_bucket_name = os.getenv("GCS_BUCKET_NAME")
     if not gcs_bucket_name:
-        return "Error: GCS_BUCKET_NAME environment variable not set."
+        logger.error("GCS_BUCKET_NAME environment variable not set.")
+        return None
 
     try:
         # 1. Check for a cached asset in Firestore `media_assets` collection
@@ -43,7 +44,7 @@ async def get_uri_by_source_ref_id(source_ref_id: str) -> str:
             gcs_uri = cached_data.get("gcs_uri")
             mime_type = cached_data.get("mime_type", "application/octet-stream")
             logger.info("Found cached asset in GCS: %s", gcs_uri)
-            
+
             signed_url = await get_gcs_signed_url(gcs_uri)
             if signed_url:
                 return json.dumps({"uri": signed_url, "mime_type": mime_type})
@@ -59,7 +60,7 @@ async def get_uri_by_source_ref_id(source_ref_id: str) -> str:
 
         if not query_snapshot:
             logger.warning("No timeline event found with source_ref_id: %s", source_ref_id)
-            return f"Error: No timeline event found with source_ref_id '{source_ref_id}'"
+            return None
 
         event_data = query_snapshot[0].to_dict()
         details = event_data.get("details", {})
@@ -68,7 +69,7 @@ async def get_uri_by_source_ref_id(source_ref_id: str) -> str:
 
         if not original_uri:
             logger.warning("No video_uri found for event with source_ref_id: %s", source_ref_id)
-            return f"Error: No video_uri found for event with source_ref_id '{source_ref_id}'"
+            return None
 
         # 3. Trigger background task to cache the asset (don't wait for it)
         logger.info("Triggering background task to cache asset: %s", source_ref_id)
@@ -86,7 +87,7 @@ async def get_uri_by_source_ref_id(source_ref_id: str) -> str:
 
     except Exception as e:
         logger.error("Error in get_uri_by_source_ref_id: %s", e, exc_info=True)
-        return f"Error retrieving URI: {e}"
+        return None
 
 async def get_uri_by_title(title: str, session_id: str) -> str | None:
     """
