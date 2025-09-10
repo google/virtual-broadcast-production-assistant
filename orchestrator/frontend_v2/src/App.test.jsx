@@ -103,5 +103,19 @@ describe('App', () => {
       );
       expect(screen.getByText('401 Not Authorised')).toBeInTheDocument();
     });
+
+    it('renders the NotAuthorised page when user has no email', () => {
+        mockUseAuth.currentUser.email = null;
+        render(
+            <AuthProvider>
+                <RundownProvider>
+                <SocketProvider>
+                    <App />
+                </SocketProvider>
+                </RundownProvider>
+            </AuthProvider>
+        );
+        expect(screen.getByText('401 Not Authorised')).toBeInTheDocument();
+    });
   });
 });

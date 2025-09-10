@@ -13,25 +13,28 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // User is signed in, check if they are in the users collection
-        const userRef = doc(db, "users", user.email);
-        const userSnap = await getDoc(userRef);
-
-        if (userSnap.exists()) {
-          setCurrentUser(user);
-          setIsAuthorised(true);
+        if (user.email) {
+          const userRef = doc(db, "users", user.email);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            setCurrentUser(user);
+            setIsAuthorised(true);
+          } else {
+            setCurrentUser(user);
+            setIsAuthorised(false);
+          }
         } else {
-          // User is not in the users collection
+          // User exists but has no email. Treat as unauthorized.
           setCurrentUser(user);
           setIsAuthorised(false);
         }
       } else {
+        // No user is signed in.
         setCurrentUser(null);
         setIsAuthorised(null);
       }
       setLoading(false);
     });
-
     return unsubscribe;
   }, []);
 
