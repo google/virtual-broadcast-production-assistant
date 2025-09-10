@@ -6,18 +6,16 @@ from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPServerPa
 from dotenv import load_dotenv
 from google.adk.agents.llm_agent import LlmAgent
 
-load_dotenv()
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path=dotenv_path)
 
 logging.basicConfig()
 
 HOST = os.getenv("HOST")
 
 # Create MCP toolset with streamable HTTP connection
-mcp_toolset = MCPToolset(
-    connection_params=StreamableHTTPServerParams(
-        url=HOST
-    )
-)
+mcp_toolset = MCPToolset(connection_params=StreamableHTTPServerParams(
+    url=HOST))
 
 # Export mcp_toolset so it can be used in __main__.py
 __all__ = ['create_agent', 'mcp_toolset']
@@ -26,20 +24,21 @@ __all__ = ['create_agent', 'mcp_toolset']
 def load_instructions_from_file(filename):
     """
     Load agent instructions from a markdown file.
-    
+
     Args:
         filename (str): Path to the markdown file containing instructions.
-        
+
     Returns:
         str: The instruction text from the file.
     """
     possible_paths = [
         filename,  # Direct filename
-        os.path.join(os.path.dirname(__file__), filename),  # Same directory as script
+        os.path.join(os.path.dirname(__file__),
+                     filename),  # Same directory as script
         os.path.abspath(filename),  # Absolute path
         os.path.join(os.getcwd(), filename)  # Current working directory
     ]
-    
+
     # Try each path
     for path in possible_paths:
         try:
@@ -70,3 +69,5 @@ def create_agent() -> LlmAgent:
     instruction=agent_instructions,
         tools=[mcp_toolset],
     )
+
+root_agent = create_agent()
