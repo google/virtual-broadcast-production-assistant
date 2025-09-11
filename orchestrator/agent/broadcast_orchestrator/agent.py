@@ -17,6 +17,7 @@ from a2a.types import (
     FilePart,
     FileWithBytes,
     FileWithUri,
+    JSONRPCErrorResponse,
     MessageSendParams,
     Part,
     SendMessageRequest,
@@ -700,9 +701,48 @@ class RoutingAgent:
             return [error_message]
         logger.info("send_response %s", send_response)
 
+        if (isinstance(send_response.root, JSONRPCErrorResponse) and
+                send_response.root.error and
+                "is in terminal state" in (send_response.root.error.message or "")):
+            logger.warning(
+                "Task ID %s is in a terminal state. Clearing it and retrying.",
+                task_id)
+            if agent_specific_task_id_key in state:
+                state[agent_specific_task_id_key] = None
+
+            # Create a new message object for the retry, preserving the original
+            retry_message_to_send = Message(
+                role=message_to_send.role,
+                parts=message_to_send.parts,
+                message_id=message_to_send.message_id,
+                task_id=None,
+                context_id=message_to_send.context_id,
+            )
+            params = MessageSendParams(message=retry_message_to_send)
+            message_request = SendMessageRequest(id=message_id, params=params)
+
+            try:
+                logger.info("Retrying A2A payload: %s",
+                            message_request.model_dump_json(indent=2))
+                send_response = await client.send_message(
+                    message_request=message_request)
+                logger.info("Retry send_response %s", send_response)
+            except (httpx.ConnectError, A2AClientTimeoutError) as e:
+                error_message = (
+                    "Network connection failed during retry to agent "
+                    f"'{agent_name}'.")
+                logger.error("ERROR: %s Details: %s", error_message, e)
+                return [error_message]
+
         if not isinstance(send_response.root, SendMessageSuccessResponse):
-            logger.warning("received non-success response. Aborting get task ")
-            return ["Failed to send message."]
+            error_text = "Failed to send message."
+            if (isinstance(send_response.root, JSONRPCErrorResponse) and
+                    send_response.root.error):
+                error_text = f"Failed to send message: {send_response.root.error.message}"
+            logger.warning(
+                "received non-success response. Aborting get task. %s",
+                error_text)
+            return [error_text]
 
         result = send_response.root.result
 
@@ -727,6 +767,9 @@ class RoutingAgent:
             if hasattr(result, 'artifacts') and result.artifacts:
                 for artifact in result.artifacts:
                     parts_to_process.extend(artifact.parts or [])
+
+        if not parts_to_process and isinstance(result, Task):
+            return [result.model_dump_json(exclude_none=True)]
 
         for part in parts_to_process:
             part_dict = part.model_dump(exclude_none=True)
