@@ -1,88 +1,54 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+import os
+import uuid
 
 # Mark all tests in this file as asyncio
 pytestmark = pytest.mark.asyncio
 
-# --- Mocks and Fixtures ---
-
 @pytest.fixture
-def mock_httpx_client():
-    """Fixture to mock the httpx.AsyncClient."""
-    with patch("httpx.AsyncClient") as mock_client_class:
-        mock_client = mock_client_class.return_value.__aenter__.return_value
-        mock_response = MagicMock()
-        mock_response.content = b"test video content"
-        mock_response.headers = {"content-type": "video/mp4"}
-        mock_client.get = AsyncMock(return_value=mock_response)
-        yield mock_client
+def mock_bucket_and_blob():
+    """Fixture to mock the firebase_admin.storage.bucket and the blob it returns."""
+    mock_blob = MagicMock()
+    mock_blob.upload_from_string = MagicMock()
 
-@pytest.fixture
-def mock_storage_client():
-    """Fixture to mock the google.cloud.storage.Client."""
-    with patch("broadcast_orchestrator.gcs_uploader.storage_client") as mock_client:
-        mock_blob = MagicMock()
-        mock_blob.upload_from_string = MagicMock()
-        mock_blob.generate_signed_url = MagicMock(return_value="http://signed.url/test.mp4")
-        mock_bucket = MagicMock()
-        mock_bucket.blob.return_value = mock_blob
-        mock_client.bucket.return_value = mock_bucket
-        yield mock_client
+    mock_bucket = MagicMock()
+    def configure_blob(name):
+        mock_blob.name = name
+        return mock_blob
+    mock_bucket.blob.side_effect = configure_blob
+    
+    with patch("firebase_admin.storage.bucket", return_value=mock_bucket) as mock_bucket_func:
+        yield mock_bucket_func, mock_bucket, mock_blob
 
-@pytest.fixture
-def mock_firestore_client():
-    """Fixture to mock the firestore_async.client."""
-    with patch("broadcast_orchestrator.gcs_uploader.db") as mock_db:
-        mock_doc_ref = MagicMock()
-        mock_doc_ref.set = AsyncMock()
-        mock_db.collection.return_value.document.return_value = mock_doc_ref
-        yield mock_db
-
-# --- Tests ---
-
-async def test_cache_asset_to_gcs(
-    mock_httpx_client, mock_storage_client, mock_firestore_client
-):
-    """Tests that cache_asset_to_gcs downloads, uploads, and updates Firestore."""
-    from broadcast_orchestrator.gcs_uploader import cache_asset_to_gcs
+async def test_upload_base64_image_to_gcs(mock_bucket_and_blob):
+    """Tests that upload_base64_image_to_gcs correctly uploads a file and constructs a tokenized URL."""
+    mock_bucket_func, mock_bucket, mock_blob = mock_bucket_and_blob
+    
+    from broadcast_orchestrator.gcs_uploader import upload_base64_image_to_gcs
 
     # Arrange
-    source_url = "http://example.com/video.mp4"
-    asset_id = "test-asset-123"
+    base64_data = "aGVsbG8gd29ybGQ=" # "hello world" in base64
+    filename = "test.png"
     bucket_name = "test-bucket"
+    test_uuid = uuid.uuid4()
 
-    # Act
-    await cache_asset_to_gcs(source_url, asset_id, bucket_name)
+    with patch.dict(os.environ, {"GCS_BUCKET_NAME": bucket_name}), \
+         patch("uuid.uuid4", return_value=test_uuid):
 
-    # Assert
-    mock_httpx_client.get.assert_called_once_with(source_url, follow_redirects=True)
-    
-    mock_storage_client.bucket.assert_called_once_with(bucket_name)
-    mock_storage_client.bucket.return_value.blob.assert_called_once_with(asset_id)
-    
-    upload_call = mock_storage_client.bucket.return_value.blob.return_value.upload_from_string
-    upload_call.assert_called_once()
-    assert upload_call.call_args[0][0] == b"test video content"
-    assert upload_call.call_args[1]['content_type'] == "video/mp4"
+        # Act
+        result_url = await upload_base64_image_to_gcs(base64_data, filename)
 
-    firestore_call = mock_firestore_client.collection.return_value.document.return_value.set
-    firestore_call.assert_called_once()
-    firestore_data = firestore_call.call_args[0][0]
-    assert firestore_data["gcs_uri"] == f"gs://{bucket_name}/{asset_id}"
-    assert firestore_data["source_url"] == source_url
+        # Assert
+        mock_bucket_func.assert_called_once_with(bucket_name)
+        
+        expected_blob_name = f"images/{test_uuid}-{filename}"
+        mock_bucket.blob.assert_called_once_with(expected_blob_name)
+        
+        mock_blob.upload_from_string.assert_called_once_with(
+            b'hello world', content_type="image/png"
+        )
 
-async def test_get_gcs_signed_url(mock_storage_client):
-    """Tests the generation of a GCS signed URL."""
-    from broadcast_orchestrator.gcs_uploader import get_gcs_signed_url
-
-    # Arrange
-    gcs_uri = "gs://test-bucket/test-asset-123"
-
-    # Act
-    signed_url = await get_gcs_signed_url(gcs_uri)
-
-    # Assert
-    assert signed_url == "http://signed.url/test.mp4"
-    
-    # Verify that generate_signed_url was called
-    mock_storage_client.bucket.return_value.blob.return_value.generate_signed_url.assert_called_once()
+        assert result_url is not None
+        assert f"alt=media&token={test_uuid}" in result_url
+        assert f"/o/images%2F{test_uuid}-{filename}" in result_url

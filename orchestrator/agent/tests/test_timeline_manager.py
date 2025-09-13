@@ -8,7 +8,7 @@ from broadcast_orchestrator.timeline_manager import (
     _extract_parts_from_response,
     _parse_spelling_errors_from_text,
     _process_spelling_errors,
-    _process_video_clips,
+    _process_media_clips,
     _save_timeline_events,
     process_tool_output_for_timeline,
 )
@@ -124,23 +124,47 @@ async def test_process_spelling_errors(mock_parser, mock_tool_context):
     assert result[0]["details"]["original_word"] == "test"
 
 
-async def test_process_video_clips():
-    """Tests the processing of parts to create video clip events."""
+async def test_process_media_clips():
+    """Tests the processing of parts to create video and image clip events."""
     parts = [
         {"text": "not a file"},
         {
             "file": {
-                "uri": "/video.mp4"
+                "uri": "/video.mp4",
+                "mime_type": "video/mp4"
             },
             "metadata": {
                 "title": "Test Video"
             },
         },
+        {
+            "file": {
+                "uri": "/image.png",
+                "mime_type": "image/png"
+            },
+            "metadata": {
+                "title": "Test Image"
+            },
+        },
+        {
+            "file": { # Should be ignored as it has no URI
+                "bytes": "..."
+            }
+        }
     ]
-    result = await _process_video_clips(parts)
-    assert len(result) == 1
-    assert result[0]["type"] == "VIDEO_CLIP"
-    assert result[0]["title"] == "Test Video"
+    result = await _process_media_clips(parts)
+    assert len(result) == 2
+    
+    video_event = next((e for e in result if e["type"] == "VIDEO_CLIP"), None)
+    image_event = next((e for e in result if e["type"] == "IMAGE_CLIP"), None)
+
+    assert video_event is not None
+    assert video_event["title"] == "Test Video"
+    assert video_event["details"]["video_uri"] == "/video.mp4"
+
+    assert image_event is not None
+    assert image_event["title"] == "Test Image"
+    assert image_event["details"]["image_uri"] == "/image.png"
 
 
 async def test_save_timeline_events(mock_firestore_client, mock_tool_context):
@@ -160,10 +184,10 @@ async def test_save_timeline_events(mock_firestore_client, mock_tool_context):
 
 
 @patch("broadcast_orchestrator.timeline_manager._save_timeline_events", new_callable=AsyncMock)
-@patch("broadcast_orchestrator.timeline_manager._process_video_clips", new_callable=AsyncMock)
+@patch("broadcast_orchestrator.timeline_manager._process_media_clips", new_callable=AsyncMock)
 @patch("broadcast_orchestrator.timeline_manager._process_spelling_errors", new_callable=AsyncMock)
 async def test_process_tool_output_orchestration_for_posture_agent(
-    mock_process_spelling, mock_process_video, mock_save, mock_tool_context
+    mock_process_spelling, mock_process_media, mock_save, mock_tool_context
 ):
     """Tests that the main function correctly orchestrates calls for the posture agent."""
     # Arrange
@@ -174,7 +198,7 @@ async def test_process_tool_output_orchestration_for_posture_agent(
     mock_tool_response = [json.dumps({"text": "a part"})]
 
     mock_process_spelling.return_value = [{"id": "spell_event"}]
-    mock_process_video.return_value = [{"id": "video_event"}]
+    mock_process_media.return_value = [{"id": "media_event"}]
 
     # Act
     await process_tool_output_for_timeline(
@@ -186,15 +210,15 @@ async def test_process_tool_output_orchestration_for_posture_agent(
 
     # Assert
     mock_process_spelling.assert_called_once_with([{"text": "a part"}], mock_tool_context)
-    mock_process_video.assert_called_once_with([{"text": "a part"}])
-    mock_save.assert_called_once_with([{"id": "spell_event"}, {"id": "video_event"}], mock_tool_context)
+    mock_process_media.assert_called_once_with([{"text": "a part"}])
+    mock_save.assert_called_once_with([{"id": "spell_event"}, {"id": "media_event"}], mock_tool_context)
 
 
 @patch("broadcast_orchestrator.timeline_manager._save_timeline_events", new_callable=AsyncMock)
-@patch("broadcast_orchestrator.timeline_manager._process_video_clips", new_callable=AsyncMock)
+@patch("broadcast_orchestrator.timeline_manager._process_media_clips", new_callable=AsyncMock)
 @patch("broadcast_orchestrator.timeline_manager._process_spelling_errors", new_callable=AsyncMock)
 async def test_process_tool_output_orchestration_for_other_agent(
-    mock_process_spelling, mock_process_video, mock_save, mock_tool_context
+    mock_process_spelling, mock_process_media, mock_save, mock_tool_context
 ):
     """Tests that spelling check is skipped for other agents."""
     # Arrange
@@ -204,7 +228,7 @@ async def test_process_tool_output_orchestration_for_other_agent(
 
     mock_tool_response = [json.dumps({"text": "a part"})]
     
-    mock_process_video.return_value = []
+    mock_process_media.return_value = []
 
     # Act
     await process_tool_output_for_timeline(
@@ -216,5 +240,5 @@ async def test_process_tool_output_orchestration_for_other_agent(
 
     # Assert
     mock_process_spelling.assert_not_called()  # The key assertion
-    mock_process_video.assert_called_once_with([{"text": "a part"}])
+    mock_process_media.assert_called_once_with([{"text": "a part"}])
     mock_save.assert_not_called()

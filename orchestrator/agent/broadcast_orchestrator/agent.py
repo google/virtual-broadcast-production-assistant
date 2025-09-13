@@ -49,6 +49,7 @@ from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
 from .firestore_observer import FirestoreAgentObserver
 from .timeline_manager import process_tool_output_for_timeline
 from .timeline_tool import get_uri_by_source_ref_id, get_uri_by_title
+from .gcs_uploader import upload_base64_image_to_gcs
 
 load_dotenv()
 
@@ -155,7 +156,7 @@ def infer_mime_type(filename: str | None) -> str:
     """Infers the MIME type from a filename based on its extension."""
     if not filename:
         return "application/octet-stream"
-    
+
     filename = filename.lower()
     if filename.endswith(".mp4"):
         return "video/mp4"
@@ -164,7 +165,7 @@ def infer_mime_type(filename: str | None) -> str:
     if filename.endswith(".png"):
         return "image/png"
     # Add other common types as needed
-    
+
     return "application/octet-stream"
 
 
@@ -219,9 +220,8 @@ class RoutingAgent:
             return {"active_agent": f"{state['active_agent']}"}
         return {"active_agent": "None"}
 
-    def _get_formatted_instructions(
-        self,
-        rundown_system_preference: str) -> str:
+    def _get_formatted_instructions(self,
+                                    rundown_system_preference: str) -> str:
         """
         Formats the system instructions based on the selected rundown system.
         """
@@ -346,7 +346,8 @@ class RoutingAgent:
                 description_lines.append("  Skills:")
                 for skill in c.card.skills:
                     description_lines.append(
-                        f"  - `{skill.id}` ({skill.name}): {skill.description}")
+                        f"  - `{skill.id}` ({skill.name}): {skill.description}"
+                    )
                     if skill.examples:
                         description_lines.append(
                             f"    Example: {skill.examples[0]}")
@@ -374,11 +375,11 @@ class RoutingAgent:
 
         # Create a mutable copy of kwargs to modify for downstream processors.
         final_kwargs = kwargs.copy()
-        
+
         # Rehydrate the tool response for the timeline and observer.
         llm_response = kwargs.get("tool_response", [])
         part_cache = tool_context.state.get("part_cache", {})
-        
+
         rehydrated_response = []
         if llm_response and isinstance(llm_response, list):
             for item_str in llm_response:
@@ -391,15 +392,18 @@ class RoutingAgent:
                             asset_id = placeholder_uri.split("/")[-2]
                             if asset_id in part_cache:
                                 # Replace the entire sanitized part with the original full part
-                                rehydrated_response.append(json.dumps(part_cache[asset_id]))
-                                logger.info("Rehydrated full part for asset ID %s", asset_id)
-                                continue # Continue to next item_str
-                    
+                                rehydrated_response.append(
+                                    json.dumps(part_cache[asset_id]))
+                                logger.info(
+                                    "Rehydrated full part for asset ID %s",
+                                    asset_id)
+                                continue  # Continue to next item_str
+
                     # If it wasn't a sanitized part that we replaced, append it as is.
                     rehydrated_response.append(item_str)
                 except (json.JSONDecodeError, TypeError):
                     rehydrated_response.append(item_str)
-        
+
         final_kwargs["tool_response"] = rehydrated_response
 
         # --- Intelligent Rundown State Caching ---
@@ -412,12 +416,14 @@ class RoutingAgent:
         is_rundown_agent = False
         if rundown_connection and agent_name:
             norm_agent_name = normalize_name(agent_name)
-            norm_config_name = normalize_name(tool_context.state.get('rundown_agent_config_name'))
+            norm_config_name = normalize_name(
+                tool_context.state.get('rundown_agent_config_name'))
             norm_card_name = normalize_name(rundown_connection.card.name)
             if norm_agent_name in (norm_config_name, norm_card_name):
                 is_rundown_agent = True
 
-        if is_rundown_agent and tool_response and isinstance(tool_response, list):
+        if is_rundown_agent and tool_response and isinstance(
+                tool_response, list):
             try:
                 new_data = json.loads(tool_response[0])
                 state_data = tool_context.state.get("rundown_data", {})
@@ -431,7 +437,8 @@ class RoutingAgent:
                 elif is_single:
                     item_key = 'blocks' if 'blocks' in state_data else 'items'
                     if item_key in state_data:
-                        logger.info(f"Merging item '{new_data['id']}' into state.")
+                        logger.info(
+                            f"Merging item '{new_data['id']}' into state.")
                         found = False
                         for i, item in enumerate(state_data[item_key]):
                             if item.get('id') == new_data['id']:
@@ -440,11 +447,11 @@ class RoutingAgent:
                                 break
                         if not found:
                             state_data[item_key].append(new_data)
-                    else: # state has no item list
+                    else:  # state has no item list
                         tool_context.state["rundown_data"] = new_data
             except (json.JSONDecodeError, IndexError, TypeError) as e:
                 logger.warning("Could not parse/merge rundown data: %s", e)
-        
+
         await self.observer.after_tool(**final_kwargs)
         await process_tool_output_for_timeline(**final_kwargs)
 
@@ -477,7 +484,8 @@ class RoutingAgent:
             A list of strings from the remote agent's response. Complex objects
             are returned as JSON strings.
         """
-        logger.info("RAW task from LLM for agent '%s': '%s', kwargs: %s", agent_name, task, kwargs)
+        logger.info("RAW task from LLM for agent '%s': '%s', kwargs: %s",
+                    agent_name, task, kwargs)
         state = tool_context.state
         client = None
         normalized_agent_name = normalize_name(agent_name)
@@ -511,7 +519,8 @@ class RoutingAgent:
                 matched_names = [c.card.name for _, c in matched_connections]
                 error_message = (
                     f"Error: The agent name '{agent_name}' is ambiguous and matches "
-                    f"multiple available agents: {matched_names}. Please be more specific.")
+                    f"multiple available agents: {matched_names}. Please be more specific."
+                )
                 logger.error(error_message)
                 return [error_message]
 
@@ -553,28 +562,37 @@ class RoutingAgent:
 
         source_ref_id = None
         real_uri = None
-        pattern_to_replace_in_task_string = None # Only used for string-based tasks
+        pattern_to_replace_in_task_string = None  # Only used for string-based tasks
 
         # 1. Check for structured URI first
         if is_structured_task:
             placeholder_uri = payload.get("input_uri")
-            if placeholder_uri and placeholder_uri.startswith("https://invalid.com/"):
-                match = re.search(r'https://invalid\.com/([a-z0-9_-]+)/', placeholder_uri)
+            if placeholder_uri and placeholder_uri.startswith(
+                    "https://invalid.com/"):
+                match = re.search(r'https://invalid\.com/([a-z0-9_-]+)/',
+                                  placeholder_uri)
                 if match:
                     source_ref_id = match.group(1)
-                    logger.info("Found structured placeholder URI with ID: %s", source_ref_id)
+                    logger.info("Found structured placeholder URI with ID: %s",
+                                source_ref_id)
 
         # 2. If not found in structured payload, search the raw task string
         if not source_ref_id:
-            logger.info("No structured URI found, searching for patterns in task string.")
-            placeholder_match = re.search(r'https://invalid\.com/([a-z0-9_-]+)/', task)
+            logger.info(
+                "No structured URI found, searching for patterns in task string."
+            )
+            placeholder_match = re.search(
+                r'https://invalid\.com/([a-z0-9_-]+)/', task)
             id_match = re.search(r"id\s+([\w\-_.]+)", task, re.IGNORECASE)
-            filename_match = re.search(r'([^\s/]+\.(?:mp4|mov|wav|jpg|jpeg|png))', task, re.IGNORECASE)
+            filename_match = re.search(
+                r'([^\s/]+\.(?:mp4|mov|wav|jpg|jpeg|png))', task,
+                re.IGNORECASE)
 
             if placeholder_match:
                 source_ref_id = placeholder_match.group(1)
                 pattern_to_replace_in_task_string = placeholder_match.group(0)
-                logger.info("Found string placeholder URI with ID: %s", source_ref_id)
+                logger.info("Found string placeholder URI with ID: %s",
+                            source_ref_id)
             elif id_match:
                 source_ref_id = id_match.group(1)
                 pattern_to_replace_in_task_string = id_match.group(0)
@@ -590,81 +608,109 @@ class RoutingAgent:
             mime_type = "application/octet-stream"  # Default
 
             # --- Primary Lookup: By ID ---
-            if "video_assets" in tool_context.state and source_ref_id in tool_context.state["video_assets"]:
-                cached_asset = tool_context.state["video_assets"][source_ref_id]
+            if "video_assets" in tool_context.state and source_ref_id in tool_context.state[
+                    "video_assets"]:
+                cached_asset = tool_context.state["video_assets"][
+                    source_ref_id]
                 real_uri = cached_asset.get("uri")
                 mime_type = cached_asset.get("mime_type", mime_type)
-                logger.info("Resolved asset from state cache for ID: %s", source_ref_id)
+                logger.info("Resolved asset from state cache for ID: %s",
+                            source_ref_id)
 
             if not real_uri:
-                logger.info("URI not in cache. Calling get_uri_by_source_ref_id for ID: %s", source_ref_id)
-                resolved_data_str = await get_uri_by_source_ref_id(source_ref_id)
+                logger.info(
+                    "URI not in cache. Calling get_uri_by_source_ref_id for ID: %s",
+                    source_ref_id)
+                resolved_data_str = await get_uri_by_source_ref_id(
+                    source_ref_id)
                 if resolved_data_str and "Error:" not in resolved_data_str:
                     try:
                         resolved_data = json.loads(resolved_data_str)
                         real_uri = resolved_data.get("uri")
                         mime_type = resolved_data.get("mime_type", mime_type)
                     except json.JSONDecodeError:
-                        logger.warning("Could not decode file data for ID %s", source_ref_id)
+                        logger.warning("Could not decode file data for ID %s",
+                                       source_ref_id)
                         real_uri = None
                 else:
                     real_uri = None
 
             # --- Secondary Lookup: By Title ---
             if not real_uri:
-                logger.warning("Could not resolve '%s' as an ID. Attempting fallback lookup by title.", source_ref_id)
+                logger.warning(
+                    "Could not resolve '%s' as an ID. Attempting fallback lookup by title.",
+                    source_ref_id)
                 video_assets_cache = tool_context.state.get("video_assets", {})
                 found_by_title = False
                 for asset_id, asset_details in video_assets_cache.items():
-                    if asset_details.get("title") and source_ref_id in asset_details.get("title"):
-                        logger.info("Fallback successful: Found match by title in cache for asset ID %s", asset_id)
+                    if asset_details.get(
+                            "title") and source_ref_id in asset_details.get(
+                                "title"):
+                        logger.info(
+                            "Fallback successful: Found match by title in cache for asset ID %s",
+                            asset_id)
                         real_uri = asset_details.get("uri")
                         mime_type = asset_details.get("mime_type", mime_type)
                         found_by_title = True
                         break
-                
+
                 if not found_by_title:
-                    logger.info("Asset not found in cache by title, checking Firestore.")
+                    logger.info(
+                        "Asset not found in cache by title, checking Firestore."
+                    )
                     session_id = tool_context.state.get("session_id")
                     if session_id:
-                        resolved_data_str = await get_uri_by_title(source_ref_id, session_id)
+                        resolved_data_str = await get_uri_by_title(
+                            source_ref_id, session_id)
                         if resolved_data_str and "Error:" not in resolved_data_str:
                             try:
                                 resolved_data = json.loads(resolved_data_str)
                                 real_uri = resolved_data.get("video_uri")
-                                mime_type = resolved_data.get("mime_type", mime_type)
+                                mime_type = resolved_data.get(
+                                    "mime_type", mime_type)
                             except json.JSONDecodeError:
-                                logger.warning("Could not decode file data for title %s", source_ref_id)
+                                logger.warning(
+                                    "Could not decode file data for title %s",
+                                    source_ref_id)
 
             if not real_uri:
-                logger.warning("Failed to resolve ID or Title to URI: %s. Passing original task downstream.", source_ref_id)
+                logger.warning(
+                    "Failed to resolve ID or Title to URI: %s. Passing original task downstream.",
+                    source_ref_id)
 
         # 4. Construct the final message parts based on task type
         if is_structured_task:
             # We had a structured task, so update the payload and send as DataPart
             if real_uri:
                 payload["input_uri"] = real_uri
-                logger.info("Updated structured payload with real URI: %s", payload["input_uri"])
+                logger.info("Updated structured payload with real URI: %s",
+                            payload["input_uri"])
             message_parts.append(Part(root=DataPart(data=payload)))
-            logger.info("Sending structured DataPart payload (URI may be unresolved).")
+            logger.info(
+                "Sending structured DataPart payload (URI may be unresolved).")
         else:
             # It was a simple string task. Replace the pattern in the string and send as TextPart.
-            text_content = task # Start with the original task
+            text_content = task  # Start with the original task
             if real_uri and pattern_to_replace_in_task_string:
-                text_content = task.replace(pattern_to_replace_in_task_string, real_uri)
+                text_content = task.replace(pattern_to_replace_in_task_string,
+                                            real_uri)
                 logger.info("Updated TextPart with real URI: %s", text_content)
-            
+
             if text_content:
                 message_parts.append(Part(root=TextPart(text=text_content)))
-            
+
             if real_uri and "cuez" not in agent_name.lower():
                 asset_title = ""
-                if "video_assets" in tool_context.state and source_ref_id in tool_context.state["video_assets"]:
-                     asset_title = tool_context.state["video_assets"][source_ref_id].get("title")
+                if "video_assets" in tool_context.state and source_ref_id in tool_context.state[
+                        "video_assets"]:
+                    asset_title = tool_context.state["video_assets"][
+                        source_ref_id].get("title")
                 final_mime_type = infer_mime_type(asset_title)
-                file_part = Part(root=FilePart(file=FileWithUri(uri=real_uri, mime_type=final_mime_type)))
+                file_part = Part(root=FilePart(
+                    file=FileWithUri(uri=real_uri, mime_type=final_mime_type)))
                 message_parts.append(file_part)
-                logger.info("Adding supplementary FilePart for non-Cuez agent.")
+                logger.info(
+                    "Adding supplementary FilePart for non-Cuez agent.")
 
         if not message_parts:
             return ["Error: Could not construct a message to send."]
@@ -701,9 +747,9 @@ class RoutingAgent:
             return [error_message]
         logger.info("send_response %s", send_response)
 
-        if (isinstance(send_response.root, JSONRPCErrorResponse) and
-                send_response.root.error and
-                "is in terminal state" in (send_response.root.error.message or "")):
+        if (isinstance(send_response.root, JSONRPCErrorResponse)
+                and send_response.root.error and "is in terminal state"
+                in (send_response.root.error.message or "")):
             logger.warning(
                 "Task ID %s is in a terminal state. Clearing it and retrying.",
                 task_id)
@@ -736,8 +782,8 @@ class RoutingAgent:
 
         if not isinstance(send_response.root, SendMessageSuccessResponse):
             error_text = "Failed to send message."
-            if (isinstance(send_response.root, JSONRPCErrorResponse) and
-                    send_response.root.error):
+            if (isinstance(send_response.root, JSONRPCErrorResponse)
+                    and send_response.root.error):
                 error_text = f"Failed to send message: {send_response.root.error.message}"
             logger.warning(
                 "received non-success response. Aborting get task. %s",
@@ -773,6 +819,29 @@ class RoutingAgent:
 
         for part in parts_to_process:
             part_dict = part.model_dump(exclude_none=True)
+
+            # New logic for handling base64 images from Newsroom Agent
+            agent_card_name = client.card.name.lower()
+            file_details = part_dict.get("file", {})
+            if 'newsroom agent' in agent_card_name and file_details.get("bytes"):
+                try:
+                    logger.info("Image upload logic triggered for Newsroom Agent.")
+                    base64_data = file_details.get("bytes")
+                    filename = file_details.get("name") or str(uuid.uuid4()) + ".png"
+                    logger.info("Attempting to upload image with filename: %s", filename)
+                    
+                    public_url = await upload_base64_image_to_gcs(base64_data, filename)
+                    
+                    if public_url:
+                        logger.info("Image upload successful. URL: %s", public_url)
+                        del part_dict["file"]["bytes"]
+                        part_dict["file"]["uri"] = public_url
+                        if "mime_type" not in part_dict["file"]:
+                            part_dict["file"]["mime_type"] = "image/png"
+                    else:
+                        logger.error("upload_base64_image_to_gcs returned None for file: %s", filename)
+                except Exception as e:
+                    logger.error("EXCEPTION during image upload: %s", e, exc_info=True)
 
             if part_dict.get("kind") == "file":
                 metadata = part_dict.get("metadata", {})

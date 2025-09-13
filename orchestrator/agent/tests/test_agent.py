@@ -5,6 +5,7 @@ from a2a.types import (
     AgentCard,
     DataPart,
     FilePart,
+    FileWithBytes,
     FileWithUri,
     JSONRPCError,
     JSONRPCErrorResponse,
@@ -624,3 +625,45 @@ async def test_send_message_retries_on_terminal_state_error(mocked_agent):
     assert len(result) > 0
     result_part = json.loads(result[0])
     assert result_part["id"] == "new-task-456"
+
+
+@pytest.mark.asyncio
+@patch("broadcast_orchestrator.agent.upload_base64_image_to_gcs", new_callable=AsyncMock)
+async def test_send_message_handles_base64_image(mock_upload_func, mocked_agent):
+    """Tests that send_message correctly identifies and processes a base64 image."""
+    # Arrange
+    agent = mocked_agent
+    tool_context = MagicMock()
+    tool_context.state = {"input_message_metadata": {}}
+    mock_upload_func.return_value = "http://storage.url/image.png"
+
+    # Mock the response from the Newsroom Agent
+    image_agent_response_part = Part(root=FilePart(file=FileWithBytes(
+        bytes="aGVsbG8=", mime_type="image/png", name="test.png")))
+    image_agent_message = Message(role="agent",
+                                  parts=[image_agent_response_part],
+                                  message_id="remote-img-msg-id")
+
+    mock_success_response = MagicMock(spec=SendMessageSuccessResponse)
+    mock_success_response.result = image_agent_message
+    mock_send_response = MagicMock()
+    mock_send_response.root = mock_success_response
+
+    mock_image_conn = MagicMock()
+    mock_image_conn.card.name = "Newsroom Agent"
+    mock_image_conn.send_message = AsyncMock(return_value=mock_send_response)
+    agent.remote_agent_connections["NEWSROOM_AGENT"] = mock_image_conn
+
+    # Act
+    output_parts_str = await agent.send_message("Newsroom Agent", "generate image",
+                                                tool_context, **{})
+
+    # Assert
+    mock_upload_func.assert_called_once_with("aGVsbG8=", "test.png")
+
+    assert len(output_parts_str) == 1
+    processed_part = json.loads(output_parts_str[0])
+
+    assert processed_part["kind"] == "file"
+    assert "bytes" not in processed_part["file"]
+    assert processed_part["file"]["uri"] == "http://storage.url/image.png"
