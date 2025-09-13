@@ -4,6 +4,7 @@ import json
 import uuid
 import logging
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 from google.adk.tools.tool_context import ToolContext
 import firebase_admin
@@ -69,7 +70,7 @@ async def _parse_spelling_errors_from_text(text: str) -> list[dict]:
         logger.error("Gemini client not initialized. Cannot parse.")
         return []
     try:
-        prompt = """
+        prompt = '''
         You are a strict text parser. Your task is to analyze the following text, which is a report from a proofreading agent.
         Your job is to find all explicitly mentioned spelling or grammar corrections.
         For each correction, extract the original incorrect word/phrase, the suggested correction, and the full sentence that provides context.
@@ -77,7 +78,7 @@ async def _parse_spelling_errors_from_text(text: str) -> list[dict]:
         If the text does not contain any explicit corrections, return an empty array.
 
         Example Input:
-        "Okay, I've reviewed the text and here are the corrections:
+        "Okay, I\'ve reviewed the text and here are the corrections:
 
 * \"Quen Elizabeth II in traditional Scottish attire with bapipes\" - This should be \"Queen Elizabeth II in traditional Scottish attire with bagpipes\".\n* \"Witer Olympics to be held in French Alps in 2031\" - This should be \"Winter Olympics to be held in French Alps in 2031\"."
 
@@ -94,7 +95,7 @@ async def _parse_spelling_errors_from_text(text: str) -> list[dict]:
                 "context": "Witer Olympics to be held in French Alps in 2031"
             }
         ]
-        """
+        '''
 
         full_prompt = f"{prompt}\n\nNow, parse the following text:\n---\n{text}"
         response = await gemini_client.aio.models.generate_content(
@@ -168,31 +169,68 @@ async def _process_spelling_errors(parts: list[dict],
             events.append(event_data)
     return events
 
+def infer_mime_type(filename: str | None) -> str:
+    """Infers the MIME type from a filename based on its extension."""
+    if not filename:
+        return "application/octet-stream"
 
-async def _process_video_clips(parts: list[dict]) -> list[dict]:
-    """Processes a list of parts to find and format video clip events."""
+    filename = filename.lower()
+    if filename.endswith(".mp4"):
+        return "video/mp4"
+    if filename.endswith(".jpg") or filename.endswith(".jpeg"):
+        return "image/jpeg"
+    if filename.endswith(".png"):
+        return "image/png"
+    # Add other common types as needed
+    
+    return "application/octet-stream"
+
+async def _process_media_clips(parts: list[dict]) -> list[dict]:
+    """Processes a list of parts to find and format video and image clip events."""
     events = []
-    file_parts_to_log = [p for p in parts if p.get("file")]
-    logger.info("Found %d file parts to log. Transforming...",
+    file_parts_to_log = [p for p in parts if p.get("file") and p.get("file", {}).get("uri")]
+    logger.info("Found %d file parts with URI to log. Transforming...",
                 len(file_parts_to_log))
 
     for file_part in file_parts_to_log:
+        logger.info("Processing file_part: %s", file_part)
         metadata = file_part.get("metadata", {})
-        title = metadata.get("title", "New Video Clip")
-        subtitle = metadata.get("description", "No description available.")
-        video_uri = file_part.get("file", {}).get("uri")
-        thumbnail_uri = metadata.get("cover_url")
-        file_mime_type = file_part.get("file", {}).get("mime_type")
+        file_details = file_part.get("file", {})
+        uri = file_details.get("uri")
+        mime_type = file_details.get("mime_type", "")
 
-        details = {"video_uri": video_uri, "thumbnail_uri": thumbnail_uri, "mime_type": file_mime_type}
-        if metadata.get("type") == "moment":
-            details["tc_in"] = metadata.get("tc_in")
-            details["tc_out"] = metadata.get("tc_out")
+        if not mime_type:
+            filename = metadata.get("filename") or file_details.get("name")
+            if not filename and uri:
+                filename = os.path.basename(urlparse(uri).path)
+            if filename:
+                mime_type = infer_mime_type(filename)
+                logger.info("Inferred mime_type as '%s' from filename '%s'", mime_type, filename)
+
+        if mime_type.startswith("image/"):
+            event_type = "IMAGE_CLIP"
+            category = "IMAGE"
+            title = metadata.get("title", "New Image")
+            details = {"image_uri": uri, "mime_type": mime_type}
+        elif mime_type.startswith("video/"):
+            event_type = "VIDEO_CLIP"
+            category = "VIDEO"
+            title = metadata.get("title", "New Video Clip")
+            thumbnail_uri = metadata.get("cover_url")
+            details = {"video_uri": uri, "thumbnail_uri": thumbnail_uri, "mime_type": mime_type}
+            if metadata.get("type") == "moment":
+                details["tc_in"] = metadata.get("tc_in")
+                details["tc_out"] = metadata.get("tc_out")
+        else:
+            logger.warning("Skipping file part with unknown mime_type: %s", mime_type)
+            continue
+
+        subtitle = metadata.get("description", "No description available.")
 
         event_data = {
             "id": str(uuid.uuid4()),
-            "type": "VIDEO_CLIP",
-            "category": "VIDEO",
+            "type": event_type,
+            "category": category,
             "title": title,
             "subtitle": subtitle,
             "severity": "info",
@@ -209,6 +247,9 @@ async def _process_video_clips(parts: list[dict]) -> list[dict]:
                 "Could not find a source reference ID in file part metadata.")
 
         events.append(event_data)
+        logger.info("Appended event: %s", event_data["type"])
+    
+    logger.info("Finished processing media clips. Total events created: %d", len(events))
     return events
 
 
@@ -272,13 +313,15 @@ async def process_tool_output_for_timeline(**kwargs):
                 all_parts, tool_context)
             all_events.extend(spelling_events)
 
-        video_events = await _process_video_clips(all_parts)
-        all_events.extend(video_events)
+        media_events = await _process_media_clips(all_parts)
+        logger.info("media_events created: %s", media_events)
+        all_events.extend(media_events)
 
         if all_events:
+            logger.info("Calling _save_timeline_events with %d events.", len(all_events))
             await _save_timeline_events(all_events, tool_context)
+        else:
+            logger.warning("No events were created, skipping save.")
 
     except Exception as e:
-        logger.error("Error in process_tool_output_for_timeline: %s",
-                     e,
-                     exc_info=True)
+        logger.error("Error in process_tool_output_for_timeline: %s", e, exc_info=True)

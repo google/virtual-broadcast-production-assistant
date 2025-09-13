@@ -55,6 +55,31 @@ export default function IssueCard({ issue }) {
     toast.success("Issue dismissed.");
   };
 
+  if (issue.type === 'IMAGE_CLIP') {
+    const imageUrl = issue.details?.image_uri || 'https://placehold.co/600x400?text=Image';
+
+    return (
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-[#1C1A22] to-[#2A2731] border border-white/10">
+        <div className="relative group aspect-video bg-black/20">
+          <img src={imageUrl} alt={issue.title} className="w-full h-full object-contain" />
+        </div>
+        <div className="p-4">
+          <h4 className="font-semibold text-[#E6E1E5] mb-1 truncate">{issue.title}</h4>
+          <p className="text-sm text-[#A6A0AA] truncate">{issue.subtitle}</p>
+          <div className="flex gap-2 mt-4">
+            <Button
+              variant="outline"
+              className={severityColor.secondary}
+              onClick={handleDismiss}
+            >
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (issue.type === 'VIDEO_CLIP') {
     const thumbnailUrl = issue.details?.thumbnail_uri || 'https://placehold.co/600x400?text=Video+Preview';
     const videoUrl = (issue.details?.tc_in && issue.details?.tc_out)
