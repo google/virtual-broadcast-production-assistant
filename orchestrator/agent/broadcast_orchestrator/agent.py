@@ -24,6 +24,7 @@ from a2a.types import (
     SendMessageResponse,
     SendMessageSuccessResponse,
     Task,
+    TaskState,
     TextPart,
     Message,
 )
@@ -800,7 +801,14 @@ class RoutingAgent:
         tool_context.state["last_a2a_response"] = response_json_string
 
         if isinstance(result, Task) and result.id:
-            state[agent_specific_task_id_key] = result.id
+            terminal_states = [TaskState.completed, TaskState.failed, TaskState.canceled]
+            if result.status and result.status.state in terminal_states:
+                logger.info("Task %s is already in a terminal state (%s). Clearing task_id.", result.id, result.status.state)
+                if agent_specific_task_id_key in state:
+                    state[agent_specific_task_id_key] = None
+            else:
+                logger.info("Storing active task_id: %s", result.id)
+                state[agent_specific_task_id_key] = result.id
 
         output_parts = []
         parts_to_process = []
