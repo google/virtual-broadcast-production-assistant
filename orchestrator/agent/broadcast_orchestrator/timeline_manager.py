@@ -114,8 +114,7 @@ async def _parse_spelling_errors_from_text(text: str) -> list[dict]:
 
     except Exception as e:
         logger.error("Failed to parse spelling errors with Gemini: %s",
-                     e,
-                     exc_info=True)
+                     e, exc_info=True)
         return []
 
 
