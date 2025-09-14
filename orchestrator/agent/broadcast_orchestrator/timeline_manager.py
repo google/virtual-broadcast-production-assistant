@@ -176,6 +176,8 @@ def infer_mime_type(filename: str | None) -> str:
     filename = filename.lower()
     if filename.endswith(".mp4"):
         return "video/mp4"
+    if filename.endswith(".mxf"):
+        return "video/mxf"
     if filename.endswith(".jpg") or filename.endswith(".jpeg"):
         return "image/jpeg"
     if filename.endswith(".png"):
