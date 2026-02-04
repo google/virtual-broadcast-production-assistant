@@ -3,8 +3,9 @@
 
 steps:
   # 0. Download environment files from GCS
-  - name: 'gcr.io/cloud-builders/gsutil'
+  - name: 'gcr.io/cloud-builders/gcloud'
     args:
+      - 'storage'
       - 'cp'
       - 'gs://${_GCS_BUCKET}/.env.stable'
       - '.'
