@@ -1,0 +1,1192 @@
+manifest:
+  version: "0.1.3"
+  schema: https://a2as.org/cert/schema
+  subject:
+    name: google/virtual-broadcast-production-assistant
+    source: https://github.com/google/virtual-broadcast-production-assistant
+    branch: main
+    commit: "68ef0802"
+    scope: [activity-agent/agent.py, bbc-newsround-graphics/bbc_newsround_graphics/agent.py, control-room-assistant/websocket-server/config/config.py,
+      cuez-rundown/cuez-rundown-agent/__main__.py, cuez-rundown/cuez-rundown-agent/agent.py, cuez-rundown/cuez-rundown-agent/mcp_skills.py,
+      cuez_stubzy/cuez_stubzy_agent/agent.py, itn-posture/itn-posture-agent/agent.py, itn-posture/itn-posture-agent/agent_executor.py,
+      orchestrator/agent-health-checker/main.py, orchestrator/agent/broadcast_orchestrator/agent.py, orchestrator/agent/broadcast_orchestrator/agent_repository.py,
+      orchestrator/agent/broadcast_orchestrator/automation_system_instructions.py, orchestrator/agent/broadcast_orchestrator/deploy.py,
+      orchestrator/agent/broadcast_orchestrator/firestore_observer.py, orchestrator/agent/broadcast_orchestrator/gcs_uploader.py,
+      orchestrator/agent/broadcast_orchestrator/remote_agent_connection.py, orchestrator/agent/broadcast_orchestrator/timeline_manager.py,
+      orchestrator/agent/broadcast_orchestrator/timeline_tool.py, orchestrator/app.py, shure-audio-agent/__main__.py, shure-audio-agent/agent.py,
+      shure-audio-agent/task_manager.py, sofie/agents/sofie-agent/__main__.py, sofie/agents/sofie-agent/agent.py, sofie/agents/sofie-agent/mcp_skills.py,
+      tx/stream-processor/config.py, tx/stream-processor/src/processor.py, tx/tx_agent/__main__.py, tx/tx_agent/agent/agent.py,
+      tx/tx_agent/agent/vector_search_tool.py, tx/tx_agent/config.py]
+  issued:
+    by: A2AS.org
+    at: '2026-02-11T16:38:04Z'
+    url: https://a2as.org/certified/agents/google/virtual-broadcast-production-assistant
+  signatures:
+    digest: sha256:wNwAqRE1hLg59CAm8nxOEFnCSrdQCZWnVS8_JZkJCUs
+    key: ed25519:4Dkvc9kYkf4taapm1Q7WIbkXHB8_C1WRFdua0gBPnzc
+    sig: ed25519:PmB9JSjwcL3Xp19VRqxfBBSe4yYBjLk28IJ9VCXXeSiQa4fRHQZGLJrH8dEnjnNwbf9UagTsb-3wCFOC82NyCA
+
+agents:
+  adk_agent.0:
+    type: instance
+    models: [gemini-2.0-flash]
+    params:
+      name: itn_posture_agent
+      description: Provides agentic access to the ITN Posture running order service
+      function: main
+      instance: adk_agent
+  adk_agent.1:
+    type: instance
+    models: [gemini-2.5-flash]
+    tools: [mcp_toolset]
+    mcp: [mcp_toolset.0]
+    params:
+      name: sofie_agent
+      description: An agent built to assist with the Sofie Rundown application
+      instruction: agent_instructions
+      function: create_agent
+      instance: adk_agent
+  agent._build_agent.0:
+    type: factory
+    models: [gemini-2.5-flash-preview-05-20]
+    params:
+      name: root_agent
+      description: An agent for interacting with the CUEZ rundown system and automator
+      instruction: [Pretend you are a broadcast news room system]
+      function: _build_agent
+      instance: agent._build_agent
+  agent._build_agent.1:
+    type: factory
+    models: [gpt-4o-2]
+    tools: [get_status, set_microphone_channel_coverage, load_user_preset, set_eq_setting, start_auto_positioning, steer_lobe]
+    params:
+      name: ShureAudioAgent
+      description: Agent to answer questions and perform actions related to Shure Audio device settings, user presets, and
+        microphone channel coverage via GraphQL. The agent always enforces and respects all argument constraints for every
+        tool and action.
+      function: _build_agent
+      instance: agent._build_agent
+  agent.create_agent.1:
+    type: factory
+    models: [gemini-2.0-flash]
+    tools: [mcp_toolset.1]
+    mcp: [mcp_toolset.1]
+    params:
+      name: cuez_rundown_agent
+      description: Agent to answer questions about cuez rundown, episodes, parts, items, and blocks.
+      instruction: [You are an efficient editor agent for the Cuez Rundown application. You work autonomously without requiring
+          human interaction., 'DATA STRUCTURE:', 'The rundown follows a hierarchical structure:', '- Episode (top level)',
+        └── Part (one or more per episode), └── Item (one or more per part), '└── Block_Instance (one or more per item, examples:
+          Prompter, Graphic)', ├── Block (defines the template/type), └── Context (contains the specific content/data), 'IMPORTANT
+          OPERATIONAL GUIDELINES:', 1. ALWAYS start by using the "get episode" tool to retrieve the complete structure and
+          all UIDs, 2. Identify the correct UIDs needed for subsequent tool operations, '3. When a null value is required,
+          pass it as the string "null" (with quotes)', 4. Match tool arguments precisely with the appropriate UIDs from the
+          hierarchy, 5. Work autonomously - make decisions without asking for clarification, 6. Execute operations systematically
+          through the available tools, 'WORKFLOW PRINCIPLES:', '- Before editing any element, verify its current state', '-
+          Ensure all changes maintain the integrity of the rundown structure', '- Process each request completely before considering
+          it done', '- Use the appropriate tool for each specific operation', '- Double-check UIDs before executing operations
+          to prevent errors', You are working in project with uid 7f18ce41-695f-1c93-e761-1cec6eb53c5b., 'If the user provides
+          an episode name or title and you need to find the episode_id, use the "list episodes" tool to retrieve the list
+          of episodes.', 'If responding provide human readable titles and their corresponding UIDs in the format: "Title (UID)".',
+        'For example, "Episode 1 (UID: 12345678-1234-1234-1234-123456789012)".', Take decisive action. Do not ask for confirmation.
+          Execute operations directly through the provided tools.]
+      function: create_agent
+      instance: agent.create_agent
+  root_agent.0:
+    type: instance
+    models: [gemini-2.5-flash]
+    params:
+      name: live_cast_analyst_agent
+      description: |2
+
+        You are **LiveCast Analyst**, an AI assistant specialized in analyzing a live broadcast stream by querying a database of stream events.
+        Your primary goal is to answer questions about the content of the current stream accurately and concisely using the available event entries.
+
+        When a user asks a question, follow these steps:
+
+        1. **Understand the Question:** Carefully analyze the user's question to identify the key entities, topics, and the user's intent.
+        2. **Call Tools (if needed):**  If the question requires information that is not immediately available to you, use the available tools to retrieve the necessary data.  Make sure to use the tools effectively, as the user relies on your accuracy.
+          - Use the `vector_search` tool to retrieve the most relevant stream events when answering queries about the stream's content. Do not ask for clarification about which stream; assume the current live feed.
+        3. **Synthesize the Response:** Combine your understanding of the question with the information retrieved from the database (if any) to formulate a clear, concise, and accurate answer.
+        3.1 When you have the raw event data via the vector_search tool, transform it into a clear, coherent news report: include a descriptive headline, a one-sentence summary, and one or two paragraphs of detailed information drawn from the events.
+        4. **Provide the Answer:** Respond in a news-article format: start with a headline, then the summary sentence, followed by detailed paragraphs. Cite any specific event timecodes in brackets.
+        Once you have the response of the vector_search tool, please use it to answer the user's questions directly and accurately.
+      instruction: ['When a user asks about the live stream:', '- Immediately call the `vector_search` tool with the user''s
+          question to fetch the most relevant events.', '- Do not ask clarifying questions about which stream; assume it''s
+          the current live feed.', '- If any returned event has `type` equal to "visual", use the visual description to enrich
+          the details of your article.', '- Once you receive the event records, craft your response as a concise news article:',
+        '• **Headline**: A brief, informative title.', '• **Summary**: One sentence encapsulating the key point.', '• **Details**:
+          One or two paragraphs elaborating on the news, using event `timecode` values in brackets (e.g., [00:15:23]).', '-
+          Ensure the article is factual, coherent, and uses the event data directly.']
+      function: start_agent_session
+      instance: root_agent
+  root_agent.1:
+    type: instance
+    models: [gemini-2.5-flash]
+    tools: [vector_search]
+    params:
+      name: tx_agent
+      description: prompts.ROOT_PROMPT
+      instruction: ['When a user asks about the live stream:', '- Immediately call the `vector_search` tool with the user''s
+          question to fetch the most relevant events.', '- Do not ask clarifying questions about which stream; assume it''s
+          the current live feed.', '- If any returned event has `type` equal to "visual", use the visual description to enrich
+          the details of your article.', '- Once you receive the event records, craft your response as a concise news article:',
+        '• **Headline**: A brief, informative title.', '• **Summary**: One sentence encapsulating the key point.', '• **Details**:
+          One or two paragraphs elaborating on the news, using event `timecode` values in brackets (e.g., [00:15:23]).', '-
+          Ensure the article is factual, coherent, and uses the event data directly.']
+      instance: root_agent
+  root_agent.2:
+    type: instance
+    models: [gemini-2.5-flash]
+    tools: [MCPToolset]
+    mcp: [MCPToolset.0]
+    params:
+      name: activity_agent
+      description: prompts.ROOT_PROMPT
+      instruction: [You will receive data from the orchestrator agent. This data will have come from one of the other agents
+          in the system., You must take this data and format it correctly to be inserted into the datastore via your post_activity
+          tool. Do NOT ask for clarification about any of the details. You must fill in all the fields., If you don't have
+          enough information to put something in one of the fields then fill it with the string 'null'.]
+      instance: root_agent
+  root_agent.3:
+    type: instance
+    models: [gemini-2.0-flash-exp]
+    tools: [MCPToolset.1]
+    mcp: [MCPToolset.1]
+    params:
+      name: basic_search_agent
+      description: Agent to answer questions using Google Search.
+      instruction: agent_instructions
+      instance: root_agent
+  routing_agent_instance:
+    type: instance
+    models: [gemini-live-2.5-flash]
+    tools: [send_message]
+    params:
+      name: Routing_agent
+      instruction: initial_instructions
+      before_agent_callback: self.before_agent_callback
+      after_agent_callback: self.after_agent_callback
+      before_tool_callback: self.observer.before_tool
+      after_tool_callback: self.after_tool
+      description: This Routing agent orchestrates requests for the user to assist in live news or sports broadcast control
+      class: RoutingAgent
+
+models:
+  gemini-2.0-flash:
+    type: literal
+    agents: [adk_agent.0, agent.create_agent.1]
+  gemini-2.0-flash-exp:
+    type: literal
+    agents: [root_agent.3]
+  gemini-2.5-flash:
+    type: literal
+    agents: [root_agent.0, adk_agent.1, root_agent.1, root_agent.2]
+  gemini-2.5-flash-preview-05-20:
+    type: literal
+    agents: [agent._build_agent.0]
+  gemini-live-2.5-flash:
+    type: literal
+    agents: [routing_agent_instance]
+  gpt-4o-2:
+    type: literal
+    agents: [agent._build_agent.1]
+    params:
+      alias: [azure/gpt-4o-2]
+
+tools:
+  get_status:
+    type: function
+    agents: [agent._build_agent.1]
+  load_user_preset:
+    type: function
+    agents: [agent._build_agent.1]
+  mcp_toolset:
+    type: mcp
+    agents: [adk_agent.1]
+    params:
+      class: MCPToolset
+      mcp_server: mcp_toolset
+  mcp_toolset.1:
+    type: mcp
+    agents: [agent.create_agent.1]
+    params:
+      class: MCPToolset
+      mcp_server: mcp_toolset.1
+  MCPToolset:
+    type: mcp
+    agents: [root_agent.2]
+    params:
+      class: MCPToolset
+      mcp_server: MCPToolset
+  MCPToolset.1:
+    type: mcp
+    agents: [root_agent.3]
+    params:
+      class: MCPToolset
+      mcp_server: MCPToolset.1
+  send_message:
+    type: function
+    agents: [routing_agent_instance]
+    params:
+      module: self.send_message
+      description: |-
+        Sends a task to remote seller agent
+
+        This will send a message to the remote agent named agent_name.
+
+        Args:
+            agent_name: The name of the agent to send the task to.
+            task: The comprehensive conversation context summary and goal to be
+                achieved regarding user inquiry and purchase request. This can be
+                a simple string for a text message, or a JSON string for
+                complex data like a file.
+            tool_context: The tool context this method runs in.
+
+        Returns:
+            A list of strings from the remote agent's response. Complex objects
+            are returned as JSON strings.
+  set_eq_setting:
+    type: function
+    agents: [agent._build_agent.1]
+  set_microphone_channel_coverage:
+    type: function
+    agents: [agent._build_agent.1]
+  start_auto_positioning:
+    type: function
+    agents: [agent._build_agent.1]
+  steer_lobe:
+    type: function
+    agents: [agent._build_agent.1]
+  vector_search:
+    type: function
+    agents: [root_agent.1]
+    params:
+      description: Firestore vector search implementation
+
+mcp:
+  mcp_toolset.0:
+    type: network
+    url: HOST
+    agents: [agent.create_agent, adk_agent.1]
+    params:
+      class: MCPToolset
+      connection_type: StreamableHTTPServerParams
+      instance: mcp_toolset
+  mcp_toolset.1:
+    type: network
+    url: MCP_SERVER_URL
+    agents: [agent.create_agent.1]
+    params:
+      class: MCPToolset
+      connection_type: StreamableHTTPServerParams
+      headers:
+        Authorization: MCP_SERVER_API_KEY
+  MCPToolset.0:
+    type: process
+    agents: [root_agent.2]
+    params:
+      class: MCPToolset
+      connection_type: StdioServerParameters
+      command: node
+      args: ['os.path.join(''./activity-agent/tools/'', server.js)']
+      instance: MCPToolset
+  MCPToolset.1:
+    type: process
+    agents: [root_agent.3]
+    params:
+      class: MCPToolset
+      connection_type: StdioServerParameters
+      command: node
+      args: ['os.path.join(BROADCAST_GRAPHICS_MCP_PATH, server.js)']
+
+imports:
+  A2ACardResolver: a2a.client.A2ACardResolver
+  A2AClient: a2a.client.A2AClient
+  A2AClientHTTPError: a2a.client.errors.A2AClientHTTPError
+  A2AClientTimeoutError: a2a.client.errors.A2AClientTimeoutError
+  A2AStarletteApplication: a2a.server.apps.A2AStarletteApplication
+  ActivityAgentExecutor: agent_executor.ActivityAgentExecutor
+  ADKAgentExecutor: agent_executor.ADKAgentExecutor
+  agent: agent
+  Agent: google.adk.Agent
+  agent_engines: vertexai.agent_engines
+  AgentCapabilities: a2a.cards.agent_card.AgentCapabilities
+  AgentCard: a2a.cards.agent_card.AgentCard
+  AgentExecutor: a2a.server.task_manager.AgentExecutor
+  AgentServer: a2a.server.server.AgentServer
+  AgentSkill: a2a.skills.skill_declarations.AgentSkill
+  AgentTaskManager: task_manager.AgentTaskManager
+  aiohttp: aiohttp
+  Any: typing.Any
+  api_config: config.config.api_config
+  argparse: argparse
+  asynccontextmanager: contextlib.asynccontextmanager
+  AsyncGenerator: collections.abc.AsyncGenerator
+  asyncio: asyncio
+  AsyncIterable: typing.AsyncIterable
+  AsyncIterator: typing.AsyncIterator
+  auth: firebase_admin.auth
+  AuthorizedSession: google.auth.transport.requests.AuthorizedSession
+  AUTOMATION_SYSTEMS: automation_system_instructions.AUTOMATION_SYSTEMS
+  base64: base64
+  BaseHTTPMiddleware: starlette.middleware.base.BaseHTTPMiddleware
+  Blob: google.genai.types.Blob
+  build_log_entry: src.utils.build_log_entry
+  Callable: typing.Callable
+  CallbackContext: google.adk.agents.callback_context.CallbackContext
+  click: click
+  CONFIG: config.config.CONFIG
+  config: config
+  ConfigurationError: config.config.ConfigurationError
+  Content: google.genai.types.Content
+  create_agent: agent.create_agent
+  credentials: firebase_admin.credentials
+  CuezStubzyAgent: agent.CuezStubzyAgent
+  CuezStubzyAgentExecutor: agent_executor.CuezStubzyAgentExecutor
+  cv2: cv2
+  DataPart: a2a.types.DataPart
+  datetime: datetime.datetime
+  DEFAULT_INSTRUCTIONS: automation_system_instructions.DEFAULT_INSTRUCTIONS
+  DefaultRequestHandler: a2a.server.request_handlers.DefaultRequestHandler
+  Dict: typing.Dict
+  DistanceMeasure: google.cloud.firestore_v1.base_vector_query.DistanceMeasure
+  Event: google.adk.events.Event
+  EventQueue: a2a.server.task_manager.EventQueue
+  FastAPI: fastapi.FastAPI
+  fetch_program_start: src.utils.fetch_program_start
+  ffmpeg: ffmpeg
+  FieldFilter: google.cloud.firestore_v1.base_query.FieldFilter
+  FilePart: a2a.types.FilePart
+  FileWithBytes: a2a.types.FileWithBytes
+  FileWithUri: a2a.types.FileWithUri
+  firebase_admin: firebase_admin
+  firestore: firebase_admin.firestore
+  firestore_async: firebase_admin.firestore_async
+  FirestoreAgentObserver: firestore_observer.FirestoreAgentObserver
+  FirestoreRepo: firestore_repo.FirestoreRepo
+  frame_to_jpeg_bytes: src.utils.frame_to_jpeg_bytes
+  frontend_data_agent: agent.root_agent
+  GEMINI_MODEL_FOR_AGENT: config.GEMINI_MODEL_FOR_AGENT
+  genai: google.genai
+  generate_embeddings_for_index: src.embeddings.generate_embeddings_for_index
+  generate_embeddings_for_query: embeddings.generate_embeddings_for_query
+  get_all_agents: agent_repository.get_all_agents
+  get_default_skills: mcp_skills.get_default_skills
+  get_delta_timecode: src.utils.get_delta_timecode
+  get_skills_from_mcp: mcp_skills.get_skills_from_mcp
+  get_status: shure_audio_agent.tool.get_status.get_status
+  get_uri_by_source_ref_id: timeline_tool.get_uri_by_source_ref_id
+  get_uri_by_title: timeline_tool.get_uri_by_title
+  google_auth_default: google.auth.default
+  GOOGLE_EMBEDDING_MODEL: config.GOOGLE_EMBEDDING_MODEL
+  google_search: google.adk.tools.google_search
+  GoogleCloudError: google.cloud.exceptions.GoogleCloudError
+  gr: gradio
+  hashlib: hashlib
+  httpx: httpx
+  Image: PIL.Image
+  InMemoryArtifactService: google.adk.artifacts.InMemoryArtifactService
+  InMemoryMemoryService: google.adk.memory.in_memory_memory_service.InMemoryMemoryService
+  InMemoryRunner: google.adk.runners.InMemoryRunner
+  InMemorySessionService: google.adk.sessions.InMemorySessionService
+  InMemoryTaskStore: a2a.server.tasks.InMemoryTaskStore
+  INSTRUCTIONS: src.prompts.INSTRUCTIONS
+  io: io
+  isoparse: dateutil.parser.isoparse
+  json: json
+  JSONResponse: starlette.responses.JSONResponse
+  JSONRPCErrorResponse: a2a.types.JSONRPCErrorResponse
+  List: typing.List
+  litellm: litellm
+  LiveRequestQueue: google.adk.agents.LiveRequestQueue
+  LlmAgent: adk.agent.LlmAgent
+  load_chat_history: broadcast_orchestrator.history.load_chat_history
+  load_dotenv: dotenv.load_dotenv
+  load_user_preset: shure_audio_agent.tool.load_user_preset.load_user_preset
+  log_ffmpeg_errors: src.utils.log_ffmpeg_errors
+  logger: logger.logger
+  logging: logging
+  mcp_toolset: agent.mcp_toolset
+  MCPToolset: google.adk.tools.mcp_tool.mcp_toolset.MCPToolset
+  Message: a2a.types.Message
+  MessageSendParams: a2a.types.MessageSendParams
+  MODEL: config.config.MODEL
+  new_agent_parts_message: a2a.utils.new_agent_parts_message
+  new_agent_text_message: a2a.server.task_protocols.new_agent_text_message
+  new_task: a2a.server.task_protocols.new_task
+  Optional: typing.Optional
+  os: os
+  Part: a2a.types.Part
+  Path: pathlib.Path
+  pformat: pprint.pformat
+  process_agent_events: src.processor.process_agent_events
+  process_tool_output_for_timeline: timeline_manager.process_tool_output_for_timeline
+  prompts: prompts
+  Query: fastapi.Query
+  queue: queue
+  quote: urllib.parse.quote
+  re: re
+  ReadonlyContext: google.adk.agents.readonly_context.ReadonlyContext
+  RemoteAgentConnections: remote_agent_connection.RemoteAgentConnections
+  Request: starlette.requests.Request
+  RequestContext: a2a.server.task_manager.RequestContext
+  requests: requests
+  root_agent: agent.root_agent
+  ROOT_PROMPT: src.prompts.ROOT_PROMPT
+  RoutingAgent: broadcast_orchestrator.agent.RoutingAgent
+  RunConfig: google.adk.agents.run_config.RunConfig
+  Runner: google.adk.runners.Runner
+  secretmanager: google.cloud.secretmanager
+  SendMessageRequest: a2a.types.SendMessageRequest
+  SendMessageResponse: a2a.types.SendMessageResponse
+  SendMessageSuccessResponse: a2a.types.SendMessageSuccessResponse
+  sentry_sdk: sentry_sdk
+  SERVER_TIMESTAMP: firebase_admin.firestore.SERVER_TIMESTAMP
+  ServerError: a2a.utils.errors.ServerError
+  set_eq_setting: shure_audio_agent.tool.set_eq_setting.set_eq_setting
+  set_microphone_channel_coverage: shure_audio_agent.tool.set_microphone_channel_coverage.set_microphone_channel_coverage
+  ShureAudioAgent: agent.ShureAudioAgent
+  ssl: ssl
+  start_agent_session: src.processor.start_agent_session
+  start_auto_positioning: shure_audio_agent.tool.start_auto_positioning.start_auto_positioning
+  status: fastapi.status
+  StdioServerParameters: google.adk.tools.mcp_tool.mcp_toolset.StdioServerParameters
+  steer_lobe: shure_audio_agent.tool.steer_lobe.steer_lobe
+  storage: firebase_admin.storage
+  STREAM_SSL_VERIFY: config.STREAM_SSL_VERIFY
+  stream_to_agent: src.processor.stream_to_agent
+  StreamableHTTPServerParams: google.adk.tools.mcp_tool.mcp_toolset.StreamableHTTPServerParams
+  subprocess: subprocess
+  sys: sys
+  Task: a2a.types.Task
+  TaskArtifactUpdateEvent: a2a.types.TaskArtifactUpdateEvent
+  TaskState: a2a.types.TaskState
+  TaskStatusUpdateEvent: a2a.types.TaskStatusUpdateEvent
+  TaskUpdateCallback: remote_agent_connection.TaskUpdateCallback
+  TaskUpdater: a2a.server.task_manager.TaskUpdater
+  TextPart: a2a.types.TextPart
+  threading: threading
+  time: time
+  timezone: datetime.timezone
+  ToolContext: google.adk.tools.tool_context.ToolContext
+  TOOLS: config.config.TOOLS
+  traceback: traceback
+  tx_agent: agent.agent.root_agent
+  TX_AGENT_API_KEY: config.TX_AGENT_API_KEY
+  TxAgentExecutor: agent.agent_executor.TxAgentExecutor
+  types: google.genai.types
+  UnsupportedOperationError: a2a.types.UnsupportedOperationError
+  upload_base64_image_to_gcs: gcs_uploader.upload_base64_image_to_gcs
+  urlencode: urllib.parse.urlencode
+  urlparse: urllib.parse.urlparse
+  uuid: uuid
+  uvicorn: uvicorn
+  VALID_TAGS: config.VALID_TAGS
+  Vector: google.cloud.firestore_v1.vector.Vector
+  vector_search: vector_search_tool.vector_search
+  vertexai: vertexai
+  warnings: warnings
+  WebSocket: fastapi.WebSocket
+  WebSocketDisconnect: fastapi.WebSocketDisconnect
+  yaml: yaml
+  ZoneInfo: zoneinfo.ZoneInfo
+
+functions:
+  __init__:
+    type: sync
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    args: [self, task_callback]
+  _build_agent:
+    type: sync
+    module: shure-audio-agent.agent
+    args: [self]
+    params:
+      returns: LlmAgent
+  _extract_parts_from_response:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.timeline_manager
+    args: [response_data]
+    params:
+      returns: list[dict]
+  _get_event_collection:
+    type: sync
+    module: orchestrator.agent.broadcast_orchestrator.firestore_observer
+    args: [self, context]
+    params:
+      returns: firestore_async.AsyncCollectionReference
+  _get_formatted_instructions:
+    type: sync
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    args: [self, rundown_system_preference]
+    params:
+      returns: str
+  _init_firebase_if_needed:
+    type: sync
+    module: tx.tx_agent.agent.firestore_repo
+  _load_agents_from_firestore:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    args: [self]
+  _parse_spelling_errors_from_text:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.timeline_manager
+    args: [text]
+    params:
+      returns: list[dict]
+  _process_media_clips:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.timeline_manager
+    args: [parts]
+    params:
+      returns: list[dict]
+  _process_request:
+    type: async
+    module: itn-posture.itn-posture-agent.agent_executor
+    args: [self, new_message, session_id, task_updater]
+    params:
+      returns: None
+  _process_spelling_errors:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.timeline_manager
+    args: [parts, tool_context]
+    params:
+      returns: list[dict]
+  _run_agent:
+    type: sync
+    module: itn-posture.itn-posture-agent.agent_executor
+    args: [self, session_id, new_message]
+    params:
+      returns: AsyncGenerator
+  _save_timeline_events:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.timeline_manager
+    args: [events, tool_context]
+  _upsert_session:
+    type: async
+    module: itn-posture.itn-posture-agent.agent_executor
+    args: [self, session_id]
+  add:
+    type: sync
+    module: tx.tx_agent.agent.firestore_repo
+    args: [self, data]
+    params:
+      returns: str
+  after_agent_callback:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    args: [self, callback_context]
+  after_model:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.firestore_observer
+    args: [self, context]
+  after_tool:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    args: [self]
+  agent_to_client_messaging:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.main
+    args: [websocket, live_events, session_id, user_has_spoken]
+  analyze_video_stream:
+    type: sync
+    module: tx.stream-processor.src.processor
+    args: [stream_url, live_request_queue]
+  batch_add:
+    type: sync
+    module: tx.tx_agent.agent.firestore_repo
+    args: [self, entries, embeddings]
+    params:
+      returns: None
+  before_agent_callback:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    args: [self, callback_context]
+  before_model:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.firestore_observer
+    args: [self, context]
+  before_model_callback:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    args: [self, callback_context]
+  before_tool:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.firestore_observer
+    args: [self]
+  build_log_entry:
+    type: sync
+    module: tx.stream-processor.src.utils
+    args: [raw_line]
+    params:
+      returns: list[dict]
+  cancel:
+    type: async
+    module: itn-posture.itn-posture-agent.agent_executor
+    args: [self, context, event_queue]
+  capture_audio:
+    type: sync
+    module: tx.stream-processor.src.processor
+    args: [stream_url, stop_event]
+  check_active_agent:
+    type: sync
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    args: [self, context]
+  check_agent_health:
+    type: async
+    module: orchestrator.agent-health-checker.main
+    args: [agent_id, agent_dict]
+  clear_debug_logs:
+    type: sync
+    module: orchestrator.app
+  client_to_agent_messaging:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.main
+    args: [websocket, live_request_queue, session_id, user_has_spoken]
+  convert_a2a_part_to_genai:
+    type: sync
+    module: itn-posture.itn-posture-agent.agent_executor
+    args: [part]
+    params:
+      returns: types.Part
+  convert_a2a_parts_to_genai:
+    type: sync
+    module: itn-posture.itn-posture-agent.agent_executor
+    args: [parts]
+    params:
+      returns: list[types.Part]
+  convert_genai_part_to_a2a:
+    type: sync
+    module: itn-posture.itn-posture-agent.agent_executor
+    args: [part]
+    params:
+      returns: Part
+  convert_genai_parts_to_a2a:
+    type: sync
+    module: itn-posture.itn-posture-agent.agent_executor
+    args: [parts]
+    params:
+      returns: list[Part]
+  convert_part:
+    type: sync
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    args: [part]
+  convert_parts:
+    type: sync
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    args: [parts]
+  create_agent:
+    type: sync
+    module: cuez-rundown.cuez-rundown-agent.agent
+    params:
+      returns: LlmAgent
+  create_app:
+    type: sync
+    module: activity-agent.main
+  create_gemini_session:
+    type: async
+    module: control-room-assistant.websocket-server.core.gemini_client
+  create_send_message_payload:
+    type: sync
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    args: [text, task_id, context_id]
+    params:
+      returns: dict
+  dispatch:
+    type: async
+    module: tx.tx_agent.__main__
+    args: [self, request, call_next]
+  execute:
+    type: async
+    module: shure-audio-agent.task_manager
+    args: [self, context, event_queue]
+    params:
+      returns: None
+  execute_tool:
+    type: async
+    module: control-room-assistant.websocket-server.core.tool_handler
+    args: [tool_name, params]
+    params:
+      returns: Dict
+  fetch_program_start:
+    type: sync
+    module: tx.stream-processor.src.utils
+    args: [playlist_url]
+  frame_to_jpeg_bytes:
+    type: sync
+    module: tx.stream-processor.src.utils
+    args: [frame]
+  generate_embeddings_for_index:
+    type: sync
+    module: tx.stream-processor.src.embeddings
+    args: [entries]
+    params:
+      returns: list[list[float]]
+  generate_embeddings_for_query:
+    type: sync
+    module: tx.tx_agent.agent.embeddings
+    args: [content]
+    params:
+      returns: list[float]
+  get_agent:
+    type: sync
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    args: [self]
+    params:
+      returns: Agent
+  get_agent_card:
+    type: async
+    module: orchestrator.agent-health-checker.main
+    args: [client, base_url]
+  get_all:
+    type: sync
+    module: tx.tx_agent.agent.firestore_repo
+    args: [self]
+    params:
+      returns: list[dict]
+  get_all_agents:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.agent_repository
+    params:
+      returns: list[dict]
+  get_current_service_account:
+    type: sync
+    module: orchestrator.agent-health-checker.main
+  get_debug_logs:
+    type: sync
+    module: orchestrator.app
+  get_default_skills:
+    type: sync
+    module: cuez-rundown.cuez-rundown-agent.mcp_skills
+    params:
+      returns: List[AgentSkill]
+  get_delta_timecode:
+    type: sync
+    module: tx.stream-processor.src.utils
+    args: [program_start]
+  get_mcp_tools:
+    type: async
+    module: cuez-rundown.cuez-rundown-agent.mcp_skills
+    args: [mcp_toolset]
+    params:
+      returns: List
+  get_response_from_agent:
+    type: async
+    module: orchestrator.app
+    args: [message, history]
+    params:
+      returns: AsyncIterator[gr.ChatMessage]
+  get_secret:
+    type: sync
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    args: [secret_id]
+  get_skills_from_mcp:
+    type: async
+    module: cuez-rundown.cuez-rundown-agent.mcp_skills
+    args: [mcp_toolset]
+    params:
+      returns: List[AgentSkill]
+  get_uri_by_source_ref_id:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.timeline_tool
+    args: [source_ref_id]
+  get_uri_by_title:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.timeline_tool
+    args: [title, session_id]
+  health_check:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.main
+  infer_mime_type:
+    type: sync
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    args: [filename]
+    params:
+      returns: str
+  initialize:
+    type: async
+    module: control-room-assistant.websocket-server.config.config
+    args: [self]
+  invoke:
+    type: async
+    module: shure-audio-agent.agent
+    args: [self, query, session_id]
+    params:
+      returns: AsyncIterable[dict]
+  lifespan:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.main
+    args: [fastapi_app]
+  load_instructions_from_file:
+    type: sync
+    module: bbc-newsround-graphics.bbc_newsround_graphics.agent
+    args: [filename]
+  load_system_instructions:
+    type: sync
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    params:
+      returns: str
+  log_ffmpeg_errors:
+    type: sync
+    module: tx.stream-processor.src.utils
+    args: [proc]
+  main:
+    type: async
+    module: shure-audio-agent.__main__
+  model_message:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.firestore_observer
+    args: [self, context]
+  normalize_name:
+    type: sync
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    args: [name]
+    params:
+      returns: str
+  process_agent_events:
+    type: async
+    module: tx.stream-processor.src.processor
+    args: [live_events]
+  process_tags:
+    type: sync
+    module: tx.stream-processor.src.utils
+    args: [tags_str]
+    params:
+      returns: list[str]
+  process_tool_output_for_timeline:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.timeline_manager
+  run_job:
+    type: async
+    module: tx.tx_agent.__main__
+    args: [request]
+  search_in_range:
+    type: sync
+    module: tx.tx_agent.agent.firestore_repo
+    args: [self, target_time, delta_seconds]
+    params:
+      returns: list[dict]
+  seed_agent_status:
+    type: sync
+    module: orchestrator.agent.broadcast_orchestrator.main
+  send_message:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.agent
+    args: [self, agent_name, task, tool_context]
+    params:
+      returns: list[str]
+  set_microphone_channel_coverage:
+    type: sync
+    module: shure-audio-agent.agent
+    args: [reposition_id, coordinates]
+    params:
+      returns: dict
+  start_agent_session:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.main
+    args: [user_id, app_instance, is_audio]
+  stream_to_agent:
+    type: async
+    module: tx.stream-processor.src.processor
+    args: [live_request_queue, url]
+  tool_to_skill:
+    type: sync
+    module: cuez-rundown.cuez-rundown-agent.mcp_skills
+    args: [tool]
+    params:
+      returns: AgentSkill
+  update:
+    type: sync
+    module: tx.tx_agent.agent.firestore_repo
+    args: [self, embedding_entries]
+    params:
+      returns: None
+  update_timeline_event_status:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.timeline_manager
+    args: [event_id, status]
+    params:
+      returns: str
+  upload_base64_image_to_gcs:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.gcs_uploader
+    args: [base64_data, filename]
+  user_message:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.firestore_observer
+    args: [self, context]
+  validate_timecode_format:
+    type: sync
+    module: tx.stream-processor.src.utils
+    args: [timecode_str]
+    params:
+      returns: str
+  vector_search:
+    type: sync
+    module: tx.tx_agent.agent.vector_search_tool
+    args: [query, k]
+    params:
+      returns: dict
+  verify_token:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.main
+    args: [websocket, user_id]
+  websocket_endpoint:
+    type: async
+    module: orchestrator.agent.broadcast_orchestrator.main
+    args: [websocket, user_id, is_audio]
+
+variables:
+  A2A_HOST:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [shure-audio-agent.__main__]
+  A2A_PORT:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [shure-audio-agent.__main__]
+  agent_details.get(url_env):
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [orchestrator.agent.broadcast_orchestrator.main]
+  AGENT_URL:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [cuez-rundown.cuez-rundown-agent.__main__]
+  CLOUD_RUN_TASK_ATTEMPT:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [orchestrator.agent-health-checker.main]
+  CLOUD_RUN_TASK_INDEX:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [orchestrator.agent-health-checker.main]
+  CUEZ_AUTOMATOR_ENDPOINT:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [control-room-assistant.websocket-server.config.config]
+  EXTERNAL_HOST:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [sofie.agents.sofie-agent.__main__]
+  FIRESTORE_DB_COLLECTION:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [tx.stream-processor.config, tx.tx_agent.config]
+  FIRESTORE_PROJECT_ID:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [tx.tx_agent.agent.firestore_repo]
+  GCS_BUCKET_NAME:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [orchestrator.agent.broadcast_orchestrator.gcs_uploader]
+  GEMINI_API_KEY:
+    type: env
+    params:
+      caller: [os.environ.get]
+      path: [orchestrator.agent.broadcast_orchestrator.timeline_manager]
+  GEMINI_MODEL_FOR_AGENT:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [tx.stream-processor.config, tx.tx_agent.config]
+  GOOGLE_API_KEY:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [sofie.agents.sofie-agent.__main__, control-room-assistant.websocket-server.config.config, cuez_stubzy.cuez_stubzy_agent.__main__,
+        cuez-rundown.cuez-rundown-agent.__main__]
+  GOOGLE_APPLICATION_CREDENTIALS:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [tx.stream-processor.config, tx.tx_agent.agent.firestore_repo, tx.tx_agent.config]
+  GOOGLE_CLOUD_LOCATION:
+    type: env
+    params:
+      caller: [os.environ.get]
+      path: [orchestrator.agent.broadcast_orchestrator.timeline_manager]
+  GOOGLE_CLOUD_PROJECT:
+    type: env
+    params:
+      caller: [os.environ.get, os.getenv]
+      path: [orchestrator.agent.broadcast_orchestrator.deploy, tx.tx_agent.agent.firestore_repo, orchestrator.agent-health-checker.main,
+        orchestrator.agent.broadcast_orchestrator.timeline_manager, orchestrator.agent.broadcast_orchestrator.agent]
+  GOOGLE_GENAI_USE_VERTEXAI:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [sofie.agents.sofie-agent.__main__, cuez_stubzy.cuez_stubzy_agent.__main__, cuez-rundown.cuez-rundown-agent.__main__]
+  HOST:
+    type: env
+    params:
+      caller: [os.getenv, os.environ.get]
+      path: [sofie.agents.sofie-agent.agent, activity-agent.main]
+  MCP_SERVER_API_KEY:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [cuez-rundown.cuez-rundown-agent.agent]
+  MCP_SERVER_URL:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [cuez-rundown.cuez-rundown-agent.agent]
+  MODEL_DEV_API:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [control-room-assistant.websocket-server.config.config]
+  MODEL_VERTEX_API:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [control-room-assistant.websocket-server.config.config]
+  PORT:
+    type: env
+    params:
+      caller: [os.environ.get]
+      path: [activity-agent.main]
+  PROJECT_ID:
+    type: env
+    params:
+      caller: [os.environ.get]
+      path: [control-room-assistant.websocket-server.config.config, control-room-assistant.websocket-server.core.gemini_client]
+  STORAGE_BUCKET:
+    type: env
+    params:
+      caller: [os.environ.get]
+      path: [orchestrator.agent.broadcast_orchestrator.deploy]
+  STREAM_SSL_VERIFY:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [tx.stream-processor.config]
+  TX_AGENT_API_KEY:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [tx.tx_agent.config]
+  VERTEX_API:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [control-room-assistant.websocket-server.config.config]
+  VERTEX_LOCATION:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [control-room-assistant.websocket-server.core.gemini_client]
+  VOICE_DEV_API:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [control-room-assistant.websocket-server.config.config]
+  VOICE_VERTEX_API:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [control-room-assistant.websocket-server.config.config]
+
+files:
+  ../../../orchestrator/frontend:
+    type: pattern
+    actions: [read]
+    params:
+      caller: [os.path.join]
+      pattern: [os.path.dirname(), ../../../orchestrator/frontend]
+  ../graphic-tool:
+    type: pattern
+    actions: [read]
+    params:
+      caller: [os.path.join]
+      pattern: [os.path.dirname(), ../graphic-tool]
+  .env:
+    type: literal
+    actions: [read]
+    params:
+      path: [current_dir]
+  config/cuez_api_swagger.json:
+    type: literal
+    actions: [read]
+    params:
+      caller: [open]
+      alias: [f]
+  config/system-instructions.txt:
+    type: literal
+    actions: [read]
+    params:
+      caller: [open]
+      alias: [f]
+  config_path:
+    type: variable
+    actions: [read]
+    params:
+      caller: [open, yaml.safe_load]
+      alias: [file]
+  file_path:
+    type: variable
+    actions: [read]
+    params:
+      caller: [open]
+      alias: [f]
+  path:
+    type: variable
+    actions: [read]
+    params:
+      caller: [os.path.exists, open]
+  remote_agents_config.yaml:
+    type: pattern
+    actions: [read]
+    params:
+      caller: [os.path.join]
+      pattern: [os.path.dirname(), remote_agents_config.yaml]
+  system_instructions.txt:
+    type: pattern
+    actions: [read]
+    params:
+      caller: [os.path.join]
+      pattern: [script_dir, system_instructions.txt]
+  urlparse.path:
+    type: variable
+    actions: [read]
+    params:
+      caller: [os.path.basename]
+
+networks:
+  agent_card:
+    type: api
+    actions: [GET]
+    protocols: [http]
+    ports: ["80"]
+    params:
+      caller: [create_app]
+      pattern: http://{host}:{port}/
+  firebasestorage.googleapis.com:
+    type: api
+    actions: [GET]
+    urls: ['/{...}']
+    protocols: [https]
+    ports: ["443"]
+    params:
+      caller: [upload_base64_image_to_gcs]
+  o182678.ingest.us.sentry.io:
+    type: api
+    actions: [GET]
+    urls: [/4509923209314304]
+    protocols: [https]
+    ports: ["443"]
+    params:
+      links: [dsn]
