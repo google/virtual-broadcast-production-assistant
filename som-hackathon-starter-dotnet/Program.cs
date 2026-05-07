@@ -38,7 +38,13 @@ builder.Services.AddHostedService<SkillWorker>();
 builder.Services.AddSingleton<SimulatorService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SimulatorService>());
 
-builder.WebHost.ConfigureKestrel(o => o.ListenLocalhost(5050));
+// Bind to localhost:5050 only when ASPNETCORE_URLS is unset (i.e. local `dotnet run`).
+// In containers the Dockerfile sets ASPNETCORE_URLS=http://+:5050 so Kestrel binds to
+// 0.0.0.0 and the published port is reachable from the host.
+if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
+{
+    builder.WebHost.ConfigureKestrel(o => o.ListenLocalhost(5050));
+}
 
 var app = builder.Build();
 

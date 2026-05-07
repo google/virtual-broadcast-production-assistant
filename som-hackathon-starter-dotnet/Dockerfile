@@ -13,6 +13,6 @@ WORKDIR /app
 COPY --from=build /app .
 COPY seed-stories/ seed-stories/
 COPY skills/ skills/
-ENV ASPNETCORE_URLS=http://+:8080
-EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:5050
+EXPOSE 5050
 ENTRYPOINT ["dotnet", "SomSkillWorker.dll"]

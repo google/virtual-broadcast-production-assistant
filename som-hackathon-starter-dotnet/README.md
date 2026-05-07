@@ -238,13 +238,15 @@ For shared cluster deployments:
 
 ```bash
 docker build -t som-skill-worker .
-docker run -p 8080:8080 \
+docker run -p 5050:5050 \
   -e ASPNETCORE_ENVIRONMENT=Production \
   -e Kafka__BootstrapServers=... \
   -e Kafka__SaslUsername=... \
   -e Kafka__SaslPassword=... \
   som-skill-worker
 ```
+
+The dashboard is served on port `5050` both inside the container (via `ASPNETCORE_URLS=http://+:5050` in the Dockerfile) and locally with `dotnet run` — one port everywhere.
 
 Update the `Dockerfile` base image tags from `10.0-preview` to `10.0` once .NET 10 reaches GA.
 
