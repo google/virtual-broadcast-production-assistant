@@ -1,0 +1,29 @@
+## Build outputs
+bin/
+obj/
+
+## IDE / editor state
+.vs/
+.idea/
+*.user
+*.suo
+*.DotSettings.user
+*.swp
+*~
+
+## OS junk
+.DS_Store
+Thumbs.db
+
+## Local env
+.env
+.env.local
+
+## Local Claude settings + workflow scratchpads
+.claude/
+CLAUDE.md
+claude*.md
+
+## Don't ignore content directories
+!seed-stories/
+!skills/

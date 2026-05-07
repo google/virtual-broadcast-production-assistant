@@ -1,0 +1,50 @@
+{
+  "id": "nbcu/editorial-standards",
+  "version": "0.1.0",
+  "name": "NBCU Editorial Standards",
+  "description": "Editorial standards skill for breaking news. Flags informal language in headlines and surfaces missing compliance flags on BREAKING stories.",
+  "skill_type": "broadcaster",
+  "disclosure_level": "L2",
+  "migration_policy": "gated",
+  "reads": [
+    "headline",
+    "lifecycle.phase",
+    "compliance"
+  ],
+  "produces": [
+    "skill.warning.raised",
+    "skill.run.completed"
+  ],
+  "rules": [
+    {
+      "rule_id": "nbcu-style-001",
+      "name": "Informal language in headline",
+      "description": "Flags use of newsroom-informal terms in story headlines. Encourages a more formal alternative for broadcast standards.",
+      "type": "term_match",
+      "config": {
+        "field": "headline",
+        "terms": ["cops", "kids", "busted", "slammed"],
+        "case_sensitive": false
+      },
+      "default_severity": "flag",
+      "output_message_type": "skill.warning.raised",
+      "affected_fields": ["headline"],
+      "detail_template": "Informal term '{term}' in headline. Consider formal alternative."
+    },
+    {
+      "rule_id": "nbcu-compliance-001",
+      "name": "Missing compliance flags on BREAKING",
+      "description": "Inform-severity warning when a story enters BREAKING phase with no compliance flags attached. Standards desk should verify before air.",
+      "type": "phase_with_missing_field",
+      "config": {
+        "phase_field": "lifecycle.phase",
+        "phase": "BREAKING",
+        "field": "compliance"
+      },
+      "default_severity": "inform",
+      "output_message_type": "skill.warning.raised",
+      "affected_fields": ["compliance"],
+      "detail_template": "BREAKING story has no compliance flags. Verify with Standards desk."
+    }
+  ]
+}

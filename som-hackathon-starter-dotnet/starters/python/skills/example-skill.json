@@ -1,0 +1,34 @@
+{
+  "id": "your-vendor/your-skill",
+  "version": "0.1.0",
+  "name": "Your Skill Name",
+  "description": "TODO: Describe what your skill detects or enriches.",
+  "skill_type": "vendor",
+  "disclosure_level": "L2",
+  "migration_policy": "gated",
+  "reads": [
+    "headline",
+    "lifecycle.phase"
+  ],
+  "produces": [
+    "skill.warning.raised",
+    "skill.run.completed"
+  ],
+  "rules": [
+    {
+      "rule_id": "your-vendor-rule-001",
+      "name": "TODO: Rule name",
+      "description": "TODO: What this rule checks for.",
+      "type": "term_match",
+      "config": {
+        "field": "headline",
+        "terms": ["example-term"],
+        "case_sensitive": false
+      },
+      "default_severity": "flag",
+      "output_message_type": "skill.warning.raised",
+      "affected_fields": ["headline"],
+      "detail_template": "Found '{term}' in headline."
+    }
+  ]
+}

@@ -1,0 +1,2233 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SOM Skill Bus — Live Dashboard</title>
+<style>
+[data-theme="dark"] {
+  --bg: #080b14; --bg-surface: #0e1220; --bg-surface2: #141a2e; --bg-input: #0a0e1a;
+  --border: #1e2740; --border-hover: #2e3a5a;
+  --text: #e4e8f1; --text-secondary: #a0a8c0; --text-muted: #6b7694;
+  --accent: #5b8cff; --accent2: #8b5cf6; --coral: #f96167; --ice: #cadcfc;
+  --good: #34d399; --warn: #fbbf24; --bad: #f87171;
+  --chip-bg: #1a2236; --code-bg: #0a0d14;
+}
+[data-theme="light"] {
+  --bg: #f4f6f9; --bg-surface: #ffffff; --bg-surface2: #f0f2f5; --bg-input: #ffffff;
+  --border: #d1d5db; --border-hover: #9ca3af;
+  --text: #111827; --text-secondary: #4b5563; --text-muted: #6b7280;
+  --accent: #2563eb; --accent2: #7c3aed; --coral: #dc2626; --ice: #1e3a5f;
+  --good: #059669; --warn: #d97706; --bad: #dc2626;
+  --chip-bg: #e5e7eb; --code-bg: #f3f4f6;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; }
+html, body {
+  height: 100%; background: var(--bg); color: var(--text);
+  font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+}
+button { font: inherit; cursor: pointer; }
+
+.app { display: grid; grid-template-rows: 56px 1fr 6px var(--timeline-h, 220px); height: 100vh; --timeline-h: 220px; }
+
+.resizer {
+  background: var(--border);
+  cursor: ns-resize;
+  position: relative;
+  transition: background-color .15s;
+}
+.resizer:hover, .resizer.dragging { background: var(--accent); }
+.resizer::after {
+  content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 36px; height: 2px; background: var(--text-muted); border-radius: 99px; opacity: 0.5;
+}
+
+.header {
+  background: var(--bg-surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 20px; gap: 14px;
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14px; }
+.brand-dot { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(135deg, var(--coral), var(--accent2)); }
+.brand small { color: var(--text-muted); font-weight: 500; font-size: 10px; display: block; }
+.scenario-bar { display: flex; gap: 6px; margin-left: 16px; flex-wrap: wrap; }
+.scenario-bar button {
+  padding: 5px 10px; border-radius: 7px; border: 1px solid var(--border);
+  background: var(--bg-surface2); color: var(--text-secondary);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  line-height: 1.2; text-align: left;
+}
+.scenario-bar button:hover { border-color: var(--border-hover); }
+.scenario-bar button strong { font-size: 11px; font-weight: 700; color: var(--text); }
+.scenario-bar button small { font-size: 9px; font-weight: 500; color: var(--text-muted); }
+.scenario-bar button:hover small { color: var(--text-secondary); }
+.header-spacer { flex: 1; }
+.ws-status { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+.ws-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
+.ws-status.connected .dot { background: var(--good); }
+.theme-toggle {
+  background: var(--bg-surface2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 10px; color: var(--text-muted); font-size: 12px;
+}
+.theme-toggle:hover { color: var(--text); border-color: var(--border-hover); }
+
+/* Tabler SVG icon helper */
+.icon {
+  width: 16px; height: 16px;
+  stroke: currentColor; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  vertical-align: -3px; flex-shrink: 0;
+}
+.icon-sm { width: 13px; height: 13px; vertical-align: -2px; }
+.icon-lg { width: 20px; height: 20px; vertical-align: -5px; }
+.icon-xl { width: 28px; height: 28px; }
+.theme-toggle.danger { color: var(--coral); border-color: rgba(249,97,103,0.4); }
+.theme-toggle.danger:hover { color: #fff; background: var(--coral); border-color: var(--coral); }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 20px; right: 20px;
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--good); border-radius: 10px;
+  padding: 12px 16px; font-size: 13px; z-index: 100;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  opacity: 0; transform: translateY(8px); transition: opacity .15s, transform .15s;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.danger { border-left-color: var(--coral); }
+.toast.warn { border-left-color: var(--warn); }
+
+.pipeline {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  padding: 16px; overflow: hidden;
+}
+.lane {
+  background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px;
+  display: flex; flex-direction: column; min-height: 0;
+}
+.lane-head {
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.lane-head .title { font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.lane-head .icon { font-size: 16px; }
+.lane-head .count {
+  font-size: 10px; padding: 2px 8px; border-radius: 99px;
+  background: var(--chip-bg); color: var(--text-muted); font-weight: 600;
+}
+.lane-body { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+
+.card {
+  background: var(--bg-surface2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 12px; cursor: pointer; transition: border-color .1s, transform .1s;
+}
+.card:hover { border-color: var(--border-hover); transform: translateY(-1px); }
+.card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.card-id { font-family: "Consolas", monospace; font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-title { font-weight: 700; font-size: 12px; line-height: 1.3; margin: 2px 0 6px; }
+.card-meta { font-size: 10px; color: var(--text-muted); display: flex; gap: 8px; flex-wrap: wrap; }
+.card-meta b { color: var(--text-secondary); font-weight: 600; }
+
+.tag {
+  font-size: 9px; padding: 2px 6px; border-radius: 4px;
+  background: var(--chip-bg); color: var(--text-secondary);
+  font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.tag.breaking { background: #3a1818; color: #fca5a5; }
+.tag.developing { background: #28291a; color: #e8d580; }
+.tag.published { background: #12302a; color: #6ee7b7; }
+.tag.planned { background: #1a2236; color: var(--ice); }
+.tag.flag { background: #28291a; color: #e8d580; }
+.tag.inform { background: #0f2a3a; color: #7dd3fc; }
+.tag.hold { background: #3a1818; color: #fca5a5; }
+.tag.completed { background: #12302a; color: #6ee7b7; }
+.tag.skipped { background: #1a2236; color: var(--text-muted); }
+.tag.approved { background: #12302a; color: #6ee7b7; }
+.tag.rejected { background: #3a1818; color: #fca5a5; }
+.tag.warning { background: #28291a; color: #e8d580; }
+.tag.suggestion { background: #241f38; color: #c4b5fd; }
+.tag.enrichment { background: #0f2a3a; color: #7dd3fc; }
+.tag.muted { background: var(--chip-bg); color: var(--text-muted); }
+.tag.good { background: #12302a; color: #6ee7b7; }
+
+[data-theme="light"] .tag.breaking { background: #fee2e2; color: #991b1b; }
+[data-theme="light"] .tag.developing { background: #fef3c7; color: #92400e; }
+[data-theme="light"] .tag.published { background: #d1fae5; color: #065f46; }
+[data-theme="light"] .tag.planned { background: #e5e7eb; color: #374151; }
+[data-theme="light"] .tag.flag { background: #fef3c7; color: #92400e; }
+[data-theme="light"] .tag.inform { background: #dbeafe; color: #1e40af; }
+[data-theme="light"] .tag.hold { background: #fee2e2; color: #991b1b; }
+[data-theme="light"] .tag.completed { background: #d1fae5; color: #065f46; }
+[data-theme="light"] .tag.skipped { background: #e5e7eb; color: #374151; }
+[data-theme="light"] .tag.approved { background: #d1fae5; color: #065f46; }
+[data-theme="light"] .tag.rejected { background: #fee2e2; color: #991b1b; }
+[data-theme="light"] .tag.warning { background: #fef3c7; color: #92400e; }
+[data-theme="light"] .tag.suggestion { background: #ede9fe; color: #5b21b6; }
+[data-theme="light"] .tag.enrichment { background: #dbeafe; color: #1e40af; }
+
+/* Lifecycle stepper */
+.stepper { display: flex; gap: 2px; margin: 8px 0 4px; }
+.seg { flex: 1; height: 4px; border-radius: 2px; background: var(--border); }
+.seg.passed { background: var(--text-muted); opacity: 0.5; }
+.seg.current.normal   { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+.seg.current.breaking { background: var(--coral); }
+.seg.current.developing { background: var(--warn); }
+.seg.current.published { background: var(--good); }
+.stepper-meta { display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: var(--text-muted); margin-top: 2px; }
+.stepper-meta b { color: var(--text-secondary); font-weight: 600; }
+.terminal-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  background: #3a1818; color: #fca5a5;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+}
+
+/* Instance tiles */
+.instances { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+.inst {
+  font-size: 10px; padding: 2px 7px; border-radius: 4px;
+  background: var(--chip-bg); color: var(--text-secondary);
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.inst.active   { background: #12302a; color: #6ee7b7; }
+.inst.pending  { background: #28291a; color: #e8d580; }
+.inst.scheduled { background: #0f2a3a; color: #7dd3fc; }
+.inst.archived { background: #1a2236; color: var(--text-muted); }
+[data-theme="light"] .inst.active   { background: #d1fae5; color: #065f46; }
+[data-theme="light"] .inst.pending  { background: #fef3c7; color: #92400e; }
+[data-theme="light"] .inst.scheduled { background: #dbeafe; color: #1e40af; }
+[data-theme="light"] .inst.archived { background: #e5e7eb; color: #374151; }
+
+/* Compliance & gates strip */
+.cstrip { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+.cs-item {
+  font-size: 10px; padding: 3px 7px; border-radius: 4px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 3px; border: 1px solid transparent;
+}
+.cs-item:hover { border-color: var(--border-hover); }
+.cs-item.critical { background: #3a1818; color: #fca5a5; }
+.cs-item.high     { background: #3a2818; color: #fcb27a; }
+.cs-item.medium   { background: #28291a; color: #e8d580; }
+.cs-item.low      { background: #0f2a3a; color: #7dd3fc; }
+.cs-item.good     { background: #12302a; color: #6ee7b7; }
+.cs-item.muted    { background: var(--chip-bg); color: var(--text-muted); }
+[data-theme="light"] .cs-item.critical { background: #fee2e2; color: #991b1b; }
+[data-theme="light"] .cs-item.high     { background: #ffedd5; color: #9a3412; }
+[data-theme="light"] .cs-item.medium   { background: #fef3c7; color: #92400e; }
+[data-theme="light"] .cs-item.low      { background: #dbeafe; color: #1e40af; }
+[data-theme="light"] .cs-item.good     { background: #d1fae5; color: #065f46; }
+
+/* Bus log topic filter chips */
+.topic-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.tchip {
+  padding: 3px 9px; background: var(--chip-bg); border: 1px solid var(--border);
+  border-radius: 99px; color: var(--text-muted); font-size: 11px; cursor: pointer;
+  font-family: "Consolas", monospace; display: inline-flex; gap: 6px; align-items: center;
+}
+.tchip:hover { color: var(--text); border-color: var(--border-hover); }
+.tchip.active { background: var(--accent); color: #fff; border-color: transparent; }
+.tchip .n { background: rgba(255,255,255,0.15); padding: 0 5px; border-radius: 99px; font-size: 10px; }
+.tchip.active .n { background: rgba(0,0,0,0.25); }
+
+/* Topology modal */
+.topo-svg { width: 100%; height: auto; max-height: 70vh; }
+
+/* Per-story side panel */
+.story-panel {
+  position: fixed; right: 0; top: 0; bottom: 0;
+  width: 460px; max-width: 100vw;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.2s ease-out;
+  z-index: 40;
+  box-shadow: -8px 0 24px rgba(0,0,0,0.35);
+}
+.story-panel.show { transform: translateX(0); }
+.story-panel-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid var(--border); gap: 10px;
+}
+.story-panel-title { flex: 1; min-width: 0; }
+.story-panel-id { font-family: Consolas, monospace; font-size: 11px; color: var(--text-muted); }
+.story-panel-headline { font-weight: 700; font-size: 14px; margin-top: 4px; line-height: 1.3; }
+.story-panel-close {
+  background: none; border: none; color: var(--text-muted);
+  font-size: 22px; line-height: 1; padding: 0 4px; cursor: pointer;
+}
+.story-panel-close:hover { color: var(--text); }
+.story-panel-meta {
+  padding: 10px 18px; border-bottom: 1px solid var(--border);
+  display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px;
+}
+.story-panel-section { padding: 12px 18px; border-bottom: 1px solid var(--border); }
+.story-panel-section:last-child { border-bottom: none; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.story-panel-section-title { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 8px; }
+.sp-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.sp-actions button {
+  background: var(--bg-surface2); border: 1px solid var(--border); border-radius: 7px;
+  padding: 6px 10px; color: var(--text); font-size: 11px; font-weight: 600; cursor: pointer;
+}
+.sp-actions button:hover { border-color: var(--accent); color: var(--accent); }
+.sp-actions button:disabled { opacity: 0.45; cursor: not-allowed; border-color: var(--border); color: var(--text-muted); }
+.sp-actions button.primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border: none; }
+.sp-hint { font-size: 10px; color: var(--text-muted); margin-top: 8px; line-height: 1.4; }
+
+.sp-timeline { overflow-y: auto; padding-right: 4px; flex: 1; min-height: 0; }
+.sp-event {
+  display: grid; grid-template-columns: 14px 1fr; gap: 10px; padding: 8px 0;
+  border-bottom: 1px solid var(--border); cursor: pointer;
+}
+.sp-event:hover { background: var(--bg-surface2); }
+.sp-event:last-child { border-bottom: none; }
+.sp-event-dot {
+  width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; background: var(--accent);
+}
+.sp-event.context  .sp-event-dot { background: var(--accent2); }
+.sp-event.staging  .sp-event-dot { background: var(--warn); }
+.sp-event.events   .sp-event-dot { background: var(--good); }
+.sp-event.rejected .sp-event-dot { background: var(--coral); }
+.sp-event.runs     .sp-event-dot { background: var(--accent); }
+.sp-event-time { font-family: Consolas, monospace; color: var(--text-muted); font-size: 10px; }
+.sp-event-summary { font-size: 12px; color: var(--text-secondary); margin-top: 1px; line-height: 1.4; word-break: break-word; }
+.sp-event-summary b { color: var(--text); font-weight: 600; }
+
+/* Skill registry manager */
+.skill-mgr { display: grid; gap: 14px; }
+.skill-mgr-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.skill-tab {
+  background: var(--bg-surface2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 10px; color: var(--text-secondary); font-size: 11px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  line-height: 1.2; text-align: left; min-width: 140px;
+}
+.skill-tab:hover { border-color: var(--border-hover); }
+.skill-tab strong { font-size: 12px; font-weight: 700; color: var(--text); }
+.skill-tab small { font-size: 9px; color: var(--text-muted); }
+.skill-tab.active { border-color: var(--accent); background: linear-gradient(135deg, rgba(91,140,255,0.18), rgba(139,92,246,0.18)); }
+.skill-tab.active strong { color: var(--accent); }
+.skill-tab.add { color: var(--accent); border-style: dashed; min-width: auto; align-items: center; justify-content: center; }
+
+#skill-form, #rule-form { display: flex; flex-direction: column; gap: 8px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+#skill-form label, #rule-form label {
+  display: flex; flex-direction: column; gap: 3px;
+  font-size: 10px; color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 0.05em; font-weight: 600;
+}
+#skill-form label small, #rule-form label small { color: var(--text-muted); text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 10px; }
+#skill-form input, #skill-form select, #skill-form textarea,
+#rule-form input, #rule-form select, #rule-form textarea {
+  background: var(--bg-input); border: 1px solid var(--border); border-radius: 7px;
+  padding: 6px 8px; color: var(--text); font: inherit; font-size: 12px;
+  text-transform: none; letter-spacing: 0;
+}
+#skill-form input:focus, #skill-form select:focus, #skill-form textarea:focus,
+#rule-form input:focus, #rule-form select:focus, #rule-form textarea:focus {
+  outline: none; border-color: var(--accent);
+}
+#skill-form textarea, #rule-form textarea { min-height: 60px; resize: vertical; }
+.form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+.btn.sm { padding: 3px 8px; font-size: 11px; flex: 0 0 auto; }
+.btn.primary-btn { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border: none; }
+
+.seq-badge {
+  display: inline-block; margin-left: 4px; padding: 1px 6px;
+  border-radius: 4px; background: var(--chip-bg); color: var(--text-secondary);
+  font-size: 9px; font-weight: 700; vertical-align: middle;
+}
+.story-actions { margin-top: 10px; }
+.btn.rerun { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text); }
+.btn.rerun:hover { border-color: var(--accent); color: var(--accent); }
+
+.staged-card { border-left: 3px solid var(--warn); }
+.approved-card { border-left: 3px solid var(--good); }
+.rejected-card { border-left: 3px solid var(--coral); opacity: 0.85; }
+.run-card { border-left: 3px solid var(--accent); }
+.story-card { border-left: 3px solid var(--accent2); }
+
+.actions { display: flex; gap: 6px; margin-top: 10px; }
+.btn { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text); font-size: 11px; font-weight: 600; flex: 1; }
+.btn:hover { border-color: var(--border-hover); }
+.btn.approve { background: var(--good); border: none; color: #052e1a; }
+.btn.reject { background: var(--coral); border: none; color: #fff; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.timeline-panel {
+  background: var(--bg-surface); border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; min-height: 0;
+}
+.timeline-head { padding: 10px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.timeline-head .title { font-weight: 700; font-size: 12px; }
+.timeline-head .clear { font-size: 11px; color: var(--text-muted); background: none; border: none; }
+.timeline-head .clear:hover { color: var(--text); }
+.timeline-body { flex: 1; overflow-y: auto; padding: 6px 18px; font-family: "Consolas", monospace; font-size: 11px; }
+.event-row { padding: 4px 0; display: grid; grid-template-columns: 90px 220px 1fr; gap: 12px; border-bottom: 1px solid var(--border); }
+.event-row .ts { color: var(--text-muted); }
+.event-row .topic { color: var(--ice); }
+.event-row .summary { color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Modal for inspecting a payload */
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none;
+  align-items: center; justify-content: center; z-index: 50; padding: 20px;
+}
+.modal-bg.show { display: flex; }
+.modal {
+  background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px;
+  width: min(900px, 100%); max-height: 85vh; display: flex; flex-direction: column;
+}
+.modal-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-head h3 { font-size: 14px; }
+.modal-close { background: none; border: none; color: var(--text-muted); font-size: 20px; }
+.modal-body { padding: 16px 18px; overflow-y: auto; }
+.code-block {
+  background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px; font-family: "Consolas", "Fira Code", monospace; font-size: 12px;
+  line-height: 1.6; color: var(--ice); white-space: pre; overflow-x: auto;
+}
+
+.empty { text-align: center; padding: 24px; color: var(--text-muted); font-size: 12px; }
+.empty .icon { font-size: 28px; opacity: 0.4; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<!-- Tabler icon library — paths from tabler.io/icons (MIT). Each <symbol> is referenced by <use href="#i-name"/>. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-wand"          viewBox="0 0 24 24"><path d="M6 21l15 -15l-3 -3l-15 15l3 3"/><path d="M15 6l3 3"/><path d="M9 3a2 2 0 0 0 2 2a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2a2 2 0 0 0 2 -2"/><path d="M19 13a2 2 0 0 0 2 2a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2a2 2 0 0 0 2 -2"/></symbol>
+    <symbol id="i-robot"         viewBox="0 0 24 24"><path d="M6 5h12a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-8a2 2 0 0 1 2 -2z"/><path d="M2 9v6"/><path d="M22 9v6"/><path d="M9 12v.01"/><path d="M15 12v.01"/><path d="M9.5 16a2.5 2.5 0 0 0 5 0"/><path d="M11 5l-1 -2"/><path d="M13 5l1 -2"/></symbol>
+    <symbol id="i-braces"        viewBox="0 0 24 24"><path d="M7 4a2 2 0 0 0 -2 2v3a2 3 0 0 1 -2 3a2 3 0 0 1 2 3v3a2 2 0 0 0 2 2"/><path d="M17 4a2 2 0 0 1 2 2v3a2 3 0 0 0 2 3a2 3 0 0 0 -2 3v3a2 2 0 0 1 -2 2"/></symbol>
+    <symbol id="i-network"       viewBox="0 0 24 24"><path d="M6 9a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M3 19h6"/><path d="M12 6v6"/><path d="M6 12l6 6"/><path d="M18 6a3 3 0 1 1 0 6a3 3 0 0 1 0 -6"/><path d="M21 19a3 3 0 1 1 -6 0a3 3 0 0 1 6 0"/></symbol>
+    <symbol id="i-trash"         viewBox="0 0 24 24"><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></symbol>
+    <symbol id="i-inbox"         viewBox="0 0 24 24"><path d="M4 13h3l3 3h4l3 -3h3"/><path d="M5 13l1.5 -7a2 2 0 0 1 2 -1.5h7a2 2 0 0 1 2 1.5l1.5 7"/></symbol>
+    <symbol id="i-cpu"           viewBox="0 0 24 24"><path d="M5 5m0 1a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1z"/><path d="M9 9h6v6h-6z"/><path d="M3 10h2"/><path d="M3 14h2"/><path d="M10 3v2"/><path d="M14 3v2"/><path d="M21 10h-2"/><path d="M21 14h-2"/><path d="M14 21v-2"/><path d="M10 21v-2"/></symbol>
+    <symbol id="i-hourglass"     viewBox="0 0 24 24"><path d="M6.5 7h11"/><path d="M6.5 17h11"/><path d="M6 20v-2a6 6 0 0 1 12 0v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1z"/><path d="M6 4v2a6 6 0 0 0 12 0v-2a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1z"/></symbol>
+    <symbol id="i-circle-check"  viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M9 12l2 2l4 -4"/></symbol>
+    <symbol id="i-check"         viewBox="0 0 24 24"><path d="M5 12l5 5l10 -10"/></symbol>
+    <symbol id="i-x"             viewBox="0 0 24 24"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></symbol>
+    <symbol id="i-plus"          viewBox="0 0 24 24"><path d="M12 5l0 14"/><path d="M5 12l14 0"/></symbol>
+    <symbol id="i-pencil"        viewBox="0 0 24 24"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></symbol>
+    <symbol id="i-refresh"       viewBox="0 0 24 24"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></symbol>
+    <symbol id="i-shield"        viewBox="0 0 24 24"><path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3"/></symbol>
+    <symbol id="i-door"          viewBox="0 0 24 24"><path d="M14 12v.01"/><path d="M3 21h18"/><path d="M6 21v-16a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v16"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 6l6 6l-6 6"/></symbol>
+    <symbol id="i-player-play"   viewBox="0 0 24 24"><path d="M7 4v16l13 -8z"/></symbol>
+    <symbol id="i-player-stop"   viewBox="0 0 24 24"><path d="M5 5m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z"/></symbol>
+    <symbol id="i-player-pause"  viewBox="0 0 24 24"><path d="M6 5m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z"/><path d="M14 5m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z"/></symbol>
+    <symbol id="i-list"          viewBox="0 0 24 24"><path d="M9 6l11 0"/><path d="M9 12l11 0"/><path d="M9 18l11 0"/><path d="M5 6l0 .01"/><path d="M5 12l0 .01"/><path d="M5 18l0 .01"/></symbol>
+    <symbol id="i-flask"         viewBox="0 0 24 24"><path d="M9 3l6 0"/><path d="M10 9l4 0"/><path d="M10 3v6l-4 11a.7 .7 0 0 0 .5 1h11a.7 .7 0 0 0 .5 -1l-4 -11v-6"/></symbol>
+    <symbol id="i-sun"           viewBox="0 0 24 24"><path d="M14.828 14.828a4 4 0 1 0 -5.656 -5.656a4 4 0 0 0 5.656 5.656z"/><path d="M6.343 17.657l-1.414 1.414"/><path d="M6.343 6.343l-1.414 -1.414"/><path d="M17.657 6.343l1.414 -1.414"/><path d="M17.657 17.657l1.414 1.414"/><path d="M4 12l-2 0"/><path d="M12 4l0 -2"/><path d="M20 12l2 0"/><path d="M12 20l0 2"/></symbol>
+    <symbol id="i-moon"          viewBox="0 0 24 24"><path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"/></symbol>
+    <symbol id="i-clock"         viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 7v5l3 3"/></symbol>
+    <symbol id="i-broadcast"     viewBox="0 0 24 24"><path d="M19 11a7 7 0 0 0 -7 -7"/><path d="M16 11a4 4 0 0 0 -4 -4"/><path d="M12 19v-3"/><path d="M5 19l3 -3l4 4l3 -3l4 4"/><path d="M5 11a7 7 0 0 1 7 -7"/><path d="M8 11a4 4 0 0 1 4 -4"/></symbol>
+    <symbol id="i-device-tv"     viewBox="0 0 24 24"><path d="M3 7m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"/><path d="M16 3l-4 4l-4 -4"/></symbol>
+    <symbol id="i-world"         viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M3.6 9h16.8"/><path d="M3.6 15h16.8"/><path d="M11.5 3a17 17 0 0 0 0 18"/><path d="M12.5 3a17 17 0 0 0 0 18"/></symbol>
+    <symbol id="i-device-mobile" viewBox="0 0 24 24"><path d="M6 5a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z"/><path d="M11 4h2"/><path d="M12 17v.01"/></symbol>
+    <symbol id="i-antenna-bars"  viewBox="0 0 24 24"><path d="M6 18l0 -3"/><path d="M10 18l0 -6"/><path d="M14 18l0 -9"/><path d="M18 18l0 -12"/></symbol>
+    <symbol id="i-news"          viewBox="0 0 24 24"><path d="M16 6h3a1 1 0 0 1 1 1v11a2 2 0 0 1 -4 0v-13a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1v12a3 3 0 0 0 3 3h11"/><path d="M8 8l4 0"/><path d="M8 12l4 0"/><path d="M8 16l4 0"/></symbol>
+    <symbol id="i-bell"          viewBox="0 0 24 24"><path d="M10 5a2 2 0 0 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></symbol>
+    <symbol id="i-circle-dot"    viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/></symbol>
+    <symbol id="i-circle"        viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/></symbol>
+  </defs>
+</svg>
+
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <span>SOM Skill Bus<small>Live Dashboard</small></span>
+    </div>
+    <div class="scenario-bar">
+      <button onclick="publish('informal')" title="Headline contains informal terms 'cops' and 'kids'. Fires 2 nbcu-style-001 warnings.">
+        <strong>Informal</strong><small>headline → 2 style warnings</small>
+      </button>
+      <button onclick="publish('breaking')" title="BREAKING phase with compliance flags present. Skill runs but emits no warnings.">
+        <strong>Breaking</strong><small>BREAKING + compliance → 0</small>
+      </button>
+      <button onclick="publish('breaking-no-compliance')" title="BREAKING phase with NO compliance flags. Fires nbcu-compliance-001.">
+        <strong>Breaking (no compliance)</strong><small>BREAKING, missing flags → 1</small>
+      </button>
+      <button onclick="publish('clean')" title="PUBLISHED phase, clean copy, compliance OK. Skill runs but emits no warnings.">
+        <strong>Clean</strong><small>PUBLISHED, clean copy → 0</small>
+      </button>
+      <button onclick="publish('election')" title="DEVELOPING phase, clean copy, compliance OK. Skill runs but emits no warnings.">
+        <strong>Election</strong><small>DEVELOPING, clean → 0</small>
+      </button>
+    </div>
+    <div class="header-spacer"></div>
+    <button class="theme-toggle" onclick="openSimulator()" title="Local-dev fallback for AP ENPS — run scripted scenarios or auto-stream"><svg class="icon"><use href="#i-wand"/></svg> Simulator</button>
+    <button class="theme-toggle danger" onclick="resetBus()" title="Delete and recreate all SOM topics; clear dashboard state"><svg class="icon"><use href="#i-trash"/></svg> Reset bus</button>
+    <button class="theme-toggle" onclick="openBusTopology()" title="Bus topology: producers, topics, consumers"><svg class="icon"><use href="#i-network"/></svg> Topology</button>
+    <button class="theme-toggle" onclick="openSkillInfo()" title="Skill registry — rules, live stats, AI review"><svg class="icon"><use href="#i-robot"/></svg> Skills</button>
+    <button class="theme-toggle" onclick="openSeedLibrary()" title="Browse raw SOM v0.2 envelopes"><svg class="icon"><use href="#i-braces"/></svg> SOM JSON</button>
+    <div id="ws-status" class="ws-status"><span class="dot"></span><span id="ws-label">connecting…</span></div>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme"><svg class="icon" id="theme-icon"><use href="#i-sun"/></svg></button>
+  </div>
+
+  <!-- Pipeline -->
+  <div class="pipeline">
+    <div class="lane">
+      <div class="lane-head">
+        <div class="title"><svg class="icon icon-lg"><use href="#i-inbox"/></svg> Stories on Bus</div>
+        <span class="count" id="count-stories">0</span>
+      </div>
+      <div class="lane-body" id="lane-stories"></div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-head">
+        <div class="title"><svg class="icon icon-lg"><use href="#i-cpu"/></svg> Skill Runs</div>
+        <span class="count" id="count-runs">0</span>
+      </div>
+      <div class="lane-body" id="lane-runs"></div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-head">
+        <div class="title"><svg class="icon icon-lg"><use href="#i-hourglass"/></svg> Pending Approval</div>
+        <span class="count" id="count-pending">0</span>
+      </div>
+      <div class="lane-body" id="lane-pending">
+        <div class="empty"><svg class="icon icon-xl"><use href="#i-hourglass"/></svg><div>No pending decisions</div></div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-head">
+        <div class="title"><svg class="icon icon-lg"><use href="#i-circle-check"/></svg> Decisions</div>
+        <span class="count" id="count-decisions">0</span>
+      </div>
+      <div class="lane-body" id="lane-decisions"></div>
+    </div>
+  </div>
+
+  <!-- Resize handle -->
+  <div class="resizer" id="resizer" title="Drag to resize the bus event log"></div>
+
+  <!-- Timeline -->
+  <div class="timeline-panel">
+    <div class="timeline-head">
+      <div class="title"><svg class="icon"><use href="#i-list"/></svg> Bus event log</div>
+      <div class="topic-chips" id="topic-chips"></div>
+      <button class="clear" onclick="clearTimeline()">Clear</button>
+    </div>
+    <div class="timeline-body" id="timeline"></div>
+  </div>
+</div>
+
+<!-- Per-story side panel (timeline + lifecycle simulator) -->
+<aside class="story-panel" id="story-panel" aria-hidden="true">
+  <div class="story-panel-head">
+    <div class="story-panel-title">
+      <div class="story-panel-id" id="sp-id"></div>
+      <div class="story-panel-headline" id="sp-headline"></div>
+    </div>
+    <button class="story-panel-close" onclick="closeStoryPanel()" title="Close (Esc)">×</button>
+  </div>
+
+  <div class="story-panel-meta" id="sp-meta"></div>
+
+  <div class="story-panel-section">
+    <div class="story-panel-section-title"><svg class="icon"><use href="#i-wand"/></svg> Lifecycle simulator</div>
+    <div class="sp-actions" id="sp-actions"></div>
+    <div class="sp-hint">Each action mutates the story and republishes a new version. Skills re-run on the new version.</div>
+  </div>
+
+  <div class="story-panel-section">
+    <div class="story-panel-section-title"><svg class="icon"><use href="#i-list"/></svg> Timeline (<span id="sp-timeline-count">0</span>)</div>
+    <div class="sp-timeline" id="sp-timeline"></div>
+  </div>
+</aside>
+
+<!-- Inspector modal -->
+<div class="modal-bg" id="modal-bg" onclick="closeModalIfBg(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modal-title">Payload</h3>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <pre class="code-block" id="modal-body"></pre>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Theme ──────────────────────────────────────────────
+function setThemeIcon() {
+  const ic = document.getElementById('theme-icon');
+  if (!ic) return;
+  const isDark = document.documentElement.dataset.theme === 'dark';
+  ic.firstElementChild.setAttribute('href', isDark ? '#i-sun' : '#i-moon');
+}
+function toggleTheme() {
+  const html = document.documentElement;
+  html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('theme', html.dataset.theme);
+  setThemeIcon();
+}
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+document.addEventListener('DOMContentLoaded', setThemeIcon);
+
+// ── State ──────────────────────────────────────────────
+const stories = new Map();    // story_id → payload
+const runs = [];              // skill.run.completed records
+const pending = new Map();    // output_id → staged output
+const decisions = [];         // approved/rejected with payload
+const events = [];            // raw event log
+
+// ── Render helpers ─────────────────────────────────────
+const SCENARIO_LABELS = {
+  informal: 'Informal',
+  breaking: 'Breaking',
+  'breaking-no-compliance': 'Breaking (no compliance)',
+  clean: 'Clean',
+  election: 'Election',
+};
+
+// Tabler icon shortcut for use inside template literals.
+// ic('robot') → '<svg class="icon"><use href="#i-robot"/></svg>'
+function ic(name, sizeClass) {
+  const cls = sizeClass ? `icon ${sizeClass}` : 'icon';
+  return `<svg class="${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+}
+
+function escapeHtml(s) {
+  if (s === undefined || s === null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function shortId(id) {
+  if (!id) return '';
+  return id.length > 18 ? id.slice(0, 8) + '…' + id.slice(-6) : id;
+}
+
+function fmtTime(ts) {
+  if (!ts) return '';
+  try { return new Date(ts).toLocaleTimeString(); } catch { return ts; }
+}
+
+// Canonical SOM lifecycle phase order (Spec v0.2 §lifecycle).
+// BREAKING is treated as parallel to DEVELOPING; both share index 2.
+const PHASE_ORDER = ['PLANNED', 'GATHERING', 'DEVELOPING', 'READY_TO_AIR', 'ON_AIR', 'PUBLISHED'];
+const PHASE_ALIAS = { BREAKING: 'DEVELOPING', COMPLETE: 'PUBLISHED' };
+const TERMINAL_PHASES = new Set(['SPIKED', 'KILLED']);
+
+function phaseKindClass(phase) {
+  if (phase === 'BREAKING') return 'breaking';
+  if (phase === 'DEVELOPING') return 'developing';
+  if (phase === 'PUBLISHED' || phase === 'COMPLETE') return 'published';
+  return 'normal';
+}
+
+function renderLifecycle(lifecycle) {
+  if (!lifecycle?.phase) return '';
+  const phase = lifecycle.phase;
+  if (TERMINAL_PHASES.has(phase)) {
+    return `<div class="stepper-meta"><span class="terminal-badge">${escapeHtml(phase)}</span>
+            ${lifecycle.phase_entered_at ? `<span>${escapeHtml(fmtTime(lifecycle.phase_entered_at))}</span>` : ''}</div>`;
+  }
+  const canonical = PHASE_ALIAS[phase] || phase;
+  const idx = PHASE_ORDER.indexOf(canonical);
+  const cls = phaseKindClass(phase);
+
+  const segs = PHASE_ORDER.map((p, i) => {
+    if (idx === -1) return `<div class="seg" title="${escapeHtml(p)}"></div>`;
+    if (i < idx) return `<div class="seg passed" title="${escapeHtml(p)}"></div>`;
+    if (i === idx) return `<div class="seg current ${cls}" title="${escapeHtml(p)} (current)"></div>`;
+    return `<div class="seg" title="${escapeHtml(p)}"></div>`;
+  }).join('');
+
+  const owner = lifecycle.phase_owner?.display_name || '';
+  const enteredAt = lifecycle.phase_entered_at ? fmtTime(lifecycle.phase_entered_at) : '';
+
+  return `
+    <div class="stepper">${segs}</div>
+    <div class="stepper-meta">
+      <span><b>${escapeHtml(phase)}</b>${enteredAt ? ` · entered ${escapeHtml(enteredAt)}` : ''}</span>
+      ${owner ? `<span>${escapeHtml(owner)}</span>` : ''}
+    </div>`;
+}
+
+const PLATFORM_ICON = {
+  linear: ic('device-tv','icon-sm'),
+  web: ic('world','icon-sm'),
+  social: ic('device-mobile','icon-sm'),
+  ott: ic('broadcast','icon-sm'),
+  social_twitter: ic('device-mobile','icon-sm'),
+  social_instagram: ic('device-mobile','icon-sm'),
+  social_facebook: ic('device-mobile','icon-sm'),
+  article: ic('news','icon-sm'),
+  podcast: ic('antenna-bars','icon-sm'),
+  email: ic('bell','icon-sm'),
+};
+function instStatusClass(status) {
+  if (!status) return '';
+  return status.toLowerCase().replace(/[^a-z]/g, '');
+}
+function renderInstances(instances) {
+  if (!Array.isArray(instances) || instances.length === 0) return '';
+  const tiles = instances.map(i => {
+    const iconHtml = PLATFORM_ICON[i.platform] || ic('circle','icon-sm');
+    const label = i.program || i.platform || 'instance';
+    const cls = instStatusClass(i.status);
+    return `<span class="inst ${escapeHtml(cls)}" title="${escapeHtml(i.platform || '')} · status ${escapeHtml(i.status || '?')}">${iconHtml} ${escapeHtml(label)}</span>`;
+  }).join('');
+  return `<div class="instances">${tiles}</div>`;
+}
+
+const SEVERITY_RANK = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+function maxSeverity(arr) {
+  let max = null, rank = 0;
+  for (const x of arr || []) {
+    const r = SEVERITY_RANK[x?.severity] || 0;
+    if (r > rank) { rank = r; max = x.severity; }
+  }
+  return max;
+}
+function severityClass(sev) {
+  if (!sev) return 'muted';
+  const s = sev.toUpperCase();
+  return ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].includes(s) ? s.toLowerCase() : 'muted';
+}
+function renderComplianceStrip(story) {
+  const compliance = Array.isArray(story?.compliance) ? story.compliance : [];
+  const gates = Array.isArray(story?.editorial_gates) ? story.editorial_gates : [];
+  const gov = story?.government_approval;
+  if (compliance.length === 0 && gates.length === 0 && !gov) return '';
+
+  const inheritedCount = compliance.filter(c => c.inherited_from).length;
+  const maxSev = maxSeverity(compliance);
+  const sevCls = severityClass(maxSev);
+
+  const openGates = gates.filter(g => (g.status || '').toUpperCase() !== 'APPROVED').length;
+  const gateCls = openGates === 0 ? 'good' : 'medium';
+
+  const items = [];
+  if (compliance.length > 0) {
+    items.push(`<span class="cs-item ${sevCls}" data-action="compliance" title="Click for full compliance flag list">${ic('shield','icon-sm')} ${compliance.length} ${maxSev || 'flag'}${inheritedCount ? ` · ${inheritedCount} inherited` : ''}</span>`);
+  }
+  if (gates.length > 0) {
+    items.push(`<span class="cs-item ${gateCls}" data-action="gates" title="Click for full gate list">${ic('door','icon-sm')} ${openGates}/${gates.length} ${openGates === 0 ? 'cleared' : 'open'}</span>`);
+  }
+  if (gov && gov.status) {
+    const govCls = gov.status === 'approved' ? 'good' : (gov.status === 'rejected' ? 'critical' : 'medium');
+    items.push(`<span class="cs-item ${govCls}">${ic('check','icon-sm')} gov: ${escapeHtml(gov.status)}</span>`);
+  }
+  return `<div class="cstrip">${items.join('')}</div>`;
+}
+
+function renderStories() {
+  const lane = document.getElementById('lane-stories');
+  document.getElementById('count-stories').textContent = stories.size;
+  if (stories.size === 0) {
+    lane.innerHTML = `<div class="empty">${ic('inbox','icon-xl')}<div>Click a scenario above</div></div>`;
+    return;
+  }
+  lane.innerHTML = '';
+  for (const [id, story] of [...stories.entries()].reverse()) {
+    const phase = story?.lifecycle?.phase || '—';
+    const headline = story?.headline || '(no headline)';
+    const slug = story?.slug || '';
+    const priority = story?.priority?.level || '';
+    const sources = (story?.sources || []).length;
+    const assets = (story?.assets || []).length;
+
+    const seq = story?.sequence_number;
+    const div = document.createElement('div');
+    div.className = 'card story-card';
+    div.innerHTML = `
+      <div class="card-top">
+        <span class="card-id">${escapeHtml(id)}${seq != null ? ` <span class="seq-badge" title="sequence_number">v${escapeHtml(String(seq))}</span>` : ''}</span>
+        <span class="tag ${phase.toLowerCase()}">${escapeHtml(phase)}</span>
+      </div>
+      <div class="card-title">${escapeHtml(headline)}</div>
+      <div class="card-meta">
+        ${slug ? `<span><b>slug</b> ${escapeHtml(slug)}</span>` : ''}
+        ${priority ? `<span><b>priority</b> ${escapeHtml(priority)}</span>` : ''}
+        ${sources ? `<span><b>sources</b> ${sources}</span>` : ''}
+        ${assets ? `<span><b>assets</b> ${assets}</span>` : ''}
+      </div>
+      ${renderLifecycle(story?.lifecycle)}
+      ${renderInstances(story?.instances)}
+      ${renderComplianceStrip(story)}
+      <div class="actions story-actions">
+        <button class="btn rerun" data-action="rerun" title="Republish this story so the skill re-runs (simulates an NRCS update)">${ic('refresh')} Re-run skill</button>
+      </div>`;
+
+    // Drill-downs and actions
+    div.addEventListener('click', (e) => {
+      const target = e.target.closest('[data-action]');
+      if (target) {
+        e.stopPropagation();
+        const action = target.getAttribute('data-action');
+        if (action === 'compliance') {
+          openModal(`Compliance flags — ${id}`, story?.compliance || []);
+        } else if (action === 'gates') {
+          openModal(`Editorial gates — ${id}`, story?.editorial_gates || []);
+        } else if (action === 'rerun') {
+          rerunSkill(id);
+        }
+        return;
+      }
+      openStoryPanel(id);
+    });
+
+    lane.appendChild(div);
+  }
+}
+
+function renderRuns() {
+  const lane = document.getElementById('lane-runs');
+  document.getElementById('count-runs').textContent = runs.length;
+  if (runs.length === 0) {
+    lane.innerHTML = `<div class="empty">${ic('cpu','icon-xl')}<div>Skill executions appear here</div></div>`;
+    return;
+  }
+  lane.innerHTML = '';
+  for (const r of [...runs].reverse()) {
+    const warnings = (r?.outputs?.warning_ids?.length) || 0;
+    const sugg = (r?.outputs?.suggestion_ids?.length) || 0;
+    const enrich = (r?.outputs?.enrichment_ids?.length) || 0;
+    const div = document.createElement('div');
+    div.className = 'card run-card';
+    div.onclick = () => openModal(`skill.run.completed — ${r.run_id}`, r);
+    div.innerHTML = `
+      <div class="card-top">
+        <span class="card-id">${escapeHtml(shortId(r.run_id))}</span>
+        <span class="tag ${(r.outcome||'').toLowerCase()}">${escapeHtml(r.outcome || '—')}</span>
+      </div>
+      <div class="card-title">${escapeHtml(r.skill_id)}@${escapeHtml(r.skill_version)}</div>
+      <div class="card-meta">
+        <span><b>story</b> ${escapeHtml(shortId(r.story_id))}</span>
+        <span><b>${r.latency_ms} ms</b></span>
+        <span>w:${warnings} s:${sugg} e:${enrich}</span>
+      </div>`;
+    lane.appendChild(div);
+  }
+}
+
+function outputKind(o) {
+  if (o?.message_type === 'skill.warning.raised' || o?.warning_id) return 'warning';
+  if (o?.message_type === 'skill.suggestion.created' || o?.suggestion_id) return 'suggestion';
+  if (o?.message_type === 'story.enrichment' || o?.enrichment_id) return 'enrichment';
+  return 'output';
+}
+
+function outputId(o) {
+  return o?.warning_id || o?.suggestion_id || o?.enrichment_id;
+}
+
+function renderPending() {
+  const lane = document.getElementById('lane-pending');
+  document.getElementById('count-pending').textContent = pending.size;
+  if (pending.size === 0) {
+    lane.innerHTML = `<div class="empty">${ic('hourglass','icon-xl')}<div>No pending decisions</div></div>`;
+    return;
+  }
+  lane.innerHTML = '';
+  for (const [id, o] of pending.entries()) {
+    const kind = outputKind(o);
+    const severity = (o.severity || '').toLowerCase();
+    const div = document.createElement('div');
+    div.className = 'card staged-card';
+    div.innerHTML = `
+      <div class="card-top">
+        <span class="card-id">${escapeHtml(shortId(id))}</span>
+        <span class="tag ${kind}">${escapeHtml(kind.toUpperCase())}</span>
+      </div>
+      <div class="card-title">${escapeHtml(o.rule_id || o.content_type || o.representation_type || kind)}</div>
+      <div class="card-meta">
+        ${severity ? `<span class="tag ${severity}">${escapeHtml(severity.toUpperCase())}</span>` : ''}
+        ${o.story_id ? `<span><b>story</b> ${escapeHtml(shortId(o.story_id))}</span>` : ''}
+        ${(o.affected_fields || []).length ? `<span><b>fields</b> ${escapeHtml((o.affected_fields||[]).join(','))}</span>` : ''}
+      </div>
+      ${o.detail ? `<div class="card-meta" style="margin-top:6px;color:var(--text-secondary);white-space:normal;line-height:1.4;">${escapeHtml(o.detail)}</div>` : ''}
+      <div class="actions">
+        <button class="btn approve" onclick="event.stopPropagation();decide('${id}','approve')">${ic('check')} Approve</button>
+        <button class="btn reject" onclick="event.stopPropagation();decide('${id}','reject')">${ic('x')} Reject</button>
+      </div>`;
+    div.addEventListener('click', () => openModal(`Pending — ${id}`, o));
+    lane.appendChild(div);
+  }
+}
+
+function renderDecisions() {
+  const lane = document.getElementById('lane-decisions');
+  document.getElementById('count-decisions').textContent = decisions.length;
+  if (decisions.length === 0) {
+    lane.innerHTML = `<div class="empty">${ic('circle-check','icon-xl')}<div>Approve or reject staged outputs</div></div>`;
+    return;
+  }
+  lane.innerHTML = '';
+  for (const d of [...decisions].reverse()) {
+    const kind = outputKind(d.payload);
+    const cls = d.decision === 'approved' ? 'approved-card' : 'rejected-card';
+    const div = document.createElement('div');
+    div.className = `card ${cls}`;
+    div.onclick = () => openModal(`${d.decision} — ${d.id}`, d.payload);
+    div.innerHTML = `
+      <div class="card-top">
+        <span class="card-id">${escapeHtml(shortId(d.id))}</span>
+        <span class="tag ${d.decision}">${escapeHtml(d.decision.toUpperCase())}</span>
+      </div>
+      <div class="card-title">${escapeHtml(d.payload.rule_id || d.payload.content_type || d.payload.representation_type || kind)}</div>
+      <div class="card-meta">
+        <span class="tag ${kind}">${escapeHtml(kind.toUpperCase())}</span>
+        <span><b>by</b> ${escapeHtml(d.reviewer || 'dashboard-user')}</span>
+        <span>${escapeHtml(fmtTime(d.at))}</span>
+      </div>`;
+    lane.appendChild(div);
+  }
+}
+
+// ── Topic counters + bus log filter ────────────────────
+const KNOWN_TOPICS = [
+  'som.story.context',
+  'som.skills.staging',
+  'som.skills.events',
+  'som.skills.rejected',
+  'som.skills.runs',
+];
+const topicCounts = new Map(KNOWN_TOPICS.map(t => [t, 0]));
+let topicFilter = null;
+
+function renderTopicChips() {
+  const wrap = document.getElementById('topic-chips');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  // "All" chip
+  const all = document.createElement('span');
+  all.className = 'tchip' + (topicFilter === null ? ' active' : '');
+  all.innerHTML = `all <span class="n">${events.length}</span>`;
+  all.onclick = () => { topicFilter = null; renderTopicChips(); renderTimeline(); };
+  wrap.appendChild(all);
+  for (const t of KNOWN_TOPICS) {
+    const chip = document.createElement('span');
+    chip.className = 'tchip' + (topicFilter === t ? ' active' : '');
+    const short = t.replace('som.', '');
+    chip.innerHTML = `${escapeHtml(short)} <span class="n">${topicCounts.get(t) || 0}</span>`;
+    chip.onclick = () => { topicFilter = (topicFilter === t ? null : t); renderTopicChips(); renderTimeline(); };
+    wrap.appendChild(chip);
+  }
+}
+
+function renderTimeline() {
+  const tl = document.getElementById('timeline');
+  const filtered = topicFilter ? events.filter(e => e.topic === topicFilter) : events;
+  if (filtered.length === 0) {
+    tl.innerHTML = topicFilter
+      ? `<div class="empty">No events on <code>${escapeHtml(topicFilter)}</code> yet…</div>`
+      : '<div class="empty">Bus is quiet…</div>';
+    return;
+  }
+  tl.innerHTML = '';
+  for (const e of filtered.slice(-200).reverse()) {
+    const row = document.createElement('div');
+    row.className = 'event-row';
+    row.innerHTML = `
+      <div class="ts">${escapeHtml(fmtTime(e.received_at))}</div>
+      <div class="topic">${escapeHtml(e.topic)}</div>
+      <div class="summary">${escapeHtml(e.summary)}</div>`;
+    tl.appendChild(row);
+  }
+}
+
+// ── Modal ──────────────────────────────────────────────
+function openModal(title, payload) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').textContent = JSON.stringify(payload, null, 2);
+  document.getElementById('modal-bg').classList.add('show');
+}
+function closeModal() { document.getElementById('modal-bg').classList.remove('show'); }
+function closeModalIfBg(e) { if (e.target.id === 'modal-bg') closeModal(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ── Actions ────────────────────────────────────────────
+// ── Toast helper ───────────────────────────────────────
+function showToast(message, kind) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.className = 'toast' + (kind ? ' ' + kind : '');
+  t.textContent = message;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 200);
+  }, 3000);
+}
+
+// ── Reset bus ──────────────────────────────────────────
+async function resetBus() {
+  if (!confirm('Delete and recreate all 5 SOM topics, and clear the dashboard?\n\nAll messages currently on the bus will be lost.')) return;
+  showToast('Resetting bus…', 'warn');
+  try {
+    const res = await fetch('/api/reset', { method: 'POST' });
+    if (!res.ok) {
+      showToast('Reset failed: ' + await res.text(), 'danger');
+      return;
+    }
+    // The server broadcasts {type:"reset"} via WebSocket; that handler clears UI state.
+    // But we also clear locally in case the WS message is delayed.
+    clearLocalState();
+    showToast('Bus cleared. Ready for a new test.', '');
+  } catch (err) {
+    showToast('Reset failed: ' + err.message, 'danger');
+  }
+}
+
+function clearLocalState() {
+  stories.clear();
+  runs.length = 0;
+  pending.clear();
+  decisions.length = 0;
+  events.length = 0;
+  for (const t of KNOWN_TOPICS) topicCounts.set(t, 0);
+  topicFilter = null;
+  renderStories();
+  renderRuns();
+  renderPending();
+  renderDecisions();
+  renderTopicChips();
+  renderTimeline();
+  if (typeof refreshTopologyIfOpen === 'function') refreshTopologyIfOpen();
+}
+
+// ── Per-story side panel ───────────────────────────────
+let _openStoryId = null;
+
+function openStoryPanel(storyId) {
+  _openStoryId = storyId;
+  renderStoryPanel();
+  document.getElementById('story-panel').classList.add('show');
+  document.getElementById('story-panel').setAttribute('aria-hidden', 'false');
+}
+function closeStoryPanel() {
+  _openStoryId = null;
+  document.getElementById('story-panel').classList.remove('show');
+  document.getElementById('story-panel').setAttribute('aria-hidden', 'true');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && _openStoryId) closeStoryPanel(); });
+
+const PHASE_NEXT_MAP = {
+  PLANNED: 'GATHERING', GATHERING: 'DEVELOPING', DEVELOPING: 'READY_TO_AIR',
+  BREAKING: 'READY_TO_AIR', READY_TO_AIR: 'ON_AIR', ON_AIR: 'PUBLISHED',
+};
+
+function eventStoryId(e) {
+  const p = e?.payload;
+  if (!p) return null;
+  return p.story_id ?? p?.payload?.story_id ?? null;
+}
+
+function eventTopicSuffix(topic) {
+  // e.g. "som.skills.staging" → "staging"
+  return (topic || '').split('.').pop();
+}
+
+function eventTimestamp(e) {
+  const p = e?.payload;
+  // Prefer the producer-side timestamp embedded in the SOM payload, fall back to received_at.
+  const t = p?.timestamp || p?.lifecycle?.phase_entered_at || p?.updated_at || e?.received_at;
+  return t ? new Date(t).getTime() : 0;
+}
+
+function eventSummary(e) {
+  const topic = e.topic;
+  const p = e.payload;
+  const suffix = eventTopicSuffix(topic);
+  if (suffix === 'context') {
+    const story = p?.payload || p;
+    const phase = story?.lifecycle?.phase || '—';
+    const seq = story?.sequence_number;
+    return `<b>story.context</b> · phase=${escapeHtml(phase)}${seq != null ? ` · v${seq}` : ''}`;
+  }
+  if (suffix === 'staging') {
+    return `<b>STAGED</b> ${escapeHtml(p.rule_id || outputKind(p))} <span style="color:var(--text-muted)">[${escapeHtml(p.severity||'')}]</span> — ${escapeHtml((p.detail||'').slice(0,80))}`;
+  }
+  if (suffix === 'events') {
+    return `<b>APPROVED</b> ${escapeHtml(p.rule_id || outputKind(p))} by ${escapeHtml(p.approved_by||'?')}`;
+  }
+  if (suffix === 'rejected') {
+    return `<b>REJECTED</b> ${escapeHtml(p.rule_id || outputKind(p))} by ${escapeHtml(p.rejected_by||'?')}`;
+  }
+  if (suffix === 'runs') {
+    const w = p?.outputs?.warning_ids?.length || 0;
+    return `<b>${escapeHtml(p.outcome || 'RAN')}</b> · skill ${escapeHtml(p.skill_id || '?')} · ${p.latency_ms}ms · ${w} warning${w===1?'':'s'}`;
+  }
+  return `<code>${escapeHtml(topic)}</code>`;
+}
+
+function renderStoryPanel() {
+  if (!_openStoryId) return;
+  const storyId = _openStoryId;
+  const story = stories.get(storyId);
+
+  // Header
+  document.getElementById('sp-id').textContent = storyId;
+  document.getElementById('sp-headline').textContent = story?.headline || '(story not in cache)';
+
+  // Meta
+  const meta = document.getElementById('sp-meta');
+  if (story) {
+    const phase = story.lifecycle?.phase || '—';
+    const seq = story.sequence_number;
+    const priority = story.priority?.level;
+    const compliance = (story.compliance || []).length;
+    const gates = (story.editorial_gates || []).length;
+    meta.innerHTML = `
+      <span class="tag ${escapeHtml(phase.toLowerCase())}">${escapeHtml(phase)}</span>
+      ${seq != null ? `<span class="tag">v${escapeHtml(String(seq))}</span>` : ''}
+      ${priority ? `<span class="tag">priority ${escapeHtml(priority)}</span>` : ''}
+      ${compliance ? `<span class="tag">${compliance} compliance</span>` : ''}
+      ${gates ? `<span class="tag">${gates} gate${gates===1?'':'s'}</span>` : ''}`;
+  } else {
+    meta.innerHTML = '<span class="tag">story removed from cache (try Reset)</span>';
+  }
+
+  // Actions
+  const actions = document.getElementById('sp-actions');
+  const phase = story?.lifecycle?.phase;
+  const nextPhase = phase ? PHASE_NEXT_MAP[phase] : null;
+  actions.innerHTML = `
+    <button onclick="advancePhase('${escapeHtml(storyId)}')" ${nextPhase ? '' : 'disabled'} title="${nextPhase ? `${escapeHtml(phase)} → ${escapeHtml(nextPhase)}` : 'Story is at terminal phase'}">${ic('chevron-right')} ${nextPhase ? 'Advance to ' + escapeHtml(nextPhase) : 'No next phase'}</button>
+    <button onclick="addCompliance('${escapeHtml(storyId)}')">${ic('shield')} Add compliance flag</button>
+    <button onclick="rerunSkill('${escapeHtml(storyId)}')">${ic('refresh')} Re-run skill</button>
+    <button onclick="openModal('story.context — ${escapeHtml(storyId)}', stories.get('${escapeHtml(storyId)}'))" class="primary">${ic('braces')} View JSON</button>`;
+
+  // Timeline
+  const timeline = document.getElementById('sp-timeline');
+  const items = events
+    .filter(e => eventStoryId(e) === storyId)
+    .map(e => ({ e, t: eventTimestamp(e) }))
+    .sort((a, b) => b.t - a.t);
+  document.getElementById('sp-timeline-count').textContent = items.length;
+  if (items.length === 0) {
+    timeline.innerHTML = '<div class="empty" style="padding:18px;">No events yet for this story.</div>';
+    return;
+  }
+  timeline.innerHTML = items.map(({e}) => {
+    const suffix = eventTopicSuffix(e.topic);
+    return `
+      <div class="sp-event ${escapeHtml(suffix)}" onclick='openModal(${JSON.stringify(e.topic + " — " + (e.payload?.warning_id || e.payload?.run_id || e.payload?.story_id || ""))}, ${JSON.stringify(e.payload)})'>
+        <div class="sp-event-dot"></div>
+        <div>
+          <div class="sp-event-time">${escapeHtml(fmtTime(e.received_at))} · <code>${escapeHtml(e.topic)}</code></div>
+          <div class="sp-event-summary">${eventSummary(e)}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Lifecycle simulator actions ──
+async function advancePhase(storyId) {
+  try {
+    const res = await fetch(`/api/stories/${encodeURIComponent(storyId)}/advance-phase`, { method: 'POST' });
+    if (!res.ok) { showToast('Advance failed: ' + await res.text(), 'danger'); return; }
+    showToast(`Phase advanced for ${storyId}`, '');
+  } catch (err) { showToast('Advance failed: ' + err.message, 'danger'); }
+}
+
+async function addCompliance(storyId) {
+  const type = prompt('Compliance flag type:', 'EDITORIAL_REVIEW');
+  if (!type) return;
+  const severity = prompt('Severity (CRITICAL/HIGH/MEDIUM/LOW):', 'MEDIUM');
+  if (!severity) return;
+  const detail = prompt('Detail:', 'Added via dashboard simulator');
+  if (detail === null) return;
+  try {
+    const res = await fetch(`/api/stories/${encodeURIComponent(storyId)}/add-compliance`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, severity, detail }),
+    });
+    if (!res.ok) { showToast('Add compliance failed: ' + await res.text(), 'danger'); return; }
+    showToast(`Compliance flag added to ${storyId}`, '');
+  } catch (err) { showToast('Add compliance failed: ' + err.message, 'danger'); }
+}
+
+async function rerunSkill(storyId) {
+  // Optimistically clear local pending for this story so the UI feels responsive.
+  // The backend does the same; the WS rerun notice will reconcile if anything differs.
+  for (const [id, output] of [...pending.entries()]) {
+    if (output?.story_id === storyId) pending.delete(id);
+  }
+  renderPending();
+  try {
+    const res = await fetch(`/api/stories/${encodeURIComponent(storyId)}/rerun`, { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.text();
+      showToast('Re-run failed: ' + err, 'danger');
+      return;
+    }
+    const body = await res.json();
+    showToast(`Re-running skill on ${storyId}` + (body.cleared_pending ? ` (cleared ${body.cleared_pending} stale)` : ''), '');
+  } catch (err) {
+    showToast('Re-run failed: ' + err.message, 'danger');
+  }
+}
+
+async function publish(scenario) {
+  try {
+    const res = await fetch(`/api/publish/${encodeURIComponent(scenario)}`, { method: 'POST' });
+    if (!res.ok) console.error('publish failed', await res.text());
+  } catch (err) { console.error(err); }
+}
+
+async function decide(id, decision) {
+  try {
+    const res = await fetch(`/api/decision/${encodeURIComponent(id)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision, reviewer: 'dashboard-user' }),
+    });
+    if (!res.ok) console.error('decision failed', await res.text());
+  } catch (err) { console.error(err); }
+}
+
+function clearTimeline() {
+  events.length = 0;
+  renderTimeline();
+}
+
+// ── Bus event handling ─────────────────────────────────
+function summarize(topic, payload) {
+  if (topic.endsWith('story.context')) {
+    const s = payload.headline || payload?.payload?.headline || payload.story_id;
+    return `story ${payload.story_id || payload?.payload?.story_id} — ${s}`;
+  }
+  if (topic.endsWith('skills.staging')) {
+    return `STAGED ${outputKind(payload)} ${payload.rule_id || ''} (${payload.severity || ''})`;
+  }
+  if (topic.endsWith('skills.events')) {
+    return `APPROVED ${outputKind(payload)} ${payload.rule_id || ''} → ${payload.story_id || ''}`;
+  }
+  if (topic.endsWith('skills.rejected')) {
+    return `REJECTED ${outputKind(payload)} ${payload.rule_id || ''} → ${payload.story_id || ''}`;
+  }
+  if (topic.endsWith('skills.runs')) {
+    return `RUN ${payload.outcome} latency=${payload.latency_ms}ms story=${payload.story_id}`;
+  }
+  return JSON.stringify(payload).slice(0, 120);
+}
+
+function handleBusEvent(msg) {
+  const topic = msg.topic;
+  const payload = msg.payload;
+
+  events.push({
+    received_at: msg.received_at,
+    topic,
+    summary: summarize(topic, payload),
+  });
+  topicCounts.set(topic, (topicCounts.get(topic) || 0) + 1);
+  renderTopicChips();
+  if (typeof refreshTopologyIfOpen === 'function') refreshTopologyIfOpen();
+  if (_openStoryId && eventStoryId({ payload }) === _openStoryId) renderStoryPanel();
+
+  if (topic.endsWith('story.context')) {
+    // Tolerate either flat payloads (TestProducer) or full SOM v0.2 envelopes (payload-wrapped).
+    const story = payload?.payload || payload;
+    if (story?.story_id) stories.set(story.story_id, story);
+    renderStories();
+  } else if (topic.endsWith('skills.staging')) {
+    const id = outputId(payload);
+    if (id) pending.set(id, payload);
+    renderPending();
+  } else if (topic.endsWith('skills.events')) {
+    const id = outputId(payload);
+    if (id && pending.has(id)) pending.delete(id);
+    decisions.push({ id, decision: 'approved', reviewer: payload.approved_by, at: payload.approved_at, payload });
+    renderPending();
+    renderDecisions();
+  } else if (topic.endsWith('skills.rejected')) {
+    const id = outputId(payload);
+    if (id && pending.has(id)) pending.delete(id);
+    decisions.push({ id, decision: 'rejected', reviewer: payload.rejected_by, at: payload.rejected_at, payload });
+    renderPending();
+    renderDecisions();
+  } else if (topic.endsWith('skills.runs')) {
+    runs.push(payload);
+    renderRuns();
+  }
+
+  renderTimeline();
+}
+
+function handleSnapshot(msg) {
+  for (const item of msg.pending || []) {
+    pending.set(item.id, item.payload);
+  }
+  renderPending();
+}
+
+// ── WebSocket ──────────────────────────────────────────
+function connect() {
+  const wsUrl = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
+  const ws = new WebSocket(wsUrl);
+  const status = document.getElementById('ws-status');
+  const label = document.getElementById('ws-label');
+
+  ws.onopen = () => { status.classList.add('connected'); label.textContent = 'connected'; };
+  ws.onclose = () => {
+    status.classList.remove('connected'); label.textContent = 'reconnecting…';
+    setTimeout(connect, 1500);
+  };
+  ws.onerror = () => { /* close handler will reconnect */ };
+  ws.onmessage = (evt) => {
+    try {
+      const msg = JSON.parse(evt.data);
+      if (msg.type === 'snapshot') handleSnapshot(msg);
+      else if (msg.type === 'bus_event') handleBusEvent(msg);
+      else if (msg.type === 'reset') {
+        clearLocalState();
+        showToast('Bus reset by another client', 'warn');
+      }
+      else if (msg.type === 'rerun') {
+        // Drop any stale pending warnings for this story that we might still have.
+        for (const [id, output] of [...pending.entries()]) {
+          if (output?.story_id === msg.story_id) pending.delete(id);
+        }
+        renderPending();
+      }
+    } catch (err) { console.error('bad ws message', err, evt.data); }
+  };
+}
+
+// ── Resizable timeline ────────────────────────────────
+(function setupResizer() {
+  const resizer = document.getElementById('resizer');
+  const app = document.querySelector('.app');
+  let startY = 0, startHeight = 220;
+
+  // Restore saved height
+  const saved = parseInt(localStorage.getItem('timelineHeight') || '', 10);
+  if (saved && saved > 60) app.style.setProperty('--timeline-h', saved + 'px');
+
+  resizer.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    resizer.classList.add('dragging');
+    startY = e.clientY;
+    const cs = getComputedStyle(app).getPropertyValue('--timeline-h');
+    startHeight = parseInt(cs, 10) || 220;
+
+    const onMove = (ev) => {
+      const dy = startY - ev.clientY;
+      let h = Math.max(60, Math.min(window.innerHeight - 200, startHeight + dy));
+      app.style.setProperty('--timeline-h', h + 'px');
+    };
+    const onUp = () => {
+      resizer.classList.remove('dragging');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      const final = parseInt(getComputedStyle(app).getPropertyValue('--timeline-h'), 10);
+      if (final) localStorage.setItem('timelineHeight', String(final));
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  // Double-click handle to reset
+  resizer.addEventListener('dblclick', () => {
+    app.style.setProperty('--timeline-h', '220px');
+    localStorage.removeItem('timelineHeight');
+  });
+})();
+
+// ── Bus topology ───────────────────────────────────────
+let _topologyOpen = false;
+
+function topologySvg() {
+  const c = (t) => topicCounts.get(t) || 0;
+  // Layout: vertical flow. Producers/workers in boxes, topics as pills along the path.
+  const txt = (color) => color || 'var(--text)';
+  return `
+  <svg class="topo-svg" viewBox="0 0 720 600" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--text-muted)"/>
+      </marker>
+      <marker id="arrow-good" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--good)"/>
+      </marker>
+      <marker id="arrow-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--coral)"/>
+      </marker>
+    </defs>
+
+    <!-- TestProducer -->
+    <g>
+      <rect x="260" y="20" width="200" height="56" rx="10" fill="var(--bg-surface2)" stroke="var(--accent2)" stroke-width="1.5"/>
+      <text x="360" y="42" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">📤 TestProducer</text>
+      <text x="360" y="60" text-anchor="middle" font-size="10" fill="var(--text-muted)">seed-stories/*.json</text>
+    </g>
+
+    <!-- arrow producer → story.context -->
+    <line x1="360" y1="76" x2="360" y2="100" stroke="var(--text-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+    <!-- topic: story.context -->
+    <g>
+      <rect x="240" y="100" width="240" height="32" rx="16" fill="var(--code-bg)" stroke="var(--border)"/>
+      <text x="270" y="120" font-size="11" fill="var(--ice)" font-family="Consolas">som.story.context</text>
+      <circle cx="450" cy="116" r="12" fill="var(--accent)"/>
+      <text x="450" y="120" text-anchor="middle" font-size="10" fill="#fff" font-weight="700">${c('som.story.context')}</text>
+    </g>
+
+    <!-- arrow story.context → SkillWorker -->
+    <line x1="360" y1="132" x2="360" y2="156" stroke="var(--text-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+    <!-- SkillWorker -->
+    <g>
+      <rect x="260" y="156" width="200" height="56" rx="10" fill="var(--bg-surface2)" stroke="var(--accent)" stroke-width="1.5"/>
+      <text x="360" y="178" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">SkillWorker</text>
+      <text x="360" y="196" text-anchor="middle" font-size="10" fill="var(--text-muted)">nbcu/editorial-standards@0.1.0</text>
+    </g>
+
+    <!-- fork into runs (left) and staging (right) -->
+    <path d="M 360 212 L 360 230 L 160 230 L 160 250" stroke="var(--text-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+    <path d="M 360 212 L 360 230 L 560 230 L 560 250" stroke="var(--text-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+
+    <!-- topic: skills.runs (left branch, terminal) -->
+    <g>
+      <rect x="40" y="250" width="240" height="32" rx="16" fill="var(--code-bg)" stroke="var(--border)"/>
+      <text x="70" y="270" font-size="11" fill="var(--ice)" font-family="Consolas">som.skills.runs</text>
+      <circle cx="250" cy="266" r="12" fill="var(--accent)"/>
+      <text x="250" y="270" text-anchor="middle" font-size="10" fill="#fff" font-weight="700">${c('som.skills.runs')}</text>
+    </g>
+    <text x="160" y="306" text-anchor="middle" font-size="10" fill="var(--text-muted)">audit-only</text>
+
+    <!-- topic: skills.staging (right branch) -->
+    <g>
+      <rect x="440" y="250" width="240" height="32" rx="16" fill="var(--code-bg)" stroke="var(--warn)" stroke-width="1.5"/>
+      <text x="470" y="270" font-size="11" fill="var(--ice)" font-family="Consolas">som.skills.staging</text>
+      <circle cx="650" cy="266" r="12" fill="var(--warn)"/>
+      <text x="650" y="270" text-anchor="middle" font-size="10" fill="#000" font-weight="700">${c('som.skills.staging')}</text>
+    </g>
+
+    <!-- arrow staging → Dashboard -->
+    <line x1="560" y1="282" x2="560" y2="316" stroke="var(--text-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+    <!-- Dashboard / approval gate -->
+    <g>
+      <rect x="440" y="316" width="240" height="56" rx="10" fill="var(--bg-surface2)" stroke="var(--warn)" stroke-width="1.5"/>
+      <text x="560" y="338" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">DashboardService</text>
+      <text x="560" y="356" text-anchor="middle" font-size="10" fill="var(--text-muted)">approval gate · WS fanout</text>
+    </g>
+
+    <!-- Dashboard fork: approve (left) / reject (right) -->
+    <path d="M 560 372 L 560 390 L 460 390 L 460 410" stroke="var(--good)" stroke-width="1.5" fill="none" marker-end="url(#arrow-good)"/>
+    <path d="M 560 372 L 560 390 L 660 390 L 660 410" stroke="var(--coral)" stroke-width="1.5" fill="none" marker-end="url(#arrow-bad)"/>
+
+    <text x="500" y="386" font-size="11" fill="var(--good)" font-weight="700">approve</text>
+    <text x="608" y="386" font-size="11" fill="var(--coral)" font-weight="700">reject</text>
+
+    <!-- topic: skills.events -->
+    <g>
+      <rect x="340" y="410" width="240" height="32" rx="16" fill="var(--code-bg)" stroke="var(--good)" stroke-width="1.5"/>
+      <text x="370" y="430" font-size="11" fill="var(--ice)" font-family="Consolas">som.skills.events</text>
+      <circle cx="550" cy="426" r="12" fill="var(--good)"/>
+      <text x="550" y="430" text-anchor="middle" font-size="10" fill="#000" font-weight="700">${c('som.skills.events')}</text>
+    </g>
+    <text x="460" y="465" text-anchor="middle" font-size="10" fill="var(--text-muted)">production bus</text>
+
+    <!-- topic: skills.rejected -->
+    <g>
+      <rect x="540" y="410" width="160" height="32" rx="16" fill="var(--code-bg)" stroke="var(--coral)" stroke-width="1.5"/>
+      <text x="560" y="430" font-size="10" fill="var(--ice)" font-family="Consolas">skills.rejected</text>
+      <circle cx="680" cy="426" r="12" fill="var(--coral)"/>
+      <text x="680" y="430" text-anchor="middle" font-size="10" fill="#fff" font-weight="700">${c('som.skills.rejected')}</text>
+    </g>
+
+    <!-- legend -->
+    <g transform="translate(20,510)">
+      <text x="0" y="0" font-size="10" fill="var(--text-muted)" font-weight="600">LEGEND</text>
+      <rect x="0" y="14" width="14" height="14" rx="3" fill="var(--bg-surface2)" stroke="var(--accent2)"/>
+      <text x="22" y="25" font-size="11" fill="var(--text)">producer</text>
+      <rect x="100" y="14" width="14" height="14" rx="3" fill="var(--bg-surface2)" stroke="var(--accent)"/>
+      <text x="122" y="25" font-size="11" fill="var(--text)">consumer/skill</text>
+      <rect x="240" y="14" width="14" height="14" rx="3" fill="var(--bg-surface2)" stroke="var(--warn)"/>
+      <text x="262" y="25" font-size="11" fill="var(--text)">approval gate</text>
+      <rect x="370" y="14" width="60" height="14" rx="7" fill="var(--code-bg)" stroke="var(--border)"/>
+      <text x="438" y="25" font-size="11" fill="var(--text)">topic + live count</text>
+    </g>
+  </svg>`;
+}
+
+function openBusTopology() {
+  _topologyOpen = true;
+  document.getElementById('modal-title').textContent = 'Bus topology';
+  const body = document.getElementById('modal-body');
+  body.innerHTML = `
+    <div style="margin-bottom:10px;font-size:12px;color:var(--text-secondary);line-height:1.5;">
+      Five Kafka topics carry the demo. Skill outputs go to <code>staging</code> first; the dashboard
+      republishes them to <code>events</code> on approve, or <code>rejected</code> on reject.
+      Numbers update live as messages flow through the bus.
+    </div>
+    <div id="topo-mount">${topologySvg()}</div>`;
+  document.getElementById('modal-bg').classList.add('show');
+}
+
+function refreshTopologyIfOpen() {
+  if (!_topologyOpen) return;
+  if (!document.getElementById('modal-bg').classList.contains('show')) {
+    _topologyOpen = false;
+    return;
+  }
+  const mount = document.getElementById('topo-mount');
+  if (mount) mount.innerHTML = topologySvg();
+}
+
+// Reset open flag when modal closes
+const _origCloseModal = closeModal;
+closeModal = function () {
+  _topologyOpen = false;
+  _origCloseModal();
+};
+
+// ── Simulator UI ───────────────────────────────────────
+async function openSimulator() {
+  document.getElementById('modal-title').textContent = 'NBCU Simulator';
+  document.getElementById('modal-body').innerHTML = '<div class="empty">loading…</div>';
+  document.getElementById('modal-bg').classList.add('show');
+  await renderSimulator();
+}
+
+async function renderSimulator() {
+  const body = document.getElementById('modal-body');
+  let status, scenarios;
+  try {
+    [status, scenarios] = await Promise.all([
+      fetch('/api/simulator/status').then(r => r.json()),
+      fetch('/api/simulator/scenarios').then(r => r.json()),
+    ]);
+  } catch (err) {
+    body.innerHTML = `<div class="empty">Failed to load: ${escapeHtml(err.message)}</div>`;
+    return;
+  }
+
+  const running = status.runningScenarioId;
+  const startedAt = status.runningStartedAt ? new Date(status.runningStartedAt) : null;
+  const elapsed = startedAt ? Math.floor((Date.now() - startedAt.getTime()) / 1000) : 0;
+
+  const runningBanner = running ? `
+    <div class="card" style="cursor:default;border-left:3px solid var(--accent);background:var(--bg-surface2);">
+      <div class="card-top">
+        <span class="card-id" style="color:var(--ice);">${ic('player-play','icon-sm')} Running: ${escapeHtml(running)}</span>
+        <button class="btn reject sm" onclick="stopSimulatorScenario()">${ic('player-stop','icon-sm')} Stop</button>
+      </div>
+      <div class="card-meta" style="margin-top:6px;color:var(--text-secondary);">
+        elapsed ${elapsed}s
+      </div>
+    </div>` : '';
+
+  const autoBanner = `
+    <div class="card" style="cursor:default;border-left:3px solid ${status.autoEnabled ? 'var(--good)' : 'var(--border)'};">
+      <div class="card-top">
+        <div>
+          <strong>Auto-stream</strong> ${status.autoEnabled ? '<span class="tag good" style="background:#12302a;color:#6ee7b7;">ON</span>' : '<span class="tag muted">OFF</span>'}
+        </div>
+        ${status.autoEnabled
+          ? `<button class="btn reject sm" onclick="stopAutoStream()">${ic('player-pause','icon-sm')} Stop</button>`
+          : `<button class="btn approve sm" onclick="startAutoStream()">${ic('player-play','icon-sm')} Start</button>`}
+      </div>
+      <div class="card-meta" style="margin-top:6px;color:var(--text-secondary);line-height:1.4;">
+        Publish a random seed scenario every <input type="number" id="auto-interval" value="${status.autoIntervalSeconds}" min="3" max="600" style="width:60px;padding:2px 4px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;color:var(--text);"> seconds.
+        Useful for keeping the dashboard alive during demos and giving vendor skills a steady test load.
+      </div>
+    </div>`;
+
+  const scenarioCards = scenarios.map(s => `
+    <div class="card" style="cursor:default;border-left:3px solid var(--accent2);">
+      <div class="card-top">
+        <span class="card-id" style="color:var(--ice);">${escapeHtml(s.id)}</span>
+        <span class="tag">${s.duration_seconds}s · ${s.step_count} steps</span>
+      </div>
+      <div class="card-title">${escapeHtml(s.name)}</div>
+      <div class="card-meta" style="white-space:normal;color:var(--text-secondary);line-height:1.5;margin-top:6px;">
+        ${escapeHtml(s.description)}
+      </div>
+      <div class="actions" style="margin-top:10px;">
+        <button class="btn approve" onclick="runSimulatorScenario('${escapeHtml(s.id)}')" ${running ? 'disabled' : ''}>${ic('player-play','icon-sm')} Run scenario</button>
+      </div>
+    </div>`).join('');
+
+  body.innerHTML = `
+    <div style="margin-bottom:12px;font-size:12px;color:var(--text-secondary);line-height:1.5;">
+      Local-dev fallback for AP ENPS. Scripted scenarios drive realistic SOM lifecycle traffic
+      onto the bus so vendors can test skills against a representative workload without depending
+      on the upstream AP feed.
+    </div>
+    <div style="display:grid;gap:14px;">
+      ${runningBanner}
+      ${autoBanner}
+      <div>
+        <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Scripted scenarios</div>
+        <div style="display:grid;gap:8px;">${scenarioCards}</div>
+      </div>
+    </div>`;
+}
+
+async function runSimulatorScenario(id) {
+  const res = await fetch(`/api/simulator/run/${encodeURIComponent(id)}`, { method: 'POST' });
+  if (!res.ok) { showToast('Failed to start: ' + await res.text(), 'danger'); return; }
+  showToast(`▶ Running scenario: ${id}`, '');
+  await renderSimulator();
+}
+
+async function stopSimulatorScenario() {
+  await fetch('/api/simulator/stop', { method: 'POST' });
+  showToast('Scenario stopped', 'warn');
+  await renderSimulator();
+}
+
+async function startAutoStream() {
+  const interval = parseInt(document.getElementById('auto-interval')?.value || '20', 10);
+  const res = await fetch('/api/simulator/auto/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ intervalSeconds: interval }),
+  });
+  if (!res.ok) { showToast('Failed to start auto-stream', 'danger'); return; }
+  showToast(`▶ Auto-stream ON (every ${interval}s)`, '');
+  await renderSimulator();
+}
+
+async function stopAutoStream() {
+  await fetch('/api/simulator/auto/stop', { method: 'POST' });
+  showToast('Auto-stream OFF', 'warn');
+  await renderSimulator();
+}
+
+// ── Skill registry UI ──────────────────────────────────
+// Modal for browsing, creating, editing, and deleting skills. Skills are stored
+// as JSON files in /skills on the server; the dashboard mediates via /api/skills.
+//
+// State in the modal is intentionally simple: re-fetch on every navigation. The
+// list is small (handful of skills, handful of rules each).
+
+const RULE_TYPE_HINTS = {
+  term_match:                'config: { "field": "headline", "terms": ["cops","kids"], "case_sensitive": false }',
+  phase_with_missing_field:  'config: { "phase_field": "lifecycle.phase", "phase": "BREAKING", "field": "compliance" }',
+  field_value_in:            'config: { "field": "priority.level", "values": ["FLASH","URGENT"] }',
+  field_present:             'config: { "field": "ai_enrichments" }',
+  field_absent:              'config: { "field": "editorial_gates" }',
+  field_regex:               'config: { "field": "headline", "pattern": "\\\\b\\\\w{20,}\\\\b" }',
+};
+
+function computeStatsForSkill(skillId) {
+  const filteredRuns = skillId ? runs.filter(r => r.skill_id === skillId) : runs;
+  const total = filteredRuns.length;
+  const completed = filteredRuns.filter(r => r.outcome === 'COMPLETED').length;
+  const skipped = filteredRuns.filter(r => r.outcome === 'SKIPPED').length;
+  const avgLatency = total === 0 ? 0
+    : Math.round(filteredRuns.reduce((s, r) => s + (r.latency_ms || 0), 0) / total);
+  const totalWarnings = filteredRuns.reduce((s, r) => s + (r.outputs?.warning_ids?.length || 0), 0);
+  const decisionsForSkill = skillId
+    ? decisions.filter(d => d.payload?.skill_id === skillId)
+    : decisions;
+  const approved = decisionsForSkill.filter(d => d.decision === 'approved').length;
+  const rejected = decisionsForSkill.filter(d => d.decision === 'rejected').length;
+  const pendingNow = skillId
+    ? [...pending.values()].filter(p => p.skill_id === skillId).length
+    : pending.size;
+  const decided = approved + rejected;
+  const approvalRate = decided === 0 ? null : Math.round((approved / decided) * 100);
+  return { total, completed, skipped, avgLatency, totalWarnings,
+           approved, rejected, pendingNow, approvalRate };
+}
+
+async function openSkillInfo() {
+  document.getElementById('modal-title').textContent = 'Skill registry';
+  document.getElementById('modal-body').innerHTML = '<div class="empty">loading…</div>';
+  document.getElementById('modal-bg').classList.add('show');
+  await renderSkillList();
+}
+
+async function renderSkillList(selectedId) {
+  const body = document.getElementById('modal-body');
+  let skills = [], aiStatus = { available: false, provider: 'none' };
+  try {
+    const [skillsRes, aiRes] = await Promise.all([
+      fetch('/api/skills'),
+      fetch('/api/skills/ai-review/status'),
+    ]);
+    skills = await skillsRes.json();
+    aiStatus = await aiRes.json();
+  } catch (err) {
+    body.innerHTML = `<div class="empty">Failed to load: ${escapeHtml(err.message)}</div>`;
+    return;
+  }
+  const aiBadge = aiStatus.available
+    ? `<span class="tag good" title="AI provider configured">${ic('robot','icon-sm')} ${escapeHtml(aiStatus.provider)}</span>`
+    : `<span class="tag muted" title="Set GOOGLE_API_KEY or ANTHROPIC_API_KEY to enable AI review">${ic('robot','icon-sm')} AI review off</span>`;
+
+  if (skills.length === 0) {
+    body.innerHTML = `
+      <div class="empty">
+        ${ic('robot','icon-xl')}
+        <div>No skills registered. Add one to start evaluating stories.</div>
+        <div style="margin-top:14px;"><button class="btn primary-btn" onclick="openSkillEditor()">${ic('plus')} Add skill</button></div>
+      </div>`;
+    return;
+  }
+
+  const current = selectedId
+    ? skills.find(s => s.id === selectedId) ?? skills[0]
+    : skills[0];
+
+  const tabs = skills.map(s => `
+    <button class="skill-tab ${s.id === current.id ? 'active' : ''}" onclick="renderSkillList('${escapeHtml(s.id)}')">
+      <strong>${escapeHtml(s.name || s.id)}</strong>
+      <small>${escapeHtml(s.id)} · ${(s.rules||[]).length} rule${(s.rules||[]).length===1?'':'s'}</small>
+    </button>`).join('');
+
+  body.innerHTML = `
+    <div class="skill-mgr">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">${aiBadge}</div>
+      <div class="skill-mgr-tabs">
+        ${tabs}
+        <button class="skill-tab add" onclick="openSkillEditor()" title="Create a new skill">${ic('plus')} Add skill</button>
+      </div>
+      <div id="skill-mgr-detail">${renderSkillDetail(current)}</div>
+    </div>`;
+}
+
+function renderSkillDetail(skill) {
+  const stats = computeStatsForSkill(skill.id);
+  const reads = (skill.reads || []).map(r => `<span class="tag">${escapeHtml(r)}</span>`).join(' ') || '<span class="tag">—</span>';
+  const produces = (skill.produces || []).map(r => `<span class="tag suggestion">${escapeHtml(r)}</span>`).join(' ') || '<span class="tag">—</span>';
+
+  const rulesHtml = (skill.rules || []).map((rule, idx) => `
+    <div class="card" style="cursor:default;border-left:3px solid var(--accent);">
+      <div class="card-top">
+        <span class="card-id" style="font-size:11px;color:var(--ice);">${escapeHtml(rule.rule_id)}</span>
+        <span class="tag ${escapeHtml((rule.default_severity||'').toLowerCase())}">${escapeHtml((rule.default_severity||'').toUpperCase())}</span>
+      </div>
+      <div class="card-title">${escapeHtml(rule.name || rule.rule_id)}</div>
+      <div class="card-meta" style="white-space:normal;color:var(--text-secondary);line-height:1.5;margin-top:6px;">
+        ${escapeHtml(rule.description || '')}
+      </div>
+      <div class="card-meta" style="margin-top:8px;">
+        <span><b>type</b> <code>${escapeHtml(rule.type)}</code></span>
+        <span><b>fires</b> ${escapeHtml(rule.output_message_type)}</span>
+        <span><b>fields</b> ${(rule.affected_fields||[]).map(escapeHtml).join(', ')}</span>
+      </div>
+      <div style="margin-top:8px;">
+        <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Config</div>
+        <div class="code-block" style="padding:8px 10px;font-size:11px;">${escapeHtml(JSON.stringify(rule.config, null, 2))}</div>
+      </div>
+      <div class="actions" style="margin-top:10px;">
+        <button class="btn" onclick="openRuleEditor('${escapeHtml(skill.id)}', ${idx})">${ic('pencil','icon-sm')} Edit rule</button>
+        <button class="btn reject" onclick="deleteRule('${escapeHtml(skill.id)}', ${idx})">${ic('trash','icon-sm')} Delete</button>
+      </div>
+    </div>`).join('');
+
+  const statBox = (label, value, sub) => `
+    <div style="background:var(--bg-surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
+      <div style="color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:0.05em;">${escapeHtml(label)}</div>
+      <div style="font-size:20px;font-weight:700;margin-top:2px;">${escapeHtml(String(value))}</div>
+      ${sub ? `<div style="color:var(--text-muted);font-size:11px;">${escapeHtml(sub)}</div>` : ''}
+    </div>`;
+
+  return `
+    <div style="display:grid;gap:14px;">
+      <div class="card" style="cursor:default;border-left:3px solid var(--accent2);">
+        <div class="card-top">
+          <span class="card-id" style="font-size:12px;color:var(--ice);">${escapeHtml(skill.id)} @ ${escapeHtml(skill.version)}</span>
+          <div style="display:flex;gap:6px;">
+            <span class="tag suggestion">${escapeHtml((skill.skill_type||'').toUpperCase())}</span>
+            <button class="btn sm" onclick="dryRunSkill('${escapeHtml(skill.id)}')" title="Evaluate this skill against all 5 seed stories">${ic('flask','icon-sm')} Dry-run</button>
+            <button class="btn sm" onclick="aiReviewSkill('${escapeHtml(skill.id)}')" title="AI-powered editorial review">${ic('robot','icon-sm')} AI review</button>
+            <button class="btn sm" onclick="openSkillEditor('${escapeHtml(skill.id)}')">${ic('pencil','icon-sm')} Edit</button>
+            <button class="btn sm reject" onclick="deleteSkill('${escapeHtml(skill.id)}')">${ic('trash','icon-sm')}</button>
+          </div>
+        </div>
+        <div class="card-title" style="font-size:15px;">${escapeHtml(skill.name)}</div>
+        <div class="card-meta" style="white-space:normal;color:var(--text-secondary);line-height:1.5;margin-top:6px;">
+          ${escapeHtml(skill.description || '')}
+        </div>
+        <div class="card-meta" style="margin-top:10px;">
+          <span><b>disclosure</b> ${escapeHtml(skill.disclosure_level || '—')}</span>
+          <span><b>migration</b> ${escapeHtml(skill.migration_policy || '—')}</span>
+        </div>
+        <div style="margin-top:10px;"><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Reads</div>${reads}</div>
+        <div style="margin-top:8px;"><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Produces</div>${produces}</div>
+      </div>
+
+      <div>
+        <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Live runtime stats — ${escapeHtml(skill.id)} (this session)</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;">
+          ${statBox('Runs', stats.total, `${stats.completed} done · ${stats.skipped} skipped`)}
+          ${statBox('Avg latency', stats.avgLatency + ' ms', '')}
+          ${statBox('Warnings', stats.totalWarnings, '')}
+          ${statBox('Pending', stats.pendingNow, 'awaiting decision')}
+          ${statBox('Approved', stats.approved, stats.approvalRate !== null ? `${stats.approvalRate}% rate` : '')}
+          ${statBox('Rejected', stats.rejected, '')}
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Rules (${(skill.rules||[]).length})</div>
+          <button class="btn sm" onclick="openRuleEditor('${escapeHtml(skill.id)}')">${ic('plus','icon-sm')} Add rule</button>
+        </div>
+        <div style="display:grid;gap:8px;">${rulesHtml || '<div class="empty" style="padding:20px;">No rules yet — click "Add rule" above.</div>'}</div>
+      </div>
+    </div>`;
+}
+
+// ── Skill editor (create or update an entire skill envelope) ──
+async function openSkillEditor(skillId) {
+  const isEdit = !!skillId;
+  let initial = {
+    id: '', version: '0.1.0', name: '', description: '',
+    skill_type: 'broadcaster', disclosure_level: 'L2', migration_policy: 'gated',
+    reads: [], produces: ['skill.warning.raised', 'skill.run.completed'], rules: [],
+  };
+  if (isEdit) {
+    try {
+      const res = await fetch(`/api/skills/${encodeURIComponent(skillId)}`);
+      if (res.ok) initial = await res.json();
+    } catch {}
+  }
+
+  const body = document.getElementById('modal-body');
+  document.getElementById('modal-title').textContent = isEdit ? `Edit skill — ${initial.id}` : 'Add skill';
+  body.innerHTML = `
+    <form id="skill-form" onsubmit="event.preventDefault();saveSkill(${isEdit ? `'${escapeHtml(skillId)}'` : 'null'});">
+      <div class="form-grid">
+        <label>Skill id <small>(e.g. "vendor/skill-name")</small>
+          <input name="id" value="${escapeHtml(initial.id)}" ${isEdit ? '' : 'required'} placeholder="acme/style-validator"/></label>
+        <label>Version <input name="version" value="${escapeHtml(initial.version)}" required/></label>
+        <label>Name <input name="name" value="${escapeHtml(initial.name)}" required/></label>
+        <label>Skill type
+          <select name="skill_type">
+            <option ${initial.skill_type === 'broadcaster' ? 'selected' : ''}>broadcaster</option>
+            <option ${initial.skill_type === 'reference' ? 'selected' : ''}>reference</option>
+          </select></label>
+        <label>Disclosure level
+          <select name="disclosure_level">
+            <option ${initial.disclosure_level === 'L1' ? 'selected' : ''}>L1</option>
+            <option ${initial.disclosure_level === 'L2' ? 'selected' : ''}>L2</option>
+            <option ${initial.disclosure_level === 'L3' ? 'selected' : ''}>L3</option>
+          </select></label>
+        <label>Migration policy
+          <select name="migration_policy">
+            <option ${initial.migration_policy === 'hot' ? 'selected' : ''}>hot</option>
+            <option ${initial.migration_policy === 'cold' ? 'selected' : ''}>cold</option>
+            <option ${initial.migration_policy === 'gated' ? 'selected' : ''}>gated</option>
+          </select></label>
+      </div>
+      <label>Description <textarea name="description">${escapeHtml(initial.description || '')}</textarea></label>
+      <label>Reads <small>(comma-separated dotted paths)</small>
+        <input name="reads" value="${escapeHtml((initial.reads || []).join(', '))}" placeholder="headline, lifecycle.phase, compliance"/></label>
+      <label>Produces <small>(comma-separated message_types)</small>
+        <input name="produces" value="${escapeHtml((initial.produces || []).join(', '))}"/></label>
+      <div class="form-actions">
+        <button type="button" class="btn" onclick="renderSkillList('${escapeHtml(initial.id)}')">Cancel</button>
+        <button type="submit" class="btn approve">${isEdit ? 'Save changes' : 'Create skill'}</button>
+      </div>
+    </form>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:14px;">
+      Rules are managed inside the skill detail view. ${isEdit ? '' : 'After creating, you\'ll be able to add rules.'}
+    </div>`;
+
+  // Stash the existing rules so save round-trips them on edit.
+  document.getElementById('skill-form').dataset.rules = JSON.stringify(initial.rules || []);
+}
+
+// Validate a skill draft via the server (layer 1).
+async function validateSkillDraft(skill) {
+  try {
+    const res = await fetch('/api/skills/validate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(skill),
+    });
+    return await res.json();
+  } catch (err) { return { ok: false, errors: [{ severity: 'error', path: 'network', message: err.message }], warnings: [] }; }
+}
+
+function renderValidationBanner(validation) {
+  if (!validation || (validation.errors?.length === 0 && validation.warnings?.length === 0)) return '';
+  const sev = validation.errors?.length > 0 ? 'critical' : 'medium';
+  const tone = validation.errors?.length > 0 ? 'Validation failed' : 'Validation passed with warnings';
+  const list = [...(validation.errors || []), ...(validation.warnings || [])].map(i => `
+    <div style="font-size:11px;line-height:1.5;">
+      <code style="font-size:10px;color:var(--ice);">${escapeHtml(i.path)}</code> — ${escapeHtml(i.message)}
+    </div>`).join('');
+  return `<div class="cs-item ${sev}" style="cursor:default;flex-direction:column;align-items:flex-start;padding:10px 12px;width:100%;gap:6px;">
+    <div style="font-weight:700;">${escapeHtml(tone)} (${(validation.errors?.length||0)} errors, ${(validation.warnings?.length||0)} warnings)</div>
+    ${list}
+  </div>`;
+}
+
+// Layer 2: dry-run a skill against the 5 seed stories.
+async function dryRunSkill(skillId) {
+  const body = document.getElementById('modal-body');
+  const oldHtml = body.innerHTML;
+  body.innerHTML = '<div class="empty">running…</div>';
+  try {
+    const res = await fetch(`/api/skills/${encodeURIComponent(skillId)}/dry-run`, { method: 'POST' });
+    if (!res.ok) { showToast('Dry-run failed', 'danger'); body.innerHTML = oldHtml; return; }
+    const result = await res.json();
+    document.getElementById('modal-title').textContent = `Dry-run — ${skillId}`;
+    body.innerHTML = renderDryRunResult(result, skillId);
+  } catch (err) {
+    showToast('Dry-run error: ' + err.message, 'danger');
+    body.innerHTML = oldHtml;
+  }
+}
+
+function renderDryRunResult(result, skillId) {
+  const cards = result.scenarios.map(s => {
+    const headerCls = s.matches.length > 0 ? 'matches' : 'no-matches';
+    const matchHtml = s.matches.length === 0
+      ? `<div style="color:var(--text-muted);font-size:11px;">${escapeHtml(s.note || 'no matches')}</div>`
+      : s.matches.map(m => `
+          <div style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px;">
+            <div><span class="tag ${escapeHtml(m.severity)}">${escapeHtml(m.severity.toUpperCase())}</span> <code style="font-size:10px;color:var(--ice);">${escapeHtml(m.ruleId)}</code></div>
+            <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;line-height:1.4;">${escapeHtml(m.detail)}</div>
+          </div>`).join('');
+    return `
+      <div class="card" style="cursor:default;border-left:3px solid ${s.matches.length > 0 ? 'var(--warn)' : 'var(--good)'};">
+        <div class="card-top">
+          <span class="card-id" style="font-size:11px;color:var(--ice);">${escapeHtml(s.scenario)}</span>
+          <span class="tag">${s.matches.length} match${s.matches.length === 1 ? '' : 'es'}</span>
+        </div>
+        <div class="card-meta" style="margin-top:4px;font-size:11px;"><b>story</b> ${escapeHtml(s.storyId || '?')}</div>
+        ${matchHtml}
+      </div>`;
+  }).join('');
+  return `
+    <div style="margin-bottom:10px;font-size:12px;color:var(--text-secondary);line-height:1.5;">
+      Evaluated <code>${escapeHtml(result.skillId)}</code> against ${result.scenarios.length} seed stories — total ${result.totalMatches} match${result.totalMatches===1?'':'es'}. No messages were published.
+    </div>
+    <div style="display:grid;gap:8px;">${cards}</div>
+    <div class="form-actions">
+      <button class="btn" onclick="renderSkillList('${escapeHtml(skillId)}')">← Back to skill</button>
+      <button class="btn primary-btn" onclick="aiReviewSkill('${escapeHtml(skillId)}')">${ic('robot','icon-sm')} Run AI review</button>
+    </div>`;
+}
+
+// Layer 3: AI review.
+async function aiReviewSkill(skillId) {
+  const body = document.getElementById('modal-body');
+  const oldHtml = body.innerHTML;
+  body.innerHTML = `<div class="empty">${ic('robot','icon-xl')}<div>calling AI provider… (this may take 5-30s)</div></div>`;
+  try {
+    const res = await fetch(`/api/skills/${encodeURIComponent(skillId)}/ai-review`, { method: 'POST' });
+    const result = await res.json();
+    document.getElementById('modal-title').textContent = `AI review — ${skillId}`;
+    body.innerHTML = renderAiReviewResult(result, skillId);
+  } catch (err) {
+    showToast('AI review error: ' + err.message, 'danger');
+    body.innerHTML = oldHtml;
+  }
+}
+
+function renderAiReviewResult(result, skillId) {
+  if (!result.available) {
+    return `
+      <div class="card" style="cursor:default;border-left:3px solid var(--warn);">
+        <div class="card-title">${ic('robot')} AI review not configured</div>
+        <div class="card-meta" style="white-space:normal;color:var(--text-secondary);line-height:1.5;margin-top:6px;">
+          ${escapeHtml(result.error || 'No AI provider configured.')}
+        </div>
+        <div class="card-meta" style="margin-top:8px;font-size:11px;">
+          Set <code>GOOGLE_API_KEY</code> (or <code>GEMINI_API_KEY</code>) for Gemini, or <code>ANTHROPIC_API_KEY</code> for Claude, then restart the worker.
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn" onclick="renderSkillList('${escapeHtml(skillId)}')">← Back</button>
+      </div>`;
+  }
+
+  if (result.error) {
+    return `
+      <div class="card" style="cursor:default;border-left:3px solid var(--coral);">
+        <div class="card-title">${ic('robot')} AI review failed</div>
+        <div class="card-meta" style="margin-top:4px;"><span class="tag">${escapeHtml(result.provider)}</span></div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text-secondary);">${escapeHtml(result.error)}</div>
+      </div>
+      <div class="form-actions">
+        <button class="btn" onclick="renderSkillList('${escapeHtml(skillId)}')">← Back</button>
+      </div>`;
+  }
+
+  const findings = (result.findings || []).map(f => `
+    <div class="card" style="cursor:default;border-left:3px solid ${severityColor(f.severity)};">
+      <div class="card-top">
+        <span class="card-id" style="color:var(--ice);">${escapeHtml(f.category)}${f.ruleId ? ' · ' + escapeHtml(f.ruleId) : ''}</span>
+        <span class="tag ${severityClassForFinding(f.severity)}">${escapeHtml(f.severity.toUpperCase())}</span>
+      </div>
+      <div style="margin-top:6px;font-size:12px;line-height:1.5;">${escapeHtml(f.message)}</div>
+    </div>`).join('');
+
+  return `
+    <div class="card" style="cursor:default;border-left:3px solid var(--accent);">
+      <div class="card-top">
+        <span class="card-id">${escapeHtml(skillId)}</span>
+        <span class="tag suggestion">${escapeHtml(result.provider)}</span>
+      </div>
+      <div style="margin-top:8px;font-size:13px;font-weight:500;">${escapeHtml(result.summary || '(no summary)')}</div>
+    </div>
+    <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin:14px 0 6px;">Findings (${(result.findings||[]).length})</div>
+    <div style="display:grid;gap:8px;">${findings || '<div class="empty" style="padding:18px;">No findings returned.</div>'}</div>
+    <div class="form-actions">
+      <button class="btn" onclick="renderSkillList('${escapeHtml(skillId)}')">← Back to skill</button>
+      <button class="btn" onclick="dryRunSkill('${escapeHtml(skillId)}')">${ic('flask','icon-sm')} Dry-run again</button>
+    </div>`;
+}
+
+function severityColor(sev) {
+  switch ((sev || '').toLowerCase()) {
+    case 'warning':    return 'var(--coral)';
+    case 'suggestion': return 'var(--warn)';
+    case 'info':       return 'var(--accent)';
+    case 'nit':        return 'var(--text-muted)';
+    default:           return 'var(--accent)';
+  }
+}
+function severityClassForFinding(sev) {
+  switch ((sev || '').toLowerCase()) {
+    case 'warning':    return 'critical';
+    case 'suggestion': return 'medium';
+    case 'info':       return 'low';
+    case 'nit':        return 'muted';
+    default:           return 'low';
+  }
+}
+
+async function saveSkill(originalId) {
+  const form = document.getElementById('skill-form');
+  const fd = new FormData(form);
+  const skill = {
+    id: fd.get('id').toString().trim(),
+    version: fd.get('version').toString().trim(),
+    name: fd.get('name').toString().trim(),
+    description: fd.get('description')?.toString() || '',
+    skill_type: fd.get('skill_type').toString(),
+    disclosure_level: fd.get('disclosure_level').toString(),
+    migration_policy: fd.get('migration_policy').toString(),
+    reads: splitCsv(fd.get('reads')),
+    produces: splitCsv(fd.get('produces')),
+    rules: JSON.parse(form.dataset.rules || '[]'),
+  };
+  try {
+    const res = originalId
+      ? await fetch(`/api/skills/${encodeURIComponent(originalId)}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(skill) })
+      : await fetch('/api/skills', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(skill) });
+    if (!res.ok) {
+      // Surface structured validation errors when present.
+      let body;
+      try { body = await res.json(); } catch { body = null; }
+      if (body?.error === 'validation_failed') {
+        const errs = (body.errors || []).map(e => `• ${e.path}: ${e.message}`).join('\n');
+        showToast(`Validation failed:\n${errs}`, 'danger');
+      } else {
+        showToast('Save failed: ' + (body?.error || res.statusText), 'danger');
+      }
+      return;
+    }
+    const body = await res.json();
+    const warnings = body.warnings || body.skill?.warnings || [];
+    if (warnings.length > 0) {
+      showToast(`Saved with ${warnings.length} warning${warnings.length===1?'':'s'} — see console`, 'warn');
+      console.warn('[skill warnings]', warnings);
+    } else {
+      showToast(originalId ? 'Skill updated' : 'Skill created', '');
+    }
+    await renderSkillList(skill.id);
+  } catch (err) {
+    showToast('Save failed: ' + err.message, 'danger');
+  }
+}
+
+async function deleteSkill(skillId) {
+  if (!confirm(`Delete skill "${skillId}"?\n\nThis removes the JSON file from skills/ and stops the skill from running on new stories.`)) return;
+  const res = await fetch(`/api/skills/${encodeURIComponent(skillId)}`, { method: 'DELETE' });
+  if (!res.ok) { showToast('Delete failed', 'danger'); return; }
+  showToast(`Deleted ${skillId}`, '');
+  await renderSkillList();
+}
+
+// ── Rule editor ──
+async function openRuleEditor(skillId, ruleIdx) {
+  const skillRes = await fetch(`/api/skills/${encodeURIComponent(skillId)}`);
+  if (!skillRes.ok) { showToast('Skill not found', 'danger'); return; }
+  const skill = await skillRes.json();
+  const isEdit = ruleIdx != null;
+  const r = isEdit ? skill.rules[ruleIdx] : {
+    rule_id: '', name: '', description: '', type: 'term_match',
+    config: { field: 'headline', terms: [] },
+    default_severity: 'flag', output_message_type: 'skill.warning.raised',
+    affected_fields: [], detail_template: '',
+  };
+
+  const body = document.getElementById('modal-body');
+  document.getElementById('modal-title').textContent = isEdit
+    ? `Edit rule — ${r.rule_id}`
+    : `Add rule to ${skill.id}`;
+
+  body.innerHTML = `
+    <form id="rule-form" onsubmit="event.preventDefault();saveRule('${escapeHtml(skillId)}', ${ruleIdx ?? 'null'});">
+      <div class="form-grid">
+        <label>Rule id <input name="rule_id" value="${escapeHtml(r.rule_id)}" required placeholder="my-skill-style-001"/></label>
+        <label>Default severity
+          <select name="default_severity">
+            <option ${r.default_severity === 'hold'   ? 'selected' : ''}>hold</option>
+            <option ${r.default_severity === 'flag'   ? 'selected' : ''}>flag</option>
+            <option ${r.default_severity === 'inform' ? 'selected' : ''}>inform</option>
+          </select></label>
+        <label>Name <input name="name" value="${escapeHtml(r.name)}" required/></label>
+        <label>Output message type
+          <input name="output_message_type" value="${escapeHtml(r.output_message_type)}" required/></label>
+      </div>
+      <label>Description <textarea name="description">${escapeHtml(r.description || '')}</textarea></label>
+      <div class="form-grid">
+        <label>Rule type
+          <select name="type" id="rule-type-select" onchange="onRuleTypeChange()">
+            ${Object.keys(RULE_TYPE_HINTS).map(t => `<option ${r.type === t ? 'selected' : ''}>${t}</option>`).join('')}
+          </select></label>
+        <label>Affected fields <small>(CSV)</small>
+          <input name="affected_fields" value="${escapeHtml((r.affected_fields || []).join(', '))}"/></label>
+      </div>
+      <label>Config (JSON)
+        <textarea name="config" id="rule-config-textarea" style="font-family:Consolas,monospace;min-height:120px;">${escapeHtml(JSON.stringify(r.config || {}, null, 2))}</textarea>
+        <small id="rule-config-hint" style="color:var(--text-muted);">${escapeHtml(RULE_TYPE_HINTS[r.type] || '')}</small></label>
+      <label>Detail template <small>(supports placeholders like {term}, {field}, {value}, {phase})</small>
+        <input name="detail_template" value="${escapeHtml(r.detail_template || '')}"/></label>
+      <div class="form-actions">
+        <button type="button" class="btn" onclick="renderSkillList('${escapeHtml(skillId)}')">Cancel</button>
+        <button type="submit" class="btn approve">${isEdit ? 'Save rule' : 'Add rule'}</button>
+      </div>
+    </form>`;
+}
+
+function onRuleTypeChange() {
+  const sel = document.getElementById('rule-type-select');
+  const hint = document.getElementById('rule-config-hint');
+  if (sel && hint) hint.textContent = RULE_TYPE_HINTS[sel.value] || '';
+}
+
+async function saveRule(skillId, ruleIdx) {
+  const form = document.getElementById('rule-form');
+  const fd = new FormData(form);
+  let configObj;
+  try { configObj = JSON.parse(fd.get('config').toString()); }
+  catch (err) { showToast('Config is not valid JSON: ' + err.message, 'danger'); return; }
+
+  const rule = {
+    rule_id: fd.get('rule_id').toString().trim(),
+    name: fd.get('name').toString().trim(),
+    description: fd.get('description')?.toString() || '',
+    type: fd.get('type').toString(),
+    config: configObj,
+    default_severity: fd.get('default_severity').toString(),
+    output_message_type: fd.get('output_message_type').toString(),
+    affected_fields: splitCsv(fd.get('affected_fields')),
+    detail_template: fd.get('detail_template')?.toString() || null,
+  };
+
+  // Fetch current skill, modify rules array, PUT it back.
+  const skillRes = await fetch(`/api/skills/${encodeURIComponent(skillId)}`);
+  if (!skillRes.ok) { showToast('Skill not found', 'danger'); return; }
+  const skill = await skillRes.json();
+  if (ruleIdx != null) skill.rules[ruleIdx] = rule;
+  else skill.rules = [...(skill.rules || []), rule];
+
+  const res = await fetch(`/api/skills/${encodeURIComponent(skillId)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(skill),
+  });
+  if (!res.ok) { showToast('Save failed: ' + await res.text(), 'danger'); return; }
+  showToast(ruleIdx != null ? 'Rule updated' : 'Rule added', '');
+  await renderSkillList(skillId);
+}
+
+async function deleteRule(skillId, ruleIdx) {
+  if (!confirm('Delete this rule?')) return;
+  const skillRes = await fetch(`/api/skills/${encodeURIComponent(skillId)}`);
+  if (!skillRes.ok) return;
+  const skill = await skillRes.json();
+  skill.rules.splice(ruleIdx, 1);
+  await fetch(`/api/skills/${encodeURIComponent(skillId)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(skill),
+  });
+  showToast('Rule removed', '');
+  await renderSkillList(skillId);
+}
+
+function splitCsv(value) {
+  if (!value) return [];
+  return value.toString().split(',').map(s => s.trim()).filter(Boolean);
+}
+
+// ── SOM JSON library ──────────────────────────────────
+async function openSeedLibrary() {
+  let scenarios = [];
+  try {
+    const res = await fetch('/api/seed-stories');
+    scenarios = await res.json();
+  } catch (err) {
+    console.error('failed to load scenarios', err);
+    return;
+  }
+
+  const body = document.getElementById('modal-body');
+  document.getElementById('modal-title').textContent = 'SOM v0.2 Envelopes (seed-stories/)';
+  body.innerHTML = `
+    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;" id="seed-tabs"></div>
+    <pre class="code-block" id="seed-json" style="max-height:60vh;">Choose a scenario to view its raw SOM v0.2 envelope.</pre>`;
+  const tabs = document.getElementById('seed-tabs');
+  for (const s of scenarios) {
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.textContent = SCENARIO_LABELS[s] || s;
+    btn.onclick = () => loadSeedJson(s, btn);
+    tabs.appendChild(btn);
+  }
+  document.getElementById('modal-bg').classList.add('show');
+
+  // Pre-load the first scenario for instant context.
+  if (scenarios.length > 0) loadSeedJson(scenarios[0], tabs.firstChild);
+}
+
+async function loadSeedJson(scenario, activeBtn) {
+  const tabs = document.getElementById('seed-tabs');
+  if (tabs) tabs.querySelectorAll('button').forEach(b => b.style.background = '');
+  if (activeBtn) activeBtn.style.background = 'linear-gradient(135deg,var(--accent),var(--accent2))';
+  if (activeBtn) activeBtn.style.color = '#fff';
+
+  const pre = document.getElementById('seed-json');
+  pre.textContent = 'loading…';
+  try {
+    const res = await fetch(`/api/seed-stories/${encodeURIComponent(scenario)}`);
+    const text = await res.text();
+    try {
+      pre.textContent = JSON.stringify(JSON.parse(text), null, 2);
+    } catch {
+      pre.textContent = text;
+    }
+  } catch (err) {
+    pre.textContent = 'Failed to load: ' + err.message;
+  }
+}
+
+renderStories();
+renderRuns();
+renderPending();
+renderDecisions();
+renderTopicChips();
+renderTimeline();
+connect();
+</script>
+</body>
+</html>

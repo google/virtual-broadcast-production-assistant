@@ -1,0 +1,38 @@
+# docker-compose.app.yml — run the skill worker + dashboard as a container
+# alongside the bundled Kafka.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.app.yml up --build
+#
+# This layers on top of the bundled docker-compose.yml so the same project network
+# carries both the broker (`kafka:29092` internal listener) and the app. Vendors
+# with no other infrastructure can run a single command and have everything
+# containerised — no .NET SDK required.
+#
+# Configuration model:
+#   Per-environment values (broker address, credentials, log level) come from env
+#   vars at run time, not from `appsettings.Production.json`. The image itself is
+#   immutable and identical to whatever ships to a real cluster. See the
+#   "Configuration model" section of README.md.
+#
+# Pointing at a different broker:
+#   This file targets the bundled Kafka. To run the same image against any other
+#   Kafka broker, override `Kafka__BootstrapServers` (and join the right Docker
+#   network if the broker lives in one) — see the "Container against an existing
+#   Kafka broker" section of README.md.
+
+services:
+  som-skill-worker:
+    build: .
+    image: som-skill-worker:local
+    container_name: som-skill-worker
+    ports:
+      - "5050:5050"
+    environment:
+      # Kafka__* maps to Kafka:* in IConfiguration (double underscore is .NET's
+      # section delimiter). kafka:29092 is the internal advertised listener
+      # defined in docker-compose.yml.
+      Kafka__BootstrapServers: kafka:29092
+      Kafka__SecurityProtocol: Plaintext
+    depends_on:
+      - kafka
