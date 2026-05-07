@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Options;
 
 namespace SomSkillWorker;
 
@@ -25,6 +26,7 @@ public sealed class SimulatorService : BackgroundService
 {
     private readonly ILogger<SimulatorService> _logger;
     private readonly DashboardService _dashboard;
+    private readonly KafkaOptions _kafkaOptions;
     private readonly Random _rng = new();
 
     private CancellationTokenSource? _scenarioCts;
@@ -34,10 +36,11 @@ public sealed class SimulatorService : BackgroundService
     private bool _autoEnabled;
     private int _autoIntervalSeconds = 20;
 
-    public SimulatorService(ILogger<SimulatorService> logger, DashboardService dashboard)
+    public SimulatorService(ILogger<SimulatorService> logger, DashboardService dashboard, IOptions<KafkaOptions> kafkaOptions)
     {
         _logger = logger;
         _dashboard = dashboard;
+        _kafkaOptions = kafkaOptions.Value;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -79,7 +82,7 @@ public sealed class SimulatorService : BackgroundService
         if (scenarios.Count == 0) return;
         var pick = scenarios[_rng.Next(scenarios.Count)];
         _logger.LogInformation("Auto-stream → publishing seed scenario {Scenario}", pick);
-        await TestProducer.RunAsync(pick);
+        await TestProducer.RunAsync(_kafkaOptions, pick);
     }
 
     // ─── Scripted scenarios ─────────────────────────────────────────────────
@@ -174,7 +177,7 @@ public sealed class SimulatorService : BackgroundService
         switch (action.Type)
         {
             case "publish":
-                if (action.Scenario is not null) await TestProducer.RunAsync(action.Scenario);
+                if (action.Scenario is not null) await TestProducer.RunAsync(_kafkaOptions, action.Scenario);
                 break;
             case "advance-phase":
                 if (action.StoryId is not null) await _dashboard.AdvancePhaseAsync(action.StoryId, ct);

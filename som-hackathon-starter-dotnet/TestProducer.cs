@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Confluent.Kafka;
+using Microsoft.Extensions.Configuration;
 
 namespace SomSkillWorker;
 
@@ -49,26 +50,45 @@ public static class TestProducer
         return null;
     }
 
-    public static async Task RunAsync(string? scenario = null)
+    private static KafkaOptions LoadOptionsFromConfiguration()
     {
-        var bootstrapServers = Environment.GetEnvironmentVariable("KAFKA_BOOTSTRAP_SERVERS") ?? "localhost:9092";
-        var topic = Environment.GetEnvironmentVariable("KAFKA_STORY_CONTEXT_TOPIC") ?? "som.story.context";
+        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
+        var config = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: true)
+            .AddJsonFile($"appsettings.{env}.json", optional: true)
+            .AddEnvironmentVariables()
+            .Build();
+        return config.GetSection("Kafka").Get<KafkaOptions>() ?? new KafkaOptions();
+    }
+
+    /// <summary>
+    /// CLI entry point. Builds a minimal IConfiguration since no host exists when invoked
+    /// with `dotnet run -- --test-producer`.
+    /// </summary>
+    public static Task RunAsync(string? scenario = null)
+        => RunAsync(LoadOptionsFromConfiguration(), scenario);
+
+    /// <summary>
+    /// In-process entry point. Caller supplies the same KafkaOptions used by SkillWorker
+    /// and DashboardService so a single config source drives every Kafka client.
+    /// </summary>
+    public static async Task RunAsync(KafkaOptions options, string? scenario = null)
+    {
+        var topic = options.StoryContextTopic;
 
         var config = new ProducerConfig
         {
-            BootstrapServers = bootstrapServers,
+            BootstrapServers = options.BootstrapServers,
             Acks = Acks.Leader,
         };
 
-        // Support Confluent Cloud (SaslSsl) when env vars are set
-        var apiKey = Environment.GetEnvironmentVariable("KAFKA_API_KEY");
-        var apiSecret = Environment.GetEnvironmentVariable("KAFKA_API_SECRET");
-        if (!string.IsNullOrEmpty(apiKey) && !string.IsNullOrEmpty(apiSecret))
+        if (options.SecurityProtocol.Equals("SaslSsl", StringComparison.OrdinalIgnoreCase))
         {
             config.SecurityProtocol = SecurityProtocol.SaslSsl;
             config.SaslMechanism = SaslMechanism.Plain;
-            config.SaslUsername = apiKey;
-            config.SaslPassword = apiSecret;
+            config.SaslUsername = options.SaslUsername;
+            config.SaslPassword = options.SaslPassword;
         }
 
         using var producer = new ProducerBuilder<string, string>(config).Build();

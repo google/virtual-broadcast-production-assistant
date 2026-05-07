@@ -22,6 +22,25 @@ A self-contained .NET 10 starter that demonstrates the full SOM (Semantic Object
 
    Listens on http://localhost:5050.
 
+### Pointing at an existing broker (e.g. Redpanda on a non-default port)
+
+The default config in `appsettings.json` is `localhost:9092` / `Plaintext`. To point at any other local broker — for example a Redpanda already running on `:19092` — override via env vars without editing the file:
+
+```bash
+Kafka__BootstrapServers=localhost:19092 \
+  Kafka__SecurityProtocol=Plaintext \
+  dotnet run
+```
+
+`Kafka__BootstrapServers` (note the **double** underscore — `.NET`'s section delimiter) binds to `Kafka:BootstrapServers` in `IConfiguration`, which every Kafka client in the app reads from.
+
+If your broker has `auto.create.topics.enabled=false`, pre-create the 5 SOM topics first:
+
+```bash
+docker exec <broker-container> rpk topic create \
+  som.story.context som.skills.events som.skills.rejected som.skills.runs som.skills.staging
+```
+
 3. Open the dashboard at **http://localhost:5050**
 
 4. Click any seed story button in the header to publish a `story.context` event onto the bus
@@ -213,7 +232,7 @@ For shared cluster deployments:
    ASPNETCORE_ENVIRONMENT=Production dotnet run
    ```
 
-The `appsettings.Production.json` file uses `${KAFKA_*}` placeholders for the bootstrap server, API key, and API secret.
+`appsettings.Production.json` sets `SecurityProtocol=SaslSsl` and leaves the bootstrap server and SASL credentials unset — the env vars (`Kafka__BootstrapServers`, `Kafka__SaslUsername`, `Kafka__SaslPassword`) populate them at runtime via `IConfiguration`'s env-var provider. Double underscores (`__`) are `.NET`'s section delimiter and bind to `Kafka:BootstrapServers` etc.
 
 ## Building a container image
 
@@ -221,9 +240,9 @@ The `appsettings.Production.json` file uses `${KAFKA_*}` placeholders for the bo
 docker build -t som-skill-worker .
 docker run -p 8080:8080 \
   -e ASPNETCORE_ENVIRONMENT=Production \
-  -e KAFKA_BOOTSTRAP_SERVERS=... \
-  -e KAFKA_API_KEY=... \
-  -e KAFKA_API_SECRET=... \
+  -e Kafka__BootstrapServers=... \
+  -e Kafka__SaslUsername=... \
+  -e Kafka__SaslPassword=... \
   som-skill-worker
 ```
 

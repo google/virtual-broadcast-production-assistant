@@ -1,5 +1,6 @@
 using System.Net.WebSockets;
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Options;
 using SomSkillWorker;
 
 // ── Test producer mode (CLI) ──────────────────────────
@@ -236,11 +237,11 @@ app.MapPost("/api/reset", async (DashboardService dash, CancellationToken ct) =>
     return Results.Ok(new { result.Ok, topics_reset = result.TopicsReset });
 });
 
-app.MapPost("/api/publish/{scenario}", async (string scenario) =>
+app.MapPost("/api/publish/{scenario}", async (string scenario, IOptions<KafkaOptions> kafka) =>
 {
     try
     {
-        await TestProducer.RunAsync(scenario);
+        await TestProducer.RunAsync(kafka.Value, scenario);
         return Results.Ok(new { published = scenario });
     }
     catch (Exception ex)
