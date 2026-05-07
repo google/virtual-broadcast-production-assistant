@@ -22,25 +22,6 @@ A self-contained .NET 10 starter that demonstrates the full SOM (Semantic Object
 
    Listens on http://localhost:5050.
 
-### Pointing at an existing broker (e.g. Redpanda on a non-default port)
-
-The default config in `appsettings.json` is `localhost:9092` / `Plaintext`. To point at any other local broker — for example a Redpanda already running on `:19092` — override via env vars without editing the file:
-
-```bash
-Kafka__BootstrapServers=localhost:19092 \
-  Kafka__SecurityProtocol=Plaintext \
-  dotnet run
-```
-
-`Kafka__BootstrapServers` (note the **double** underscore — `.NET`'s section delimiter) binds to `Kafka:BootstrapServers` in `IConfiguration`, which every Kafka client in the app reads from.
-
-If your broker has `auto.create.topics.enabled=false`, pre-create the 5 SOM topics first:
-
-```bash
-docker exec <broker-container> rpk topic create \
-  som.story.context som.skills.events som.skills.rejected som.skills.runs som.skills.staging
-```
-
 3. Open the dashboard at **http://localhost:5050**
 
 4. Click any seed story button in the header to publish a `story.context` event onto the bus
@@ -48,6 +29,56 @@ docker exec <broker-container> rpk topic create \
 5. Watch the four-lane pipeline: stories → skill runs → pending approval → decisions
 
 6. **Approve** or **reject** each staged warning to push it to `som.skills.events` or `som.skills.rejected`
+
+## Run modes
+
+Four valid combinations of "how is the app running" × "which Kafka broker." Pick the row that matches your setup:
+
+| | Bundled Kafka (`docker-compose.yml`) | Existing Kafka broker |
+|---|---|---|
+| **`dotnet run`** | Quick start (above) | [`dotnet run` against an existing broker](#dotnet-run-against-an-existing-broker) |
+| **Containerised app** | [Run the app as a container](#run-the-app-as-a-container) | [Container against an existing Kafka broker](#container-against-an-existing-kafka-broker) |
+
+All four use the **same image and the same source**. Only the env vars and network attachment differ — see [Configuration model](#configuration-model) for why.
+
+### Run the app as a container
+
+When you want to exercise the production code path locally — same image, same Kestrel binding, same env-var-driven config that a real deployment uses. No .NET SDK required.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.app.yml up --build
+```
+
+This layers `docker-compose.app.yml` on top of the bundled `docker-compose.yml`, so Kafka + Kafka UI + the app all run on the same Docker network. The app talks to the broker via the internal hostname `kafka:29092` (defined in `docker-compose.yml`'s advertised listeners).
+
+Dashboard at http://localhost:5050 as before. To use a different host port, override `ASPNETCORE_URLS=http://+:6060` and remap with `-p 6060:6060` — see [Configuration model](#configuration-model).
+
+### `dotnet run` against an existing broker
+
+The default config in `appsettings.json` is `localhost:9092` / `Plaintext`. To point at a different local Kafka broker — say one already running on `:19092` — override via env vars without editing the file:
+
+```bash
+Kafka__BootstrapServers=localhost:19092 Kafka__SecurityProtocol=Plaintext dotnet run
+```
+
+`Kafka__BootstrapServers` (note the **double** underscore — `.NET`'s section delimiter) binds to `Kafka:BootstrapServers` in `IConfiguration`, which every Kafka client in the app reads from.
+
+If your broker has `auto.create.topics.enabled=false`, pre-create the 5 SOM topics first:
+
+```bash
+docker exec <broker-container> rpk topic create som.story.context som.skills.events som.skills.rejected som.skills.runs som.skills.staging
+```
+
+### Container against an existing Kafka broker
+
+Run the same image against any Kafka broker by overriding env vars at run time. The broker just needs to be reachable from the container by hostname. If your broker advertises an internal listener on a Docker network you can join, that's the cleanest path:
+
+```bash
+docker build -t som-skill-worker:local .
+docker run --rm -p 5050:5050 --network <broker-network> -e Kafka__BootstrapServers=<broker-host>:<broker-port> -e Kafka__SecurityProtocol=Plaintext som-skill-worker:local
+```
+
+If the broker's port is exposed on the Docker host but not on a network the container can join, use `--add-host <broker-host>:host-gateway` instead of `--network`. Either way, what the broker **advertises** to clients (its `advertised.listeners`) must be reachable from inside the container — a broker that advertises `localhost:19092` is unusable from any container, because `localhost` inside the container is its own loopback. See [Configuration model](#configuration-model).
 
 ## Architecture
 
@@ -219,6 +250,31 @@ The skill registry header in the dashboard shows a status badge: `🤖 google/ge
 | `POST` | `/api/simulator/auto/stop` | Stop auto-stream |
 | `WS` | `/ws` | Live bus event stream (every Kafka message broadcast as JSON) |
 
+## Configuration model
+
+The starter follows the [twelve-factor](https://12factor.net/config) pattern: **build the image once, supply per-environment values via env vars at run time.** The image is identical whether you run it on your laptop, a CI runner, or a real cluster. This is what makes the four [run modes](#run-modes) all work with the same source and Dockerfile.
+
+What lives where:
+
+| Where | What | Example |
+|---|---|---|
+| `appsettings.json` | Local-dev defaults (loaded when `ASPNETCORE_ENVIRONMENT` is unset or `Development`) | `localhost:9092`, `Plaintext` |
+| `appsettings.Production.json` | Things true for **all** production-like deployments. Loaded when `ASPNETCORE_ENVIRONMENT=Production` | `SecurityProtocol: SaslSsl`, lower log level |
+| Env vars at run time | Per-environment values: broker address, credentials, ports | `Kafka__BootstrapServers`, `Kafka__SaslPassword` |
+
+**The .NET env-var convention.** Double underscore is .NET's config-section delimiter, so `Kafka__BootstrapServers` binds to the `Kafka:BootstrapServers` key in `IConfiguration`. Single-underscore names like `KAFKA_BOOTSTRAP_SERVERS` do *not* bind — they'd only register as a top-level config key.
+
+| Env var | Binds to | Notes |
+|---|---|---|
+| `Kafka__BootstrapServers` | `Kafka:BootstrapServers` | Comma-separated `host:port` list |
+| `Kafka__SecurityProtocol` | `Kafka:SecurityProtocol` | `Plaintext` or `SaslSsl` |
+| `Kafka__SaslUsername` / `Kafka__SaslPassword` | SASL credentials | Only used when `SecurityProtocol=SaslSsl` |
+| `Kafka__GroupId` | Consumer group id | Defaults to `nbcu-editorial-standards` |
+| `ASPNETCORE_URLS` | Kestrel listen address | `http://+:5050` (in `Dockerfile`); `http://localhost:5050` (default for `dotnet run`) |
+| `ASPNETCORE_ENVIRONMENT` | Which `appsettings.{env}.json` is loaded | `Development` (default) or `Production` |
+
+**A broker-side gotcha worth flagging.** Kafka clients connect to the bootstrap, then redo connections to whatever the broker's `advertised.listeners` says. If the broker advertises `localhost:19092` but you connect from a container, the client gets back "go to localhost:19092" and tries its own loopback — which is empty. The broker must advertise a hostname **reachable from the client's network namespace** (e.g. `kafka:29092` for containers on the same Docker network, or `host.docker.internal:19092` from Docker Desktop containers). The bundled `docker-compose.yml` uses dual listeners (`internal://kafka:29092,external://localhost:9092`) so both Mac-native and container clients work.
+
 ## Confluent Cloud (production)
 
 For shared cluster deployments:
@@ -236,17 +292,16 @@ For shared cluster deployments:
 
 ## Building a container image
 
+For local exercise of the container path, the easiest route is [Run the app as a container](#run-the-app-as-a-container) — `docker compose -f docker-compose.yml -f docker-compose.app.yml up --build` builds the image and starts it alongside the bundled Kafka.
+
+For ad-hoc builds and direct `docker run` against any broker:
+
 ```bash
 docker build -t som-skill-worker .
-docker run -p 5050:5050 \
-  -e ASPNETCORE_ENVIRONMENT=Production \
-  -e Kafka__BootstrapServers=... \
-  -e Kafka__SaslUsername=... \
-  -e Kafka__SaslPassword=... \
-  som-skill-worker
+docker run -p 5050:5050 -e ASPNETCORE_ENVIRONMENT=Production -e Kafka__BootstrapServers=... -e Kafka__SaslUsername=... -e Kafka__SaslPassword=... som-skill-worker
 ```
 
-The dashboard is served on port `5050` both inside the container (via `ASPNETCORE_URLS=http://+:5050` in the Dockerfile) and locally with `dotnet run` — one port everywhere.
+The dashboard is served on port `5050` both inside the container (via `ASPNETCORE_URLS=http://+:5050` in the Dockerfile) and locally with `dotnet run` — one port everywhere. Override with `ASPNETCORE_URLS=http://+:NNNN` and a matching `-p NNNN:NNNN`.
 
 Update the `Dockerfile` base image tags from `10.0-preview` to `10.0` once .NET 10 reaches GA.
 
