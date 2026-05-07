@@ -1,0 +1,93 @@
+{
+  "som_version": "0.2.0",
+  "message_id": "019536a2-7c3f-7d8e-a1b2-000000000005",
+  "correlation_id": "019536a0-5555-7000-8000-000000000005",
+  "message_type": "story.context",
+  "timestamp": "2026-05-06T18:02:14.000000Z",
+  "source": {
+    "system_id": "ncs-nbcu-nyc-01",
+    "system_type": "ncs",
+    "system_name": "iNEWS NYC",
+    "vendor": "Avid",
+    "version": "7.0.1"
+  },
+  "topic": "som.story.context",
+  "payload": {
+    "story_id": "manhattan-explosion-2026-0506",
+    "slug": "MANHATTAN-MIDTOWN-EXPLOSION",
+    "headline": "Explosion Reported at Midtown Manhattan Office Tower",
+    "story_type": "ACTIVE",
+    "lifecycle": {
+      "phase": "BREAKING",
+      "phase_entered_at": "2026-05-06T18:01:30Z",
+      "previous_phase": "PLANNED",
+      "phase_owner": {
+        "user_id": "editor-mgarcia",
+        "display_name": "Maria Garcia",
+        "role": "output_editor"
+      }
+    },
+    "priority": {
+      "level": "URGENT",
+      "reason": "Active scene, breaking on wire",
+      "escalated_by": "ncs-nbcu-nyc-01",
+      "escalated_at": "2026-05-06T18:02:00Z"
+    },
+    "premise": {
+      "expected_outcome": "developing_facts",
+      "confidence": "LOW",
+      "premise_changed": false
+    },
+    "sources": [
+      {
+        "source_id": "src-ap-20260506-1801",
+        "source_type": "wire",
+        "provider": "Associated Press",
+        "credibility": "VERIFIED",
+        "received_at": "2026-05-06T18:01:45Z",
+        "content_hash": "sha256:9f8e7d6c5b4a..."
+      },
+      {
+        "source_id": "src-fdny-radio-01",
+        "source_type": "scanner",
+        "provider": "FDNY Dispatch",
+        "credibility": "PRIMARY",
+        "received_at": "2026-05-06T18:01:50Z"
+      }
+    ],
+    "assets": [],
+    "ai_enrichments": [],
+    "instances": [
+      {
+        "instance_id": "inst-msnbc-rolling-001",
+        "platform": "linear",
+        "program": "MSNBC Rolling Coverage",
+        "status": "ACTIVE"
+      },
+      {
+        "instance_id": "inst-nbcnews-web-002",
+        "platform": "web",
+        "program": "NBCNews.com",
+        "status": "ACTIVE"
+      }
+    ],
+    "skills_config": {
+      "broadcaster": "NBCU",
+      "skills_spec_version": "2.0.0",
+      "skill_executor_id": "executor-nbcu-nyc-01",
+      "scope_context": "MSNBC Rolling Coverage",
+      "active_skills": [
+        {
+          "skill_id": "nbcu/editorial-standards",
+          "skill_version": "0.1.0",
+          "skill_type": "broadcaster",
+          "disclosure_level": "L2",
+          "migration_policy": "gated",
+          "skill_priority": "critical"
+        }
+      ]
+    },
+    "updated_at": "2026-05-06T18:02:14Z",
+    "sequence_number": 1
+  }
+}

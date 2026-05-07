@@ -1,0 +1,151 @@
+{
+  "som_version": "0.2.0",
+  "message_id": "019536a2-7c3f-7d8e-a1b2-000000000003",
+  "correlation_id": "019536a0-3333-7000-8000-000000000003",
+  "message_type": "story.context",
+  "timestamp": "2026-05-10T16:20:00.000000Z",
+  "source": {
+    "system_id": "ncs-nbcu-la-01",
+    "system_type": "ncs",
+    "system_name": "iNEWS Los Angeles",
+    "vendor": "Avid",
+    "version": "7.0.1"
+  },
+  "topic": "som.story.context",
+  "payload": {
+    "story_id": "lapd-counterfeit-2026-0510",
+    "slug": "LAPD-COUNTERFEIT-SNEAKER-BUST",
+    "headline": "Cops Bust Ring of Kids Selling Counterfeit Sneakers in Downtown LA",
+    "story_type": "ACTIVE",
+    "lifecycle": {
+      "phase": "DEVELOPING",
+      "phase_entered_at": "2026-05-10T15:45:00Z",
+      "previous_phase": "PLANNED",
+      "phase_owner": {
+        "user_id": "editor-rjohnson",
+        "display_name": "Rachel Johnson",
+        "role": "assignment_editor"
+      }
+    },
+    "priority": {
+      "level": "ROUTINE",
+      "reason": "Local crime story"
+    },
+    "premise": {
+      "expected_outcome": "arrests_charges_filed",
+      "confidence": "HIGH",
+      "premise_changed": false
+    },
+    "compliance": [
+      {
+        "flag_id": "cf-minor-001",
+        "type": "MINOR_INVOLVED",
+        "severity": "HIGH",
+        "detail": "Suspects include individuals under 18. Do not identify minors.",
+        "jurisdiction": "US-CA",
+        "regulation_ref": "CA Welfare & Institutions Code 827",
+        "raised_by": "compliance-engine-01",
+        "raised_at": "2026-05-10T16:00:00Z",
+        "status": "ACTIVE"
+      },
+      {
+        "flag_id": "cf-legal-001",
+        "type": "LEGAL_REVIEW",
+        "severity": "MEDIUM",
+        "detail": "Suspects not yet arraigned. Use 'alleged' and 'accused' language.",
+        "jurisdiction": "US",
+        "raised_by": "legal-desk",
+        "raised_at": "2026-05-10T16:05:00Z",
+        "status": "ACTIVE"
+      }
+    ],
+    "editorial_gates": [],
+    "sources": [
+      {
+        "source_id": "src-lapd-pio",
+        "source_type": "official",
+        "provider": "LAPD Public Information Office",
+        "credibility": "OFFICIAL",
+        "received_at": "2026-05-10T15:30:00Z"
+      },
+      {
+        "source_id": "src-knbc-crew-01",
+        "source_type": "field_crew",
+        "provider": "KNBC Field Unit 7",
+        "credibility": "PRIMARY",
+        "received_at": "2026-05-10T16:10:00Z"
+      }
+    ],
+    "assets": [
+      {
+        "asset_id": "pkg-counterfeit-bust-v1",
+        "asset_type": "package",
+        "status": "IN_PRODUCTION",
+        "delivery_spec": {
+          "format": "mxf",
+          "resolution": "1920x1080",
+          "frame_rate": 29.97
+        }
+      },
+      {
+        "asset_id": "lt-lapd-arrest",
+        "asset_type": "lower_third",
+        "status": "READY"
+      },
+      {
+        "asset_id": "gfx-suspect-count",
+        "asset_type": "fullscreen_graphic",
+        "status": "READY"
+      }
+    ],
+    "ai_enrichments": [
+      {
+        "enrichment_id": "ai-summary-003",
+        "model": "claude-sonnet-4-20250514",
+        "enrichment_type": "summary",
+        "confidence": 0.90,
+        "content": "LAPD officers arrested multiple individuals in connection with a counterfeit sneaker operation in the downtown Fashion District. Some suspects are minors.",
+        "provenance": {
+          "input_sources": ["src-lapd-pio"],
+          "prompt_hash": "sha256:d4e5f6a7...",
+          "guardrails_applied": ["minor_protection", "factual_grounding", "presumption_of_innocence"]
+        },
+        "human_reviewed": false,
+        "generated_at": "2026-05-10T16:15:00Z"
+      }
+    ],
+    "instances": [
+      {
+        "instance_id": "inst-knbc-local-news",
+        "platform": "linear",
+        "program": "KNBC News at 5",
+        "status": "ACTIVE",
+        "instance_assets": ["pkg-counterfeit-bust-v1", "lt-lapd-arrest"]
+      },
+      {
+        "instance_id": "inst-nbcla-web",
+        "platform": "web",
+        "program": "NBCLA.com",
+        "status": "ACTIVE"
+      }
+    ],
+    "skills_config": {
+      "broadcaster": "NBCU",
+      "skills_spec_version": "2.0.0",
+      "skill_executor_id": "executor-nbcu-la-01",
+      "scope_context": "KNBC Local News",
+      "active_skills": [
+        {
+          "skill_id": "nbcu/editorial-standards",
+          "skill_version": "0.1.0",
+          "skill_type": "broadcaster",
+          "disclosure_level": "L2",
+          "migration_policy": "gated",
+          "skill_priority": "critical"
+        }
+      ]
+    },
+    "updated_at": "2026-05-10T16:20:00Z",
+    "sequence_number": 12
+  }
+}

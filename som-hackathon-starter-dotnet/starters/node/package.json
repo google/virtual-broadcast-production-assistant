@@ -1,0 +1,24 @@
+{
+  "name": "som-skill-worker",
+  "version": "0.1.0",
+  "description": "SOM hackathon skill worker starter — Node/TypeScript",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "worker": "tsx src/index.ts",
+    "test-producer": "tsx src/index.ts --test-producer",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "kafkajs": "^2.2.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^22.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

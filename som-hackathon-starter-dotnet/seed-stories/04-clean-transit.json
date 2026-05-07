@@ -1,0 +1,196 @@
+{
+  "som_version": "0.2.0",
+  "message_id": "019536a2-7c3f-7d8e-a1b2-000000000004",
+  "correlation_id": "019536a0-4444-7000-8000-000000000004",
+  "message_type": "story.context",
+  "timestamp": "2026-05-12T11:00:00.000000Z",
+  "source": {
+    "system_id": "ncs-nbcu-nyc-01",
+    "system_type": "ncs",
+    "system_name": "iNEWS NYC",
+    "vendor": "Avid",
+    "version": "7.0.1"
+  },
+  "topic": "som.story.context",
+  "payload": {
+    "story_id": "transit-expansion-2026-0512",
+    "slug": "NYC-TRANSIT-EXPANSION-APPROVED",
+    "headline": "City Council Approves $2.1 Billion Public Transit Expansion Plan",
+    "story_type": "ACTIVE",
+    "lifecycle": {
+      "phase": "PUBLISHED",
+      "phase_entered_at": "2026-05-12T10:30:00Z",
+      "previous_phase": "READY_TO_AIR",
+      "phase_owner": {
+        "user_id": "editor-kwilliams",
+        "display_name": "Karen Williams",
+        "role": "output_editor"
+      }
+    },
+    "priority": {
+      "level": "ROUTINE",
+      "reason": "Planned coverage — council vote expected"
+    },
+    "premise": {
+      "expected_outcome": "council_approves_plan",
+      "confidence": "HIGH",
+      "premise_changed": false
+    },
+    "compliance": [
+      {
+        "flag_id": "cf-verified-001",
+        "type": "EDITORIAL_VERIFIED",
+        "severity": "LOW",
+        "detail": "Story verified by city desk. Official vote tally confirmed.",
+        "jurisdiction": "US",
+        "raised_by": "editor-kwilliams",
+        "raised_at": "2026-05-12T10:15:00Z",
+        "status": "RESOLVED",
+        "resolved_at": "2026-05-12T10:25:00Z"
+      }
+    ],
+    "editorial_gates": [],
+    "sources": [
+      {
+        "source_id": "src-nyc-council-clerk",
+        "source_type": "government",
+        "provider": "NYC City Council Clerk",
+        "credibility": "OFFICIAL",
+        "received_at": "2026-05-12T10:05:00Z",
+        "content_hash": "sha256:e5f6a7b8..."
+      },
+      {
+        "source_id": "src-mta-press",
+        "source_type": "press_release",
+        "provider": "Metropolitan Transportation Authority",
+        "credibility": "OFFICIAL",
+        "received_at": "2026-05-12T10:10:00Z"
+      },
+      {
+        "source_id": "src-wnbc-crew-03",
+        "source_type": "field_crew",
+        "provider": "WNBC City Hall Bureau",
+        "credibility": "PRIMARY",
+        "received_at": "2026-05-12T10:00:00Z"
+      }
+    ],
+    "assets": [
+      {
+        "asset_id": "pkg-transit-vote-v1",
+        "asset_type": "package",
+        "status": "AIRED",
+        "delivery_spec": {
+          "format": "mxf",
+          "resolution": "1920x1080",
+          "frame_rate": 29.97
+        },
+        "standards_clearance": {
+          "status": "CLEARED",
+          "last_reviewed": "2026-05-12T10:20:00Z"
+        }
+      },
+      {
+        "asset_id": "gfx-transit-map-v1",
+        "asset_type": "fullscreen_graphic",
+        "status": "AIRED",
+        "delivery_spec": {
+          "format": "ndi",
+          "resolution": "1920x1080",
+          "frame_rate": 59.94
+        }
+      },
+      {
+        "asset_id": "lt-council-vote",
+        "asset_type": "lower_third",
+        "status": "AIRED"
+      },
+      {
+        "asset_id": "map-new-rail-lines",
+        "asset_type": "interactive_map",
+        "status": "LIVE",
+        "delivery_spec": {
+          "format": "html5",
+          "resolution": "1920x1080"
+        }
+      }
+    ],
+    "ai_enrichments": [
+      {
+        "enrichment_id": "ai-summary-004",
+        "model": "claude-sonnet-4-20250514",
+        "enrichment_type": "summary",
+        "confidence": 0.95,
+        "content": "New York City Council voted 7-2 to approve a $2.1 billion expansion of the public transit system, adding three new rail lines expected to be operational by 2030.",
+        "provenance": {
+          "input_sources": ["src-nyc-council-clerk", "src-mta-press"],
+          "prompt_hash": "sha256:f6a7b8c9...",
+          "guardrails_applied": ["factual_grounding"]
+        },
+        "human_reviewed": true,
+        "generated_at": "2026-05-12T10:12:00Z"
+      },
+      {
+        "enrichment_id": "ai-social-post-001",
+        "model": "claude-sonnet-4-20250514",
+        "enrichment_type": "social_post",
+        "confidence": 0.88,
+        "content": "JUST IN: NYC Council approves $2.1B transit expansion — 3 new rail lines coming by 2030. The 7-2 vote caps months of debate over funding sources.",
+        "provenance": {
+          "input_sources": ["src-nyc-council-clerk"],
+          "prompt_hash": "sha256:a7b8c9d0...",
+          "guardrails_applied": ["factual_grounding", "character_limit_280"]
+        },
+        "human_reviewed": false,
+        "generated_at": "2026-05-12T10:14:00Z"
+      }
+    ],
+    "instances": [
+      {
+        "instance_id": "inst-wnbc-midday",
+        "platform": "linear",
+        "program": "News 4 New York at Noon",
+        "status": "COMPLETED",
+        "instance_assets": ["pkg-transit-vote-v1", "lt-council-vote", "gfx-transit-map-v1"]
+      },
+      {
+        "instance_id": "inst-nbcny-web",
+        "platform": "web",
+        "program": "NBCNewYork.com",
+        "status": "ACTIVE"
+      },
+      {
+        "instance_id": "inst-nbcny-social",
+        "platform": "social",
+        "program": "NBC New York Social",
+        "status": "PENDING",
+        "instance_assets": []
+      }
+    ],
+    "skills_config": {
+      "broadcaster": "NBCU",
+      "skills_spec_version": "2.0.0",
+      "skill_executor_id": "executor-nbcu-nyc-01",
+      "scope_context": "WNBC Local News",
+      "active_skills": [
+        {
+          "skill_id": "nbcu/editorial-standards",
+          "skill_version": "0.1.0",
+          "skill_type": "broadcaster",
+          "disclosure_level": "L2",
+          "migration_policy": "gated",
+          "skill_priority": "critical"
+        },
+        {
+          "skill_id": "nbcu/social-poster",
+          "skill_version": "0.1.0",
+          "skill_type": "broadcaster",
+          "disclosure_level": "L2",
+          "migration_policy": "gated",
+          "skill_priority": "normal"
+        }
+      ]
+    },
+    "updated_at": "2026-05-12T11:00:00Z",
+    "sequence_number": 8
+  }
+}

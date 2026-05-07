@@ -1,0 +1,15 @@
+[project]
+name = "som-skill-worker"
+version = "0.1.0"
+description = "SOM hackathon skill worker starter — Python"
+requires-python = ">=3.11"
+dependencies = [
+    "confluent-kafka>=2.5.0",
+]
+
+[project.scripts]
+worker = "skill_worker:start_worker"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"

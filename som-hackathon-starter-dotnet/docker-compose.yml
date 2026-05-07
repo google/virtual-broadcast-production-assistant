@@ -1,0 +1,51 @@
+# SOM Hackathon — Local Kafka (KRaft mode, no ZooKeeper)
+# Usage: docker compose up -d
+# Kafka broker available at localhost:9092
+
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.7.1
+    hostname: kafka
+    container_name: som-kafka
+    ports:
+      - "9092:9092"         # external listener (host)
+      - "9101:9101"         # JMX (optional)
+    environment:
+      # KRaft mode — no ZooKeeper
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      # Listeners
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # Cluster
+      CLUSTER_ID: "SOMHackathon2026Local"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+      # Auto-create the 3 SOM topics
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+
+  # Kafka UI — browse topics, messages, consumer groups at http://localhost:8080
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: som-kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: som-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      - kafka
+
+volumes:
+  kafka-data:
