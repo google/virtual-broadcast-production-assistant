@@ -146,6 +146,17 @@
       ]
     },
     "updated_at": "2026-05-10T16:20:00Z",
-    "sequence_number": 12
+    "sequence_number": 12,
+    "content_refs": [
+      {
+        "content_format": null,
+        "mime_type": "text/plain",
+        "placement": "sources",
+        "provider": "NBCU",
+        "role": null,
+        "source_id": "src-lapd-pio",
+        "uri": "http://localhost:5050/api/content/lapd-counterfeit-2026-0510"
+      }
+    ]
   }
 }
