@@ -388,6 +388,31 @@ button { font: inherit; cursor: pointer; }
 
 .empty { text-align: center; padding: 24px; color: var(--text-muted); font-size: 12px; }
 .empty .icon { font-size: 28px; opacity: 0.4; margin-bottom: 4px; }
+
+/* Vendor extensions panel rendered above the raw JSON dump in the warning modal (D-002b). */
+.nbcu-ext-panel {
+  background: var(--bg-surface2); border: 1px solid var(--accent); border-radius: 10px;
+  padding: 12px 14px; margin-bottom: 14px;
+  font-family: system-ui, -apple-system, sans-serif; font-size: 12px;
+  white-space: normal; line-height: 1.5; color: var(--text);
+}
+.nbcu-ext-title {
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  font-size: 10px; color: var(--text-muted); margin-bottom: 10px;
+}
+.nbcu-ext-row { margin-bottom: 10px; }
+.nbcu-ext-row:last-child { margin-bottom: 0; }
+.nbcu-ext-label {
+  font-weight: 600; font-size: 11px; color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.nbcu-ext-value { color: var(--text); }
+.nbcu-ext-citations { margin: 0; padding-left: 18px; }
+.nbcu-ext-citations li { margin-bottom: 4px; }
+.nbcu-ext-citations li code {
+  background: var(--chip-bg); padding: 1px 5px; border-radius: 4px;
+  font-family: "Consolas", "Fira Code", monospace; font-size: 11px;
+}
 </style>
 </head>
 <body>
@@ -939,8 +964,44 @@ function renderTimeline() {
 // ── Modal ──────────────────────────────────────────────
 function openModal(title, payload) {
   document.getElementById('modal-title').textContent = title;
-  document.getElementById('modal-body').textContent = JSON.stringify(payload, null, 2);
+  document.getElementById('modal-body').innerHTML = renderModalBody(payload);
   document.getElementById('modal-bg').classList.add('show');
+}
+
+// Render the warning/event modal body. When payload.extensions carries any
+// com.nbcu.* keys we surface them in a structured panel above the raw JSON
+// dump (D-002b). All other payloads fall through to plain JSON.
+function renderModalBody(payload) {
+  const json = escapeHtml(JSON.stringify(payload, null, 2));
+  const ext = payload?.extensions;
+  if (!ext || typeof ext !== 'object') return json;
+
+  const rationale = ext['com.nbcu.rationale'];
+  const citations = ext['com.nbcu.citations'];
+  const hasRationale = typeof rationale === 'string' && rationale.trim().length > 0;
+  const hasCitations = Array.isArray(citations) && citations.length > 0;
+  if (!hasRationale && !hasCitations) return json;
+
+  const rows = [];
+  if (hasRationale) {
+    rows.push(`<div class="nbcu-ext-row">
+      <div class="nbcu-ext-label">Rationale</div>
+      <div class="nbcu-ext-value">${escapeHtml(rationale)}</div>
+    </div>`);
+  }
+  if (hasCitations) {
+    const items = citations.map(c =>
+      `<li><code>${escapeHtml(c?.source_id ?? '?')}</code> — ${escapeHtml(c?.quote ?? '')}</li>`
+    ).join('');
+    rows.push(`<div class="nbcu-ext-row">
+      <div class="nbcu-ext-label">Citations</div>
+      <div class="nbcu-ext-value"><ul class="nbcu-ext-citations">${items}</ul></div>
+    </div>`);
+  }
+  return `<div class="nbcu-ext-panel">
+    <div class="nbcu-ext-title">NBCU extensions · extensions.com.nbcu.*</div>
+    ${rows.join('')}
+  </div>${json}`;
 }
 function closeModal() { document.getElementById('modal-bg').classList.remove('show'); }
 function closeModalIfBg(e) { if (e.target.id === 'modal-bg') closeModal(); }
