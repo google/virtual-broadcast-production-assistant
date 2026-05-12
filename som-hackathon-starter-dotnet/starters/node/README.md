@@ -76,6 +76,19 @@ Five SOM v0.2 envelopes in `../../seed-stories/` (shared with all starters):
 | `clean` | Clean copy — no warnings expected |
 | `election` | Developing story — no warnings expected |
 
+### Fetching story body text (content_refs)
+
+Each seed story includes a `content_refs` array with URIs pointing to story body text. Locally these resolve to `GET /api/content/{story_id}` on the .NET dashboard (port 5050). On hackathon day, AP stories will point to AP-hosted URLs (open access).
+
+```typescript
+const refs = payload.content_refs ?? [];
+for (const ref of refs) {
+  const resp = await fetch(ref.uri);
+  const body = await resp.text();
+  // ref.source_id links back to payload.sources[] for provenance
+}
+```
+
 ## Confluent Cloud
 
 Set env vars from `.env.example`:

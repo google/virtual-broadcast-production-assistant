@@ -207,6 +207,17 @@
       ]
     },
     "updated_at": "2026-06-15T21:30:00Z",
-    "sequence_number": 134
+    "sequence_number": 134,
+    "content_refs": [
+      {
+        "content_format": null,
+        "mime_type": "text/plain",
+        "placement": "sources",
+        "provider": "NBCU",
+        "role": null,
+        "source_id": "src-ap-election-feed",
+        "uri": "http://localhost:5050/api/content/election-special-2026-0615"
+      }
+    ]
   }
 }
