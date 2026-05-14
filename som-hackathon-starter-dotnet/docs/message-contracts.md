@@ -23,6 +23,47 @@ Use the **suffixed** message type names on the wire. The unsuffixed forms in the
 
 ---
 
+## `asset_type` enum — v0.2.1-hackathon canonical set
+
+The v0.2 spec (Table 12) defines a broader canonical enum; for the hackathon, seeds and skills use a narrowed subset. Vendor-specific values use an `x-` prefix per SOM-039.
+
+**Case convention:**
+
+- Canonical values are `UPPER_SNAKE_CASE` (e.g. `LOWER_THIRD`, `FULL_FRAME`).
+- Vendor-specific values use `x-` + the **lowercase** original token preserving underscores (e.g. `x-graphics_pack`). Do **not** use `x-GRAPHICS_PACK` or `X-Graphics-Pack`.
+
+### Canonical values used in seeds today
+
+| Value | Notes |
+|---|---|
+| `SCRIPT` | Scripts, copy, AP wire copy |
+| `LOWER_THIRD` | Lower-third graphics |
+| `MAP` | Map graphics (static or interactive) |
+| `FULL_FRAME` | Full-frame / fullscreen graphics |
+
+### Vendor-specific values used in seeds today
+
+| Value | Notes |
+|---|---|
+| `x-graphics_pack` | Graphics package bundles |
+| `x-banner` | On-screen banners |
+| `x-package` | Edited video packages |
+
+### Full canonical set (spec Table 12)
+
+Producers MAY emit any value from the full spec enum; consumers MUST accept all of them:
+
+`VIDEO | AUDIO | GRAPHIC | STILL | CG | SCRIPT | PROMPTER | LOWER_THIRD | FULL_FRAME | MAP | SOCIAL_CARD | CUSTOM`
+
+The seed narrowing above is operational, not normative. Full reconciliation between starter seeds, dashboard rendering, and the formal spec is tracked as **SOM-048**.
+
+### What to do if you need a value not in the list
+
+1. **Check spec Table 12 first.** `PROMPTER`, `STILL`, `SOCIAL_CARD` are canonical even though not in today's seeds.
+2. **If genuinely vendor-specific,** use `x-<lowercase_token>` and note it in your vendor README. Promotion to the canonical enum is a v0.3 conversation.
+
+---
+
 ## `instance_ref` — instance scoping in the payload
 
 A story can air across many surfaces simultaneously — a linear newscast, a web live-blog, a social card. Each surface is represented by an entry in `payload.instances[]` on the inbound `story.context` message, identified by `instance_id`.
@@ -34,6 +75,8 @@ When a skill produces a warning or suggestion that applies **to a specific insta
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `instance_ref` | string | no | Value of an `instances[].instance_id` on the originating story. Omit for story-wide warnings. |
+
+> **Producer note — .NET starter:** `SkillWorker.BuildWarning()` in this branch does **not** yet emit `instance_ref`. All warnings produced by the bundled starter are story-scoped today. Vendor producers SHOULD set `instance_ref` when a warning is instance-scoped; consumers SHOULD respect it. Wiring `instance_ref` through the .NET starter's rule-engine match is a follow-up tracked against SOM-048 / SOM-049. Don't be surprised if you wire up consumption today and the starter's own warnings ignore it — that's expected.
 
 ### v0.3 target shape (Amendment A4)
 

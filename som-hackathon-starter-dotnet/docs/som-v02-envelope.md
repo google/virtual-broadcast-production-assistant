@@ -139,7 +139,7 @@ Graphics packs, scripts, lower thirds, packages — the production assets tied t
 | Path | Type | Description |
 |------|------|-------------|
 | `assets[].asset_id` | string | Unique asset identifier |
-| `assets[].asset_type` | string | `"graphics_pack"`, `"script"`, `"lower_third"`, `"fullscreen_graphic"`, `"package"` |
+| `assets[].asset_type` | string | Canonical UPPER_SNAKE_CASE values + `x-<lowercase>` for vendor-specific. See [`message-contracts.md` — `asset_type` enum](./message-contracts.md#asset_type-enum--v021-hackathon-canonical-set) for the v0.2.1-hackathon narrowing. Full reconciliation against spec Table 12 tracked as SOM-048. |
 | `assets[].status` | string | `"READY"`, `"IN_PRODUCTION"`, `"INVALIDATED"` |
 | `assets[].invalidated_by` | string | Compliance flag_id that invalidated it |
 | `assets[].standards_clearance` | object | Optional clearance status |
