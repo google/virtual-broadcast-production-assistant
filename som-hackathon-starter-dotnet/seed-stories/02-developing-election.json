@@ -36,6 +36,17 @@
       "confidence": "HIGH",
       "premise_changed": false
     },
+    "story_meaning": {
+      "who": "Virginia voters, the two gubernatorial candidates, AP Elections, the NBCU Decision Desk, and NBC and MSNBC election-night editorial leadership.",
+      "what": "The Virginia gubernatorial race remains too close to call as polls close, with 62% of precincts reporting and a margin under one percentage point.",
+      "when": "Story published 21:30 ET on 15 June 2026, with the DEVELOPING phase entered at 20:00 ET when polls began closing.",
+      "where": "Commonwealth of Virginia, with focus on outstanding counties Fairfax and Virginia Beach; coverage from NBC and MSNBC election-night control rooms.",
+      "why": "A close race coupled with embargoed exit-poll data and an active no-projection editorial hold places the desk under HIGH compliance scrutiny.",
+      "how": "Real-time results aggregated from AP Elections, the NBCU Decision Desk, and the Virginia Secretary of State, governed by the gate-projection-001 editorial hold.",
+      "summary": "The Virginia gubernatorial race is too close to call as polls close, with 62% of precincts in and the margin under one percentage point. NBC News is running the story under HIGH compliance — AP has not called the race, exit-poll data was embargoed until 19:01 ET, and an editorial hold blocks projection graphics until the Decision Desk authorises a call.",
+      "confidence": 0.80,
+      "provenance_refs": ["src-ap-election-feed", "src-nbcu-decision-desk", "src-va-sos"]
+    },
     "compliance": [
       {
         "flag_id": "cf-election-001",
@@ -99,7 +110,7 @@
     "assets": [
       {
         "asset_id": "gfx-va-results-board",
-        "asset_type": "graphics_pack",
+        "asset_type": "x-graphics_pack",
         "status": "READY",
         "standards_clearance": {
           "status": "CLEARED",
@@ -113,7 +124,7 @@
       },
       {
         "asset_id": "gfx-winner-banner",
-        "asset_type": "banner",
+        "asset_type": "x-banner",
         "status": "PREPARED",
         "standards_clearance": {
           "status": "BLOCKED",
@@ -122,7 +133,7 @@
       },
       {
         "asset_id": "lt-winner-projection",
-        "asset_type": "lower_third",
+        "asset_type": "LOWER_THIRD",
         "status": "PREPARED",
         "standards_clearance": {
           "status": "BLOCKED",
@@ -131,7 +142,7 @@
       },
       {
         "asset_id": "map-va-county-results",
-        "asset_type": "interactive_map",
+        "asset_type": "MAP",
         "status": "LIVE",
         "delivery_spec": {
           "format": "html5",

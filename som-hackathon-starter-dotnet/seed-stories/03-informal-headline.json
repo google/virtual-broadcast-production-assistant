@@ -36,6 +36,17 @@
       "confidence": "HIGH",
       "premise_changed": false
     },
+    "story_meaning": {
+      "who": "LAPD officers and unnamed suspects, including individuals under 18, with the KNBC Los Angeles desk handling coverage.",
+      "what": "LAPD arrested multiple individuals in a counterfeit-sneaker operation in downtown Los Angeles, with some suspects identified as minors.",
+      "when": "Story published 16:20 PT on 10 May 2026 with the DEVELOPING phase entered at 15:45 PT.",
+      "where": "Downtown Los Angeles Fashion District; jurisdiction US-CA with CA Welfare and Institutions Code 827 in effect.",
+      "why": "Minors involvement requires identity protection, and suspects not yet arraigned demand 'alleged' and 'accused' language under legal-review compliance.",
+      "how": "Reported via LAPD Public Information Office and KNBC field crew; story routed through the editorial-standards skill to catch informal headline language and protect minor identities.",
+      "summary": "LAPD arrested multiple individuals — including minors — in a counterfeit-sneaker operation in the downtown Los Angeles Fashion District. The story carries HIGH compliance under CA Welfare and Institutions Code 827 (no minor identification) and MEDIUM legal-review compliance because suspects have not yet been arraigned, requiring 'alleged' and 'accused' framing throughout.",
+      "confidence": 0.92,
+      "provenance_refs": ["src-lapd-pio", "src-knbc-crew-01"]
+    },
     "compliance": [
       {
         "flag_id": "cf-minor-001",
@@ -79,7 +90,7 @@
     "assets": [
       {
         "asset_id": "pkg-counterfeit-bust-v1",
-        "asset_type": "package",
+        "asset_type": "x-package",
         "status": "IN_PRODUCTION",
         "delivery_spec": {
           "format": "mxf",
@@ -89,12 +100,12 @@
       },
       {
         "asset_id": "lt-lapd-arrest",
-        "asset_type": "lower_third",
+        "asset_type": "LOWER_THIRD",
         "status": "READY"
       },
       {
         "asset_id": "gfx-suspect-count",
-        "asset_type": "fullscreen_graphic",
+        "asset_type": "FULL_FRAME",
         "status": "READY"
       }
     ],

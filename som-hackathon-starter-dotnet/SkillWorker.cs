@@ -131,7 +131,7 @@ public class SkillWorker : BackgroundService
     private static JsonNode BuildWarning(SkillDefinition skill, RuleMatch match, string storyId)
     {
         var rule = match.Rule;
-        return new JsonObject
+        var warning = new JsonObject
         {
             ["message_type"] = rule.OutputMessageType,
             ["warning_id"] = Guid.NewGuid().ToString(),
@@ -147,6 +147,34 @@ public class SkillWorker : BackgroundService
             ["blocks"] = new JsonArray(),
             ["timestamp"] = DateTimeOffset.UtcNow.ToString("o"),
         };
+
+        var extensions = BuildExtensions(rule);
+        if (extensions is not null) warning["extensions"] = extensions;
+
+        return warning;
+    }
+
+    /// <summary>
+    /// Build the per-warning extensions block (D-002b). Emits flat-key
+    /// extensions.com.nbcu.citations and extensions.com.nbcu.rationale when
+    /// the rule definition supplies them. Returns null if neither is set.
+    /// </summary>
+    private static JsonObject? BuildExtensions(SkillRule rule)
+    {
+        var hasCitations = rule.Citations is { Length: > 0 };
+        var hasRationale = !string.IsNullOrWhiteSpace(rule.Rationale);
+        if (!hasCitations && !hasRationale) return null;
+
+        var ext = new JsonObject();
+        if (hasCitations)
+        {
+            var arr = new JsonArray();
+            foreach (var c in rule.Citations!)
+                arr.Add(new JsonObject { ["source_id"] = c.SourceId, ["quote"] = c.Quote });
+            ext["com.nbcu.citations"] = arr;
+        }
+        if (hasRationale) ext["com.nbcu.rationale"] = rule.Rationale!;
+        return ext;
     }
 
     /// <summary>Build skill.run.completed audit record (Amendment 1, hackathon brief §8.1).</summary>

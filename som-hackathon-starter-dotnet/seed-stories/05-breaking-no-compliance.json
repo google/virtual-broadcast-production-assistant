@@ -38,6 +38,17 @@
       "confidence": "LOW",
       "premise_changed": false
     },
+    "story_meaning": {
+      "who": "Unknown individuals at a Midtown Manhattan office tower, FDNY first responders, and the NBC News breaking-news desk.",
+      "what": "An explosion was reported at a Midtown Manhattan office tower, with facts still developing and scene response active.",
+      "when": "Story published 18:02 ET on 6 May 2026; BREAKING phase entered at 18:01:30Z.",
+      "where": "Midtown Manhattan, New York City; specific tower identity pending official confirmation.",
+      "why": "Active scene with unverified casualty and cause information; story entered the bus before NBCU compliance flags or assets were attached.",
+      "how": "Initial reporting via AP wire and FDNY dispatch radio; downstream skills are expected to flag the absence of compliance metadata under the BREAKING phase.",
+      "summary": "An explosion has been reported at a Midtown Manhattan office tower, with facts still developing. The story entered the bus with no compliance flags and no prepared assets, intentionally exercising the editorial-standards skill's BREAKING-phase compliance check. Coverage is rolling across MSNBC and NBCNews.com while details from FDNY and AP are confirmed.",
+      "confidence": 0.70,
+      "provenance_refs": ["src-ap-20260506-1801", "src-fdny-radio-01"]
+    },
     "sources": [
       {
         "source_id": "src-ap-20260506-1801",
