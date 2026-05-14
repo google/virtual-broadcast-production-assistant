@@ -27,3 +27,10 @@ claude*.md
 ## Don't ignore content directories
 !seed-stories/
 !skills/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+*.tfvars.json
