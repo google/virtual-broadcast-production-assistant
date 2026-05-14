@@ -36,6 +36,17 @@
       "confidence": "HIGH",
       "premise_changed": false
     },
+    "story_meaning": {
+      "who": "The New York City Council, the Metropolitan Transportation Authority, and WNBC City Hall reporters.",
+      "what": "New York City Council approved a $2.1 billion public-transit expansion plan, adding three new rail lines slated for operation by 2030.",
+      "when": "Story published 11:00 ET on 12 May 2026; PUBLISHED phase entered at 10:30 ET following the council vote.",
+      "where": "New York City, with policy impact across the five boroughs and the MTA service area; jurisdiction US.",
+      "why": "A multi-billion-dollar capital programme materially changes the city's transit footprint; routine planned coverage anchored by an official vote tally.",
+      "how": "Council vote tally confirmed via the City Council Clerk, complemented by an MTA press release and WNBC City Hall Bureau crew on site.",
+      "summary": "The New York City Council voted 7-2 to approve a $2.1 billion expansion of the public-transit system, adding three new rail lines expected to be operational by 2030. The story is editorially verified with an official tally, and ran across WNBC News 4 New York at Noon, NBCNewYork.com, and NBC New York Social channels.",
+      "confidence": 0.97,
+      "provenance_refs": ["src-nyc-council-clerk", "src-mta-press", "src-wnbc-crew-03"]
+    },
     "compliance": [
       {
         "flag_id": "cf-verified-001",
@@ -77,7 +88,7 @@
     "assets": [
       {
         "asset_id": "pkg-transit-vote-v1",
-        "asset_type": "package",
+        "asset_type": "x-package",
         "status": "AIRED",
         "delivery_spec": {
           "format": "mxf",
@@ -91,7 +102,7 @@
       },
       {
         "asset_id": "gfx-transit-map-v1",
-        "asset_type": "fullscreen_graphic",
+        "asset_type": "FULL_FRAME",
         "status": "AIRED",
         "delivery_spec": {
           "format": "ndi",
@@ -101,12 +112,12 @@
       },
       {
         "asset_id": "lt-council-vote",
-        "asset_type": "lower_third",
+        "asset_type": "LOWER_THIRD",
         "status": "AIRED"
       },
       {
         "asset_id": "map-new-rail-lines",
-        "asset_type": "interactive_map",
+        "asset_type": "MAP",
         "status": "LIVE",
         "delivery_spec": {
           "format": "html5",
@@ -191,6 +202,17 @@
       ]
     },
     "updated_at": "2026-05-12T11:00:00Z",
-    "sequence_number": 8
+    "sequence_number": 8,
+    "content_refs": [
+      {
+        "content_format": null,
+        "mime_type": "text/plain",
+        "placement": "sources",
+        "provider": "NBCU",
+        "role": null,
+        "source_id": "src-mta-presser",
+        "uri": "http://localhost:5050/api/content/transit-expansion-2026-0512"
+      }
+    ]
   }
 }

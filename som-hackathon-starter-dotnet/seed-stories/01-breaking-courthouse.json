@@ -43,6 +43,21 @@
       "change_detected_at": "2026-04-01T14:44:55Z",
       "change_detected_by": "wire-ap-feed"
     },
+    "story_meaning": {
+      "who": "A US federal jury and defendant Jones, with NBC News national legal team covering the verdict.",
+      "what": "Federal jury returned a not-guilty verdict in the Jones fraud trial, contradicting widely expected conviction and invalidating pre-prepared coverage assets.",
+      "when": "Verdict delivered at 14:44 ET on 1 April 2026, during the BREAKING phase entered at 14:44:30Z.",
+      "where": "United States federal court (Jones case docket); jurisdiction US per compliance flag cf-019536a2-0001.",
+      "why": "Jury rejected the prosecution case on the merits; the outcome reversal triggers premise contradiction and an editorial legal-review gate on previously cleared sentencing assets.",
+      "how": "Reported via AP wire and court pool camera; outcome cross-checked against the pre-prepared coverage plan now blocked by legal review (gate-legal-001).",
+      "summary": "A US federal jury returned a not-guilty verdict in the Jones fraud trial, reversing the widely expected conviction. The reversal invalidated the network's pre-prepared graphics, scripts, and lower thirds, and triggered a CRITICAL premise-contradiction compliance flag plus an editorial legal-review gate blocking the existing assets ahead of NBC Nightly News.",
+      "confidence": 0.65,
+      "provenance_refs": ["src-ap-20260401-1444", "src-pool-camera-01"]
+    },
+    "government_approval": {
+      "status": "not_required",
+      "jurisdiction": "US"
+    },
     "compliance": [
       {
         "flag_id": "cf-019536a2-0001",
@@ -88,7 +103,7 @@
     "assets": [
       {
         "asset_id": "gfx-guilty-pack",
-        "asset_type": "graphics_pack",
+        "asset_type": "x-graphics_pack",
         "status": "INVALIDATED",
         "invalidated_by": "cf-019536a2-0001",
         "standards_clearance": {
@@ -99,13 +114,13 @@
       },
       {
         "asset_id": "script-summary-v2",
-        "asset_type": "script",
+        "asset_type": "SCRIPT",
         "status": "INVALIDATED",
         "invalidated_by": "cf-019536a2-0001"
       },
       {
         "asset_id": "lt-sentencing-001",
-        "asset_type": "lower_third",
+        "asset_type": "LOWER_THIRD",
         "status": "INVALIDATED",
         "invalidated_by": "cf-019536a2-0001"
       }
@@ -172,6 +187,17 @@
       ]
     },
     "updated_at": "2026-04-01T14:45:12Z",
-    "sequence_number": 47
+    "sequence_number": 47,
+    "content_refs": [
+      {
+        "content_format": null,
+        "mime_type": "text/plain",
+        "placement": "sources",
+        "provider": "NBCU",
+        "role": null,
+        "source_id": "src-ap-20260401-1444",
+        "uri": "http://localhost:5050/api/content/sentencing-2026-0401"
+      }
+    ]
   }
 }

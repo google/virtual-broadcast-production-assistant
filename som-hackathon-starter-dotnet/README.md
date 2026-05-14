@@ -117,7 +117,8 @@ The skill worker never publishes directly to `som.skills.events`. Every output f
 | `Program.cs` | ASP.NET WebApplication. Hosts all background services + maps REST/WS endpoints + serves static files. |
 | `KafkaOptions.cs` | POCO bound from `appsettings.json`. |
 | `wwwroot/index.html` | Dashboard SPA — single file, no build step. |
-| `seed-stories/*.json` | Five SOM v0.2 envelopes for demo scenarios. |
+| `seed-stories/*.json` | Five SOM v0.2 envelopes for demo scenarios (each includes `content_refs[]`). |
+| `content/*.txt` | Canned story body text served by `GET /api/content/{storyId}`. |
 | `appsettings.json` | Local dev config (Plaintext + localhost broker). |
 | `appsettings.Production.json` | Confluent Cloud SaslSsl placeholders, populated from env vars. |
 | `docker-compose.yml` | Local KRaft Kafka + Kafka UI on port 8080. |
@@ -164,7 +165,11 @@ Five SOM v0.2 envelopes in `seed-stories/`, modeled on real broadcast scenarios:
 | `clean` | City Council Approves $2.1 Billion Public Transit Expansion | PUBLISHED | Clean copy — no warnings expected |
 | `election` | Virginia Governor Race Too Close to Call as Polls Close | DEVELOPING | Standard developing story — no warnings expected |
 
-Each envelope is a full SOM v0.2 message (`som_version`, `message_id`, `correlation_id`, `source`, `payload`) with rich `payload` fields including `lifecycle`, `priority`, `premise`, `compliance[]`, `editorial_gates[]`, `sources[]`, `assets[]`, `ai_enrichments[]`, `instances[]`, and `skills_config`.
+Each envelope is a full SOM v0.2 message (`som_version`, `message_id`, `correlation_id`, `source`, `payload`) with rich `payload` fields including `lifecycle`, `priority`, `premise`, `compliance[]`, `editorial_gates[]`, `sources[]`, `assets[]`, `ai_enrichments[]`, `instances[]`, `skills_config`, and `content_refs[]`.
+
+### content_refs
+
+Each seed story includes a `content_refs` array pointing to `GET /api/content/{story_id}`, which serves canned body text from `content/*.txt`. This matches AP's wire shape where the Kafka message carries metadata only and the full story body lives behind a URI. Each entry includes a `source_id` linking back to the `sources[]` array for provenance. Skills that need the full text (fact-checking, summarization, NLP) should fetch from `content_refs[].uri`.
 
 ## Kafka topics
 
