@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOM Hackathon Starter — High-Level Components</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --panel: #1a2129;
+    --panel-2: #232c36;
+    --border: #2d3742;
+    --text: #e4e8ed;
+    --text-dim: #9aa5b1;
+    --accent: #4ec9b0;
+    --accent-2: #569cd6;
+    --warn: #d7ba7d;
+    --code-bg: #161b22;
+    --code-border: #30363d;
+    --hl-row: #1f2730;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+  }
+  h1 {
+    font-size: 32px;
+    margin: 0 0 8px;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+  h2 {
+    font-size: 22px;
+    margin: 48px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    color: var(--accent-2);
+  }
+  h3 {
+    font-size: 17px;
+    margin: 24px 0 8px;
+    color: var(--text);
+  }
+  p { margin: 0 0 14px; }
+  .lede {
+    color: var(--text-dim);
+    font-size: 16px;
+    margin-bottom: 32px;
+  }
+  code {
+    font-family: "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+    font-size: 13px;
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: var(--warn);
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    overflow-x: auto;
+    font-family: "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text);
+  }
+  pre code {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 20px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: var(--panel-2);
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--hl-row); }
+  ol, ul { padding-left: 24px; }
+  li { margin-bottom: 6px; }
+  .seat-callout {
+    display: inline-block;
+    background: rgba(78, 201, 176, 0.12);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .diagram {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 20px 0;
+    font-family: "JetBrains Mono", Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text);
+    white-space: pre;
+    overflow-x: auto;
+  }
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 40px 0;
+  }
+  .toc {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 24px;
+    margin-bottom: 32px;
+  }
+  .toc h3 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+  }
+  .toc ol { margin: 0; }
+  .toc a {
+    color: var(--accent-2);
+    text-decoration: none;
+  }
+  .toc a:hover { text-decoration: underline; }
+  .badge-you {
+    background: var(--accent);
+    color: var(--bg);
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>SOM Hackathon Starter — High-Level Components</h1>
+  <p class="lede">Map of the <code>som-hackathon-starter-dotnet/</code> codebase, oriented toward a team taking the <strong>story-publisher role</strong> on the SOM bus (replacing the AP ENPS stand-in).</p>
+
+  <div class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#glance">At a glance</a></li>
+      <li><a href="#ingress">Story ingress (your seat)</a></li>
+      <li><a href="#execution">Skill execution engine</a></li>
+      <li><a href="#approval">Approval gate + audit</a></li>
+      <li><a href="#validation">Skill validation (3 layers)</a></li>
+      <li><a href="#kafka">Kafka plumbing</a></li>
+      <li><a href="#host">Host + transport</a></li>
+      <li><a href="#infra">Infrastructure / deploy</a></li>
+      <li><a href="#starters">Non-.NET starters</a></li>
+      <li><a href="#publisher">For the story-publisher integration</a></li>
+    </ol>
+  </div>
+
+  <h2 id="glance">At a glance</h2>
+  <div class="diagram">┌──────────────────────────┐
+│  1. Story ingress        │ ← your seat
+│  TestProducer / Simulator│
+└──────────┬───────────────┘
+           │ som.story.context
+           ▼
+┌──────────────────────────┐
+│  2. Skill execution      │
+│  SkillWorker + RuleEngine│
+│  + SkillRegistry         │
+└──────────┬───────────────┘
+           │ som.skills.staging  + som.skills.runs (audit)
+           ▼
+┌──────────────────────────┐
+│  3. Approval gate        │
+│  DashboardService + UI   │
+└──────────┬───────────────┘
+   approve │ reject
+           ▼
+   som.skills.events / som.skills.rejected</div>
+  <p>Everything below the ingress layer is consumer-side and untouched by a publisher integration.</p>
+
+  <h2 id="ingress">1. Story ingress <span class="seat-callout">your seat</span></h2>
+  <table>
+    <thead><tr><th>Component</th><th>File</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>TestProducer</code></td><td><code>TestProducer.cs</code></td><td>Load <code>seed-stories/*.json</code>, publish to <code>som.story.context</code>. CLI: <code>dotnet run -- --test-producer</code>.</td></tr>
+      <tr><td><code>SimulatorService</code></td><td><code>SimulatorService.cs</code></td><td>Scripted scenarios + auto-stream. REST + dashboard 🎬 panel.</td></tr>
+      <tr><td>Seed envelopes</td><td><code>seed-stories/*.json</code></td><td>5 SOM v0.2 reference messages (breaking, election, informal, clean, no-compliance).</td></tr>
+      <tr><td>Story body hosting</td><td><code>content/*.txt</code> + <code>GET /api/content/{id}</code> in <code>Program.cs</code></td><td>Body served behind URI per <code>content_refs[]</code>. AP wire shape — Kafka carries metadata, body lives at HTTP URI.</td></tr>
+    </tbody>
+  </table>
+  <p><strong>To replace:</strong> publish a SOM v0.2 envelope to <code>som.story.context</code> with <code>key = story_id</code>. Host body somewhere reachable, list URI in <code>content_refs[]</code>. Re-publish on phase changes / compliance updates.</p>
+
+  <h2 id="execution">2. Skill execution engine (consumer-side)</h2>
+  <table>
+    <thead><tr><th>Component</th><th>File</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>SkillWorker</code></td><td><code>SkillWorker.cs</code></td><td><code>BackgroundService</code>. Consume <code>som.story.context</code> → run every registered skill → publish staging warnings + run audit.</td></tr>
+      <tr><td><code>RuleEngine</code></td><td><code>RuleEngine.cs</code></td><td>Generic interpreter. 6 rule types: <code>term_match</code>, <code>phase_with_missing_field</code>, <code>field_value_in</code>, <code>field_present</code>, <code>field_absent</code>, <code>field_regex</code>. Pure function <code>(rule, story) → matches</code>.</td></tr>
+      <tr><td><code>SkillRegistry</code></td><td><code>SkillRegistry.cs</code></td><td><code>ConcurrentDictionary</code> backed by <code>skills/*.json</code> on disk. CRUD persists through to filesystem.</td></tr>
+      <tr><td><code>SkillDefinition</code></td><td><code>SkillDefinition.cs</code></td><td>Record types (<code>SkillDefinition</code>, <code>SkillRule</code>, <code>Citation</code>) + JSON serialization options.</td></tr>
+      <tr><td>Vendor skills</td><td><code>skills/*.json</code></td><td>Data-driven rule definitions. Includes <code>nbcu-editorial-standards</code>, <code>ap-demographics-advisor</code>, <code>ap-follow-up-ideas</code>, <code>ap-wire-fact-check</code>.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="approval">3. Approval gate + audit</h2>
+  <table>
+    <thead><tr><th>Component</th><th>File</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>DashboardService</code></td><td><code>DashboardService.cs</code></td><td>Consume all 5 topics. WebSocket fan-out. Hold pending outputs in memory. Execute approve/reject → republish to <code>events</code>/<code>rejected</code> with <code>approved_by</code>/<code>rejected_by</code>. Also: lifecycle mutations (advance-phase, add-compliance, rerun).</td></tr>
+      <tr><td>Dashboard SPA</td><td><code>wwwroot/index.html</code></td><td>112 KB single-file SPA. 4-lane pipeline view + skill registry panel + simulator panel. No build step.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="validation">4. Skill validation (3 layers)</h2>
+  <table>
+    <thead><tr><th>Layer</th><th>Component</th><th>File</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>1. Static</td><td><code>SkillValidation</code></td><td><code>SkillValidation.cs</code></td><td>Schema + config-key check, regex compile, unique rule_ids. Runs on every <code>POST</code>/<code>PUT /api/skills</code>.</td></tr>
+      <tr><td>2. Dry-run</td><td><code>SkillDryRunner</code></td><td><code>SkillDryRunner.cs</code></td><td>Evaluate skill against the 5 seed stories without publishing. Returns <code>{scenario → matched_rules[]}</code>.</td></tr>
+      <tr><td>3. AI review</td><td><code>SkillReviewer</code></td><td><code>SkillReviewer.cs</code></td><td>LLM review. Provider chain: Gemini (<code>GOOGLE_API_KEY</code> / <code>GEMINI_API_KEY</code>) → Claude (<code>ANTHROPIC_API_KEY</code>) → no-op.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="kafka">5. Kafka plumbing</h2>
+  <table>
+    <thead><tr><th>Component</th><th>File</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>KafkaOptions</code></td><td><code>KafkaOptions.cs</code></td><td>POCO bound from <code>appsettings*.json</code> and env vars (<code>Kafka__BootstrapServers</code>, etc.).</td></tr>
+      <tr><td><code>KafkaAuthHelper</code></td><td><code>KafkaAuthHelper.cs</code></td><td>Plaintext / SaslSsl / OAuth (GCP Managed Kafka). Builder hooks for producer/consumer.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Topics</h3>
+  <table>
+    <thead><tr><th>Topic</th><th>Producer</th><th>Consumer</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>som.story.context</code></td><td><span class="badge-you">publisher (you)</span></td><td>SkillWorker, Dashboard</td><td>Inbound stories</td></tr>
+      <tr><td><code>som.skills.staging</code></td><td>SkillWorker</td><td>Dashboard</td><td>Outputs awaiting human decision</td></tr>
+      <tr><td><code>som.skills.events</code></td><td>Dashboard (approve)</td><td>downstream</td><td>Approved outputs — production bus</td></tr>
+      <tr><td><code>som.skills.rejected</code></td><td>Dashboard (reject)</td><td>audit</td><td>Rejected outputs</td></tr>
+      <tr><td><code>som.skills.runs</code></td><td>SkillWorker</td><td>Dashboard</td><td>One audit record per skill execution</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="host">6. Host + transport</h2>
+  <table>
+    <thead><tr><th>Component</th><th>File</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>Program.cs</code></td><td>ASP.NET <code>WebApplication</code></td><td>DI registration, hosted services, REST endpoints, WebSocket <code>/ws</code>, static file serving.</td></tr>
+      <tr><td><code>appsettings.json</code></td><td>config</td><td>Local dev: Plaintext + <code>localhost:9092</code>.</td></tr>
+      <tr><td><code>appsettings.Production.json</code></td><td>config</td><td>SaslSsl placeholders; env vars populate at runtime.</td></tr>
+      <tr><td><code>.env.example</code></td><td>template</td><td>Confluent Cloud credentials shape.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="infra">7. Infrastructure / deploy</h2>
+  <table>
+    <thead><tr><th>Component</th><th>File</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>Local Kafka</td><td><code>docker-compose.yml</code></td><td>KRaft Kafka + Kafka UI on <code>:8080</code>. Dual listeners (<code>kafka:29092</code> internal, <code>localhost:9092</code> external).</td></tr>
+      <tr><td>App overlay</td><td><code>docker-compose.app.yml</code></td><td>Runs the app container alongside bundled Kafka on the same Docker network.</td></tr>
+      <tr><td>Image</td><td><code>Dockerfile</code></td><td>Multi-stage .NET 10. Kestrel <code>:5050</code>.</td></tr>
+      <tr><td>GCP infra</td><td><code>terraform/</code></td><td>Managed Service for Apache Kafka + Cloud Run + Artifact Registry.</td></tr>
+      <tr><td>GCP build</td><td><code>cloudbuild.yaml</code></td><td>Image build pipeline.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="starters">8. Non-.NET starters (peer skill workers)</h2>
+  <table>
+    <thead><tr><th>Path</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>starters/node</code></td><td>TypeScript skill worker template. Own <code>skills/</code>.</td></tr>
+      <tr><td><code>starters/python</code></td><td>Python skill worker template. Own <code>skills/</code>.</td></tr>
+    </tbody>
+  </table>
+  <p>These are independent vendor skeletons — they consume the same bus, not part of the main app.</p>
+
+  <hr>
+
+  <h2 id="publisher">For the story-publisher integration</h2>
+  <p>Concrete contract you owe the bus:</p>
+  <ol>
+    <li><strong>Topic:</strong> <code>som.story.context</code>.</li>
+    <li><strong>Key:</strong> <code>story_id</code> (string — drives partitioning so updates for the same story land in order).</li>
+    <li><strong>Value:</strong> SOM v0.2 envelope JSON. Required top-level fields: <code>som_version</code>, <code>message_id</code>, <code>correlation_id</code>, <code>source</code>, <code>payload</code>.</li>
+    <li><strong>Payload shape:</strong> <code>story_id</code>, <code>lifecycle.phase</code>, <code>headline</code>, <code>priority</code>, <code>premise</code>, <code>compliance[]</code>, <code>editorial_gates[]</code>, <code>sources[]</code>, <code>assets[]</code>, <code>ai_enrichments[]</code>, <code>instances[]</code>, <code>skills_config</code>, <code>content_refs[]</code>. See <code>docs/som-v02-envelope.md</code> for the canonical spec and <code>seed-stories/*.json</code> for working examples.</li>
+    <li><strong>Content hosting:</strong> if the body is non-trivial, publish metadata only and serve the body at the HTTP URI listed in <code>content_refs[].uri</code>. The starter does this via <code>GET /api/content/{story_id}</code> reading from <code>content/*.txt</code>. Each <code>content_refs</code> entry includes a <code>source_id</code> linking back to <code>sources[]</code> for provenance.</li>
+    <li><strong>Updates:</strong> when story state changes (phase advances, compliance flag added, headline rewritten), re-publish a new envelope under the same <code>story_id</code>. The worker re-evaluates and the dashboard sees the new pass.</li>
+    <li><strong>Auth:</strong> match the target cluster. For Confluent Cloud / GCP Managed Kafka, set <code>Kafka__BootstrapServers</code>, <code>Kafka__SaslUsername</code>, <code>Kafka__SaslPassword</code> env vars; the starter's <code>KafkaAuthHelper</code> shows the producer config wiring.</li>
+  </ol>
+
+  <h3>Reference reading order</h3>
+  <ol>
+    <li><code>docs/som-v02-envelope.md</code> — canonical envelope spec.</li>
+    <li><code>docs/message-contracts.md</code> — full bus message catalog (story.context, skill.warning.raised, skill.run.completed, etc.).</li>
+    <li><code>docs/architecture.md</code> — system-level diagram and rationale.</li>
+    <li><code>docs/skill-validation.md</code> — only relevant if you also plan to publish skill definitions.</li>
+    <li><code>seed-stories/01-breaking-courthouse.json</code> (and siblings) — working SOM v0.2 envelopes to crib from.</li>
+  </ol>
+
+</div>
+</body>
+</html>
