@@ -1,0 +1,244 @@
+{
+  "id": "ap/demographics-advisor",
+  "version": "0.1.0",
+  "name": "AP Demographics Advisor",
+  "description": "Dashboard registration for AP's Ireland-backed demographics advisor. The production AP skill consumes story.context, fetches open AP content_refs[].uri body JSON when available, applies the AP hackathon UK broadcaster demographics/business-goals profile with GPT-4.1, and publishes flat skill.suggestion.created, story.enrichment, optional skill.warning.raised, and skill.run.completed messages. This JSON keeps the skill visible in the Google dashboard; real processing runs in AP infrastructure.",
+  "skill_type": "vendor",
+  "disclosure_level": "L1",
+  "migration_policy": "cold",
+  "reads": [
+    "story_id",
+    "sequence_number",
+    "headline",
+    "premise",
+    "content_refs[].uri",
+    "content_refs[].mime_type",
+    "content_refs[].content_format",
+    "sources.content_ref",
+    "planning",
+    "editorial_standards",
+    "skills_config",
+    "compliance"
+  ],
+  "produces": [
+    "story.enrichment",
+    "skill.warning.raised",
+    "skill.suggestion.created",
+    "skill.run.completed"
+  ],
+  "runtime": {
+    "owner": "Associated Press",
+    "executor_id": "ap-demographics-advisor-01",
+    "system_type": "ai_agent",
+    "deployment_region": "eu-west-1",
+    "deployment_name": "AP SOM Ireland remote-processing service",
+    "execution_model": "external Kafka consumer/publisher",
+    "dashboard_file_purpose": "registration_only"
+  },
+  "kafka": {
+    "consumes": [
+      "som.story.context"
+    ],
+    "publishes": {
+      "approval_staging": "som.skills.staging",
+      "run_audit": "som.skills.runs"
+    },
+    "does_not_embed_topic_field": true,
+    "approval_flow": "DashboardService approves staged outputs and republishes accepted items to som.skills.events."
+  },
+  "content_ref_contract": {
+    "preferred_path": "payload.content_refs[].uri",
+    "fallback_path": "payload.sources[].content_ref",
+    "mime_type": "application/json",
+    "content_format": "ap-som-body-json-v1",
+    "required_body_field": "body_text",
+    "body_html": "HTML fragment for display only"
+  },
+  "business_logic": {
+    "full_body_path": [
+      "Fetch body_text from content_ref JSON.",
+      "Load the AP static hackathon profile for a UK broadcaster, covering regional balance, age groups, practical audience utility, and business goals.",
+      "Use GPT-4.1 to produce newsroom-facing audience guidance tied only to the supplied story and configured profile.",
+      "Publish skill.suggestion.created for editor-facing guidance.",
+      "Publish story.enrichment with the audience-analysis brief and structured recommendations.",
+      "Publish optional skill.warning.raised only for profile-driven risks such as missing devolution/regional context."
+    ],
+    "missing_content_ref_path": [
+      "Do not synthesize a story body.",
+      "Run conservatively from inline headline, premise, compliance, and planning metadata when useful.",
+      "Label inline-only results as based on inline metadata only.",
+      "Publish skill.run.completed with outcome SKIPPED when required inputs are unavailable."
+    ],
+    "profile": {
+      "profile_id": "uk-broadcaster-regional-audience-v1",
+      "model": "gpt-4.1",
+      "primary_goals": [
+        "regional usefulness across UK nations and English regions",
+        "practical consequences for households, workers, businesses, public services, and affected communities",
+        "relevance for younger digital audiences while preserving trust for older linear-TV audiences"
+      ]
+    }
+  },
+  "output_contracts": [
+    {
+      "message_type": "skill.suggestion.created",
+      "topic": "som.skills.staging",
+      "shape": "flat_som_v0_2_dashboard_compatible",
+      "id_field": "suggestion_id",
+      "required_top_level_fields": [
+        "som_version",
+        "message_id",
+        "message_type",
+        "timestamp",
+        "source",
+        "suggestion_id",
+        "skill_id",
+        "skill_version",
+        "story_id",
+        "story_version",
+        "scope",
+        "suggestion_type",
+        "confidence",
+        "content_type",
+        "variants",
+        "output",
+        "tools_invoked",
+        "disclosure_levels_used",
+        "context_snapshot"
+      ],
+      "variant_fields": [
+        "variant_id",
+        "content_type",
+        "format",
+        "label",
+        "confidence",
+        "payload",
+        "preview",
+        "title",
+        "detail"
+      ],
+      "notes": "AP suggestions expose suggestion_id at the top level for dashboard approval."
+    },
+    {
+      "message_type": "story.enrichment",
+      "topic": "som.skills.staging",
+      "shape": "flat_som_v0_2_dashboard_compatible",
+      "id_field": "enrichment_id",
+      "required_top_level_fields": [
+        "som_version",
+        "message_id",
+        "message_type",
+        "timestamp",
+        "source",
+        "enrichment_id",
+        "skill_id",
+        "skill_version",
+        "story_id",
+        "story_version",
+        "sequence_number",
+        "scope",
+        "representation_type",
+        "language",
+        "content",
+        "content_key",
+        "enrichment",
+        "human_review_required"
+      ],
+      "representation_type": "summary",
+      "enrichment_type": "AUDIENCE_ANALYSIS",
+      "notes": "AP enrichment events expose enrichment_id, representation_type, language, content, and content_key at the top level for the Google dashboard."
+    },
+    {
+      "message_type": "skill.warning.raised",
+      "topic": "som.skills.staging",
+      "shape": "flat_som_v0_2_dashboard_compatible",
+      "id_field": "warning_id",
+      "required_top_level_fields": [
+        "som_version",
+        "message_id",
+        "message_type",
+        "timestamp",
+        "source",
+        "warning_id",
+        "skill_id",
+        "skill_version",
+        "story_id",
+        "story_version",
+        "scope",
+        "severity",
+        "rule_id",
+        "affected_fields",
+        "detail",
+        "blocks",
+        "evidence",
+        "human_review_required"
+      ],
+      "severity_enum": [
+        "hold",
+        "flag",
+        "inform"
+      ],
+      "notes": "Warnings are optional and profile-risk based."
+    },
+    {
+      "message_type": "skill.run.completed",
+      "topic": "som.skills.runs",
+      "shape": "flat_som_v0_2_dashboard_compatible",
+      "id_field": "run_id",
+      "required_top_level_fields": [
+        "som_version",
+        "message_id",
+        "message_type",
+        "timestamp",
+        "source",
+        "run_id",
+        "skill_id",
+        "skill_version",
+        "story_id",
+        "story_version",
+        "triggered_by",
+        "inputs",
+        "outputs",
+        "latency_ms",
+        "outcome",
+        "human_review_required"
+      ],
+      "outcome_enum": [
+        "COMPLETED",
+        "FAILED",
+        "SKIPPED",
+        "CONFLICTED"
+      ],
+      "inputs_required": [
+        "reads",
+        "content_ref",
+        "input_digest"
+      ],
+      "outputs_fields": [
+        "warning_ids",
+        "suggestion_ids",
+        "enrichment_ids"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "ap-demographics-advisor-registration-only",
+      "name": "Registration sentinel",
+      "description": "Non-firing sentinel rule. AP demographics advisor execution is handled by the AP SOM bridge and Ireland processing service, not by this dashboard rule engine.",
+      "type": "field_present",
+      "config": {
+        "field": "extensions.ap.registration_only_force_demographics_advisor"
+      },
+      "default_severity": "inform",
+      "output_message_type": "skill.warning.raised",
+      "affected_fields": [
+        "headline",
+        "premise",
+        "content_refs[].uri"
+      ],
+      "detail_template": "AP Demographics Advisor registration sentinel fired. Real AP processing should be performed by the AP Ireland-backed skill worker.",
+      "rationale": "This file registers AP's real external skill with the Google dashboard. The sentinel should not fire on normal SOM stories."
+    }
+  ]
+}
