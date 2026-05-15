@@ -1,6 +1,8 @@
 steps:
 - name: 'gcr.io/cloud-builders/docker'
+  dir: 'som-hackathon-starter-dotnet'
   args: ['build', '-t', '$_LOCATION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/som-skill-worker:latest', '.']
+
 
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', '$_LOCATION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/som-skill-worker:latest']
