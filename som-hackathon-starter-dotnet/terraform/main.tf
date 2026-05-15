@@ -275,6 +275,70 @@ resource "google_cloud_run_v2_service" "app" {
   depends_on = [google_project_service.run]
 }
 
+# Firewall rule to allow IAP SSH to instances
+resource "google_compute_firewall" "allow_iap_ssh" {
+  name    = "som-allow-iap-ssh"
+  network = google_compute_network.vpc.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+
+  source_ranges = ["35.235.240.0/20"] # Google Cloud Identity-Aware Proxy IP range
+  target_tags   = ["tailscale-router"]
+}
+
+# Tailscale Subnet Router VM
+resource "google_compute_instance" "tailscale_router" {
+  name         = "som-tailscale-router"
+  machine_type = "t2d-standard-1" # Switch to Tau T2D AMD series due to E2/N1 resource exhaustion
+  zone         = "${var.region}-b"
+
+
+
+
+
+
+
+
+  tags = ["tailscale-router"]
+
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-12"
+    }
+  }
+
+  network_interface {
+    subnetwork = google_compute_subnetwork.subnet.id
+    
+    # We give it a public IP so it can download Tailscale packages from the internet.
+    # It does not accept inbound traffic except via IAP (handled by firewall above).
+    access_config {}
+  }
+
+  # Enable IP forwarding for routing subnet traffic
+  can_ip_forward = true
+
+  metadata_startup_script = <<-EOT
+    #!/bin/bash
+    # Enable IP forwarding in OS
+    echo 'net.ipv4.ip_forward = 1' | tee -a /etc/sysctl.d/99-tailscale.conf
+    echo 'net.ipv6.conf.all.forwarding = 1' | tee -a /etc/sysctl.d/99-tailscale.conf
+    sysctl -p /etc/sysctl.d/99-tailscale.conf
+
+    # Install Tailscale
+    curl -fsSL https://tailscale.com/install.sh | sh
+
+    # If auth key is provided, authenticate automatically
+    if [ -n "${var.tailscale_auth_key}" ]; then
+      tailscale up --authkey="${var.tailscale_auth_key}" --advertise-routes="10.0.0.0/24"
+    fi
+  EOT
+}
+
+
 # TODO(security): Implement Identity-Aware Proxy (IAP) to restrict public access once developer identities are collected.
 resource "google_cloud_run_v2_service_iam_member" "public_access" {
   project  = var.project_id
