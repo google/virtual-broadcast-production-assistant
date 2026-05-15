@@ -3,6 +3,7 @@ namespace SomSkillWorker;
 public sealed class KafkaOptions
 {
     public string BootstrapServers { get; set; } = "localhost:9092";
+    public string ClientId { get; set; } = "som-skill-worker";
     public string GroupId { get; set; } = "nbcu-editorial-standards";
     public string SecurityProtocol { get; set; } = "Plaintext";      // "SaslSsl" for Confluent Cloud
     public string SaslMechanism { get; set; } = "Plain";

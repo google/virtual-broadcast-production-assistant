@@ -239,6 +239,7 @@ public class SkillWorker : BackgroundService
         var config = new ProducerConfig
         {
             BootstrapServers = _options.BootstrapServers,
+            ClientId = _options.ClientId,
             Acks = Acks.All,
             EnableIdempotence = true,
         };
@@ -251,6 +252,7 @@ public class SkillWorker : BackgroundService
         var config = new ConsumerConfig
         {
             BootstrapServers = _options.BootstrapServers,
+            ClientId = _options.ClientId,
             GroupId = _options.GroupId,
             AutoOffsetReset = AutoOffsetReset.Latest,
             EnableAutoCommit = true,

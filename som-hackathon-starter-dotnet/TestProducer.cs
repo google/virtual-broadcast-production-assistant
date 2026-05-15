@@ -80,6 +80,7 @@ public static class TestProducer
         var config = new ProducerConfig
         {
             BootstrapServers = options.BootstrapServers,
+            ClientId = $"{options.ClientId}-test-producer",
             Acks = Acks.Leader,
         };
 
