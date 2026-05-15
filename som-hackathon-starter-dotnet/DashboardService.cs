@@ -43,6 +43,7 @@ public sealed class DashboardService : BackgroundService
         var producerConfig = new ProducerConfig
         {
             BootstrapServers = _options.BootstrapServers,
+            ClientId = $"{_options.ClientId}-dashboard",
             Acks = Acks.All,
             EnableIdempotence = true,
         };
@@ -59,6 +60,7 @@ public sealed class DashboardService : BackgroundService
         var consumerConfig = new ConsumerConfig
         {
             BootstrapServers = _options.BootstrapServers,
+            ClientId = $"{_options.ClientId}-dashboard",
             GroupId = $"{_options.DashboardGroupId}-{Guid.NewGuid():N}",
             AutoOffsetReset = AutoOffsetReset.Earliest,
             EnableAutoCommit = true,
