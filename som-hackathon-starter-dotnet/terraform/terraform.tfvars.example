@@ -1,0 +1,7 @@
+project_id   = "your-project-id"
+region       = "us-central1"
+cluster_name = "som-kafka-cluster"
+image_url    = "us-central1-docker.pkg.dev/your-project-id/som-repo/som-skill-worker:latest"
+repository_name = "som-repo"
+kafka_bootstrap_servers = "host:port"
+cloudbuild_bucket = "som-infra-examples_cloudbuild"

@@ -58,7 +58,8 @@ public static class SkillReviewerFactory
         if (!string.IsNullOrWhiteSpace(anthropicKey))
             return new AnthropicSkillReviewer(http, logFactory.CreateLogger<AnthropicSkillReviewer>(), anthropicKey);
 
-        return new NoopSkillReviewer();
+        // Default to Vertex AI using ADC
+        return new VertexAiSkillReviewer(http, logFactory.CreateLogger<VertexAiSkillReviewer>());
     }
 }
 
@@ -166,6 +167,108 @@ internal static class SkillReviewPrompt
         if (firstBrace >= 0 && lastBrace > firstBrace)
             return trimmed.Substring(firstBrace, lastBrace - firstBrace + 1);
         return trimmed;
+    }
+
+    public static string ExtractModelText(string responseJson)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(responseJson);
+            var candidates = doc.RootElement.GetProperty("candidates");
+            var parts = candidates[0].GetProperty("content").GetProperty("parts");
+            return parts[0].GetProperty("text").GetString() ?? "";
+        }
+        catch { return responseJson; }
+    }
+
+    public static string Truncate(string s, int max) => s.Length <= max ? s : s[..max] + "…";
+}
+
+// ─── Vertex AI (IAM/ADC) ─────────────────────────────────────────────────────
+
+public sealed class VertexAiSkillReviewer : ISkillReviewer
+{
+    private readonly IHttpClientFactory _http;
+    private readonly ILogger<VertexAiSkillReviewer> _logger;
+    private readonly string _projectId;
+    private readonly string _region;
+    private readonly string _model;
+
+    public string ProviderName => $"google/vertex/{_model}";
+    public bool Available => true;
+
+    public VertexAiSkillReviewer(IHttpClientFactory http, ILogger<VertexAiSkillReviewer> logger)
+    {
+        _http = http;
+        _logger = logger;
+        _projectId = Environment.GetEnvironmentVariable("PROJECT_ID") ?? "ibc-smart-stories";
+        _region = Environment.GetEnvironmentVariable("LOCATION") ?? "europe-west1";
+        _model = Environment.GetEnvironmentVariable("GEMINI_MODEL") ?? "gemini-2.0-flash";
+    }
+
+    public async Task<SkillReviewResult> ReviewAsync(
+        SkillDefinition skill,
+        IReadOnlyCollection<JsonNode> sampleStories,
+        DryRunResult? dryRun,
+        CancellationToken ct)
+    {
+        var prompt = SkillReviewPrompt.Build(skill, sampleStories, dryRun);
+        var host = _region.Equals("global", StringComparison.OrdinalIgnoreCase)
+            ? "aiplatform.googleapis.com"
+            : $"{_region}-aiplatform.googleapis.com";
+        var url = $"https://{host}/v1/projects/{_projectId}/locations/{_region}/publishers/google/models/{_model}:generateContent";
+
+        var body = new JsonObject
+        {
+            ["contents"] = new JsonArray(new JsonObject
+            {
+                ["role"] = "user",
+                ["parts"] = new JsonArray(new JsonObject { ["text"] = prompt }),
+            }),
+            ["generationConfig"] = new JsonObject
+            {
+                ["temperature"] = 0.3,
+                ["responseMimeType"] = "application/json",
+            },
+        };
+
+        try
+        {
+            var credential = await Google.Apis.Auth.OAuth2.GoogleCredential.GetApplicationDefaultAsync();
+            if (credential.IsCreateScopedRequired)
+            {
+                credential = credential.CreateScoped(new[] { "https://www.googleapis.com/auth/cloud-platform" });
+            }
+            var tokenAccess = (Google.Apis.Auth.OAuth2.ITokenAccess)credential;
+            var token = await tokenAccess.GetAccessTokenForRequestAsync();
+            _logger.LogInformation("Fetched access token for Vertex AI. Length: {Length}", token?.Length ?? 0);
+
+            using var http = _http.CreateClient();
+            http.Timeout = TimeSpan.FromSeconds(45);
+            using var req = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
+            };
+            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            using var resp = await http.SendAsync(req, ct);
+            var text = await resp.Content.ReadAsStringAsync(ct);
+            if (!resp.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Vertex AI returned {Status}: {Body}", resp.StatusCode, text);
+                return new SkillReviewResult(true, ProviderName, null, Array.Empty<SkillReviewFinding>(),
+                    $"Vertex AI API {(int)resp.StatusCode}: {SkillReviewPrompt.Truncate(text, 400)}", text);
+            }
+
+            var modelText = SkillReviewPrompt.ExtractModelText(text);
+            return SkillReviewPrompt.ParseModelReply(modelText, ProviderName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Vertex AI review failed");
+            return new SkillReviewResult(true, ProviderName, null, Array.Empty<SkillReviewFinding>(),
+                $"Vertex AI call failed: {ex.Message}", null);
+        }
     }
 }
 
