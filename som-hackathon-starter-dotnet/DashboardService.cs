@@ -31,9 +31,16 @@ public sealed class DashboardService : BackgroundService
     private readonly ConcurrentDictionary<string, PendingOutput> _pending = new();
 
     // Most recent story payload seen on som.story.context, keyed by story_id.
-    // Used by the re-run endpoint to republish (with bumped sequence_number) and
-    // simulate an NRCS update without the user typing anything.
+    // Used by snapshots and by the re-run endpoint to republish (with bumped
+    // sequence_number) and simulate an NRCS update without the user typing anything.
     private readonly ConcurrentDictionary<string, JsonNode> _stories = new();
+
+    // Dashboard state accumulated from the bus so a browser opened after messages were
+    // published still sees the current bus contents instead of only future events.
+    private readonly ConcurrentQueue<JsonNode> _runs = new();
+    private readonly ConcurrentQueue<JsonNode> _decisions = new();
+    private readonly ConcurrentQueue<DashboardEvent> _recentEvents = new();
+    private const int MaxRecentEvents = 500;
 
     public DashboardService(ILogger<DashboardService> logger, IOptions<KafkaOptions> options)
     {
@@ -102,12 +109,25 @@ public sealed class DashboardService : BackgroundService
                 if (msgTimestamp != default && msgTimestamp < _resetMarker.UtcDateTime)
                     continue;
 
-                // Cache the most-recent story payload by story_id so the re-run endpoint
-                // can republish it without round-tripping through Kafka or the seed files.
+                var receivedAt = DateTimeOffset.UtcNow;
+
+                // Cache dashboard state before broadcasting. This makes late-arriving
+                // browser sessions show stories/runs/decisions that were already on the
+                // Kafka bus by the time the WebSocket connected.
                 if (result.Topic == _options.StoryContextTopic)
                 {
                     var sid = (node["payload"]?["story_id"] ?? node["story_id"])?.GetValue<string>();
                     if (sid is not null) _stories[sid] = node;
+                }
+                else if (result.Topic == _options.SkillRunsTopic)
+                {
+                    _runs.Enqueue(node);
+                    TrimQueue(_runs, MaxRecentEvents);
+                }
+                else if (result.Topic == _options.SkillEventsTopic || result.Topic == _options.SkillRejectedTopic)
+                {
+                    _decisions.Enqueue(node);
+                    TrimQueue(_decisions, MaxRecentEvents);
                 }
 
                 // For staged outputs, hold them in the pending queue so the UI can approve/reject.
@@ -124,17 +144,25 @@ public sealed class DashboardService : BackgroundService
                     }
                 }
 
-                var receivedAt = DateTimeOffset.UtcNow;
+                var busEvent = new DashboardEvent(
+                    result.Topic,
+                    result.Message.Key,
+                    result.Partition.Value,
+                    result.Offset.Value,
+                    receivedAt,
+                    node);
+                _recentEvents.Enqueue(busEvent);
+                TrimQueue(_recentEvents, MaxRecentEvents);
 
                 await BroadcastAsync(new
                 {
                     type = "bus_event",
-                    topic = result.Topic,
-                    key = result.Message.Key,
-                    partition = result.Partition.Value,
-                    offset = result.Offset.Value,
-                    received_at = receivedAt,
-                    payload = node,
+                    topic = busEvent.Topic,
+                    key = busEvent.Key,
+                    partition = busEvent.Partition,
+                    offset = busEvent.Offset,
+                    received_at = busEvent.ReceivedAt,
+                    payload = busEvent.Payload,
                 }, stoppingToken);
             }
             catch (OperationCanceledException) { break; }
@@ -157,10 +185,23 @@ public sealed class DashboardService : BackgroundService
 
         try
         {
-            // Send the current pending queue on connect so a refreshed dashboard sees state.
+            // Send current dashboard state on connect so a refreshed/new dashboard sees
+            // stories and bus events that were already consumed before the socket opened.
             var snapshot = new
             {
                 type = "snapshot",
+                stories = _stories.Values.ToArray(),
+                runs = _runs.ToArray(),
+                decisions = _decisions.ToArray(),
+                events = _recentEvents.ToArray().Select(e => new
+                {
+                    topic = e.Topic,
+                    key = e.Key,
+                    partition = e.Partition,
+                    offset = e.Offset,
+                    received_at = e.ReceivedAt,
+                    payload = e.Payload,
+                }).ToArray(),
                 pending = _pending.Values.Select(p => new
                 {
                     id = p.OutputId,
@@ -404,7 +445,9 @@ public sealed class DashboardService : BackgroundService
         _resetMarker = DateTimeOffset.UtcNow;
         _pending.Clear();
         _stories.Clear();
-
+        ClearQueue(_runs);
+        ClearQueue(_decisions);
+        ClearQueue(_recentEvents);
         await BroadcastAsync(new
         {
             type = "reset",
@@ -436,6 +479,16 @@ public sealed class DashboardService : BackgroundService
 
     // ─── Helpers ────────────────────────────────────────────────────────────
 
+    private static void TrimQueue<T>(ConcurrentQueue<T> queue, int maxItems)
+    {
+        while (queue.Count > maxItems) queue.TryDequeue(out _);
+    }
+
+    private static void ClearQueue<T>(ConcurrentQueue<T> queue)
+    {
+        while (queue.TryDequeue(out _)) { }
+    }
+
     private static string? ExtractOutputId(JsonNode node) =>
         node["warning_id"]?.GetValue<string>()
         ?? node["suggestion_id"]?.GetValue<string>()
@@ -457,6 +510,14 @@ public sealed class DashboardService : BackgroundService
         string? StoryKey,
         JsonNode Output,
         DateTimeOffset StagedAt);
+
+    private sealed record DashboardEvent(
+        string Topic,
+        string? Key,
+        int Partition,
+        long Offset,
+        DateTimeOffset ReceivedAt,
+        JsonNode Payload);
 
     public sealed record DecisionResult(bool Ok, string Status, string? PublishedTopic);
 }

@@ -386,6 +386,16 @@ button { font: inherit; cursor: pointer; }
   line-height: 1.6; color: var(--ice); white-space: pre; overflow-x: auto;
 }
 
+.bus-explorer { display: grid; gap: 12px; font-family: system-ui, -apple-system, sans-serif; }
+.bus-explorer-summary { color: var(--text-secondary); font-size: 12px; }
+.bus-topic { border: 1px solid var(--border); border-radius: 10px; background: var(--bg-surface2); overflow: hidden; }
+.bus-topic summary { padding: 10px 12px; cursor: pointer; font-weight: 700; display: flex; justify-content: space-between; gap: 12px; }
+.bus-topic-count { color: var(--text-muted); font-family: Consolas, monospace; font-size: 11px; font-weight: 500; }
+.bus-message { border-top: 1px solid var(--border); padding: 10px 12px; }
+.bus-message-head { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; color: var(--text-muted); font-size: 11px; }
+.bus-message-summary { color: var(--text-secondary); margin-bottom: 8px; font-size: 12px; }
+.bus-message pre { max-height: 260px; overflow: auto; margin: 0; white-space: pre; }
+
 .empty { text-align: center; padding: 24px; color: var(--text-muted); font-size: 12px; }
 .empty .icon { font-size: 28px; opacity: 0.4; margin-bottom: 4px; }
 
@@ -484,6 +494,7 @@ button { font: inherit; cursor: pointer; }
     <div class="header-spacer"></div>
     <button class="theme-toggle" onclick="openSimulator()" title="Local-dev fallback for AP ENPS — run scripted scenarios or auto-stream"><svg class="icon"><use href="#i-wand"/></svg> Simulator</button>
     <button class="theme-toggle danger" onclick="resetBus()" title="Delete and recreate all SOM topics; clear dashboard state"><svg class="icon"><use href="#i-trash"/></svg> Reset bus</button>
+    <button class="theme-toggle" onclick="openBusExplorer()" title="View every cached message currently seen on the SOM bus"><svg class="icon"><use href="#i-list"/></svg> Bus</button>
     <button class="theme-toggle" onclick="openBusTopology()" title="Bus topology: producers, topics, consumers"><svg class="icon"><use href="#i-network"/></svg> Topology</button>
     <button class="theme-toggle" onclick="openSkillInfo()" title="Skill registry — rules, live stats, AI review"><svg class="icon"><use href="#i-robot"/></svg> Skills</button>
     <button class="theme-toggle" onclick="openSeedLibrary()" title="Browse raw SOM v0.2 envelopes"><svg class="icon"><use href="#i-braces"/></svg> SOM JSON</button>
@@ -1007,6 +1018,49 @@ function closeModal() { document.getElementById('modal-bg').classList.remove('sh
 function closeModalIfBg(e) { if (e.target.id === 'modal-bg') closeModal(); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
+function openBusExplorer() {
+  document.getElementById('modal-title').textContent = `Bus contents — ${events.length} cached message${events.length === 1 ? '' : 's'}`;
+  document.getElementById('modal-body').innerHTML = renderBusExplorer();
+  document.getElementById('modal-bg').classList.add('show');
+}
+
+function renderBusExplorer() {
+  if (events.length === 0) {
+    return `<div class="empty">No bus messages cached yet. Publish a scenario or wait for the dashboard consumer to catch up.</div>`;
+  }
+
+  const byTopic = new Map(KNOWN_TOPICS.map(t => [t, []]));
+  for (const e of events) {
+    if (!byTopic.has(e.topic)) byTopic.set(e.topic, []);
+    byTopic.get(e.topic).push(e);
+  }
+
+  const topicSections = [...byTopic.entries()]
+    .filter(([, items]) => items.length > 0)
+    .map(([topic, items]) => {
+      const rows = [...items].reverse().map((e, idx) => `
+        <div class="bus-message">
+          <div class="bus-message-head">
+            <span>${escapeHtml(fmtTime(e.received_at))}</span>
+            <span>offset ${escapeHtml(String(e.offset ?? '—'))}</span>
+            <span>partition ${escapeHtml(String(e.partition ?? '—'))}</span>
+          </div>
+          <div class="bus-message-summary">${escapeHtml(e.summary || summarize(e.topic, e.payload))}</div>
+          <pre class="code-block">${escapeHtml(JSON.stringify(e.payload, null, 2))}</pre>
+        </div>`).join('');
+      return `
+        <details class="bus-topic" open>
+          <summary><span>${escapeHtml(topic)}</span><span class="bus-topic-count">${items.length} message${items.length === 1 ? '' : 's'}</span></summary>
+          ${rows}
+        </details>`;
+    }).join('');
+
+  return `<div class="bus-explorer">
+    <div class="bus-explorer-summary">Showing the dashboard's cached bus view (${events.length} messages, newest first within each topic). The server currently retains the most recent 500 messages for this view.</div>
+    ${topicSections}
+  </div>`;
+}
+
 // ── Actions ────────────────────────────────────────────
 // ── Toast helper ───────────────────────────────────────
 function showToast(message, kind) {
@@ -1284,7 +1338,11 @@ function handleBusEvent(msg) {
   events.push({
     received_at: msg.received_at,
     topic,
+    key: msg.key,
+    partition: msg.partition,
+    offset: msg.offset,
     summary: summarize(topic, payload),
+    payload,
   });
   topicCounts.set(topic, (topicCounts.get(topic) || 0) + 1);
   renderTopicChips();
@@ -1321,10 +1379,59 @@ function handleBusEvent(msg) {
 }
 
 function handleSnapshot(msg) {
-  for (const item of msg.pending || []) {
-    pending.set(item.id, item.payload);
+  // A snapshot is authoritative server-side dashboard state. Rebuild local state
+  // so opening or refreshing the dashboard after messages are already on Kafka
+  // still shows the current bus instead of only future WebSocket events.
+  clearLocalState();
+
+  for (const event of msg.events || []) {
+    handleBusEvent({
+      topic: event.topic,
+      key: event.key,
+      partition: event.partition,
+      offset: event.offset,
+      received_at: event.received_at,
+      payload: event.payload,
+    });
   }
+
+  for (const raw of msg.stories || []) {
+    const story = raw?.payload || raw;
+    if (story?.story_id && !stories.has(story.story_id)) stories.set(story.story_id, story);
+  }
+
+  const seenRunIds = new Set(runs.map(r => r?.run_id).filter(Boolean));
+  for (const run of msg.runs || []) {
+    if (!run?.run_id || !seenRunIds.has(run.run_id)) {
+      runs.push(run);
+      if (run?.run_id) seenRunIds.add(run.run_id);
+    }
+  }
+
+  const seenDecisionIds = new Set(decisions.map(d => d.id).filter(Boolean));
+  for (const payload of msg.decisions || []) {
+    const id = outputId(payload);
+    if (!id || seenDecisionIds.has(id)) continue;
+    const approved = payload.approved_at || payload.approved_by;
+    decisions.push({
+      id,
+      decision: approved ? 'approved' : 'rejected',
+      reviewer: payload.approved_by || payload.rejected_by,
+      at: payload.approved_at || payload.rejected_at,
+      payload,
+    });
+    seenDecisionIds.add(id);
+  }
+
+  pending.clear();
+  for (const item of msg.pending || []) pending.set(item.id, item.payload);
+
+  renderStories();
+  renderRuns();
   renderPending();
+  renderDecisions();
+  renderTopicChips();
+  renderTimeline();
 }
 
 // ── WebSocket ──────────────────────────────────────────
