@@ -157,6 +157,30 @@ app.MapGet("/api/seed-stories/{scenario}", async (string scenario) =>
         : Results.Content(json, "application/json");
 });
 
+// ── Content endpoint (story body behind content_ref) ──
+// Resolution order differs from TestProducer.ResolveSeedPath because the published
+// container has content/ next to the DLL (BaseDirectory) per the Dockerfile, while
+// `dotnet run` has it three levels up at the project root.
+app.MapGet("/api/content/{storyId}", async (string storyId) =>
+{
+    // Reject anything that isn't a plain story-id slug. Path.Combine doesn't normalise
+    // ".." segments, so without this an attacker could walk out of content/ and read
+    // arbitrary .txt files on disk.
+    if (!System.Text.RegularExpressions.Regex.IsMatch(storyId, @"^[A-Za-z0-9_-]+$"))
+        return Results.BadRequest(new { error = "invalid_story_id" });
+
+    var relPath = Path.Combine("content", $"{storyId}.txt");
+    var sourceTreePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", relPath);
+    var publishedPath = Path.Combine(AppContext.BaseDirectory, relPath);
+    var file = File.Exists(sourceTreePath) ? sourceTreePath
+             : File.Exists(publishedPath) ? publishedPath
+             : null;
+    if (file is null)
+        return Results.NotFound(new { error = "content_not_found", story_id = storyId });
+    var body = await File.ReadAllTextAsync(file);
+    return Results.Text(body, "text/plain; charset=utf-8");
+});
+
 app.MapPost("/api/decision/{id}", async (
     string id,
     DecisionRequest body,

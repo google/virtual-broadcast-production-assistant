@@ -139,7 +139,7 @@ Graphics packs, scripts, lower thirds, packages — the production assets tied t
 | Path | Type | Description |
 |------|------|-------------|
 | `assets[].asset_id` | string | Unique asset identifier |
-| `assets[].asset_type` | string | `"graphics_pack"`, `"script"`, `"lower_third"`, `"fullscreen_graphic"`, `"package"` |
+| `assets[].asset_type` | string | Canonical UPPER_SNAKE_CASE values + `x-<lowercase>` for vendor-specific. See [`message-contracts.md` — `asset_type` enum](./message-contracts.md#asset_type-enum--v021-hackathon-canonical-set) for the v0.2.1-hackathon narrowing. Full reconciliation against spec Table 12 tracked as SOM-048. |
 | `assets[].status` | string | `"READY"`, `"IN_PRODUCTION"`, `"INVALIDATED"` |
 | `assets[].invalidated_by` | string | Compliance flag_id that invalidated it |
 | `assets[].standards_clearance` | object | Optional clearance status |
@@ -197,6 +197,24 @@ Broadcaster-defined metadata about which skills should run against this story.
 | `skills_config.active_skills[].disclosure_level` | string | `"L1"`, `"L2"`, `"L3"` |
 | `skills_config.active_skills[].migration_policy` | string | `"hot"`, `"cold"`, `"gated"` |
 | `skills_config.active_skills[].skill_priority` | string | `"critical"`, `"normal"`, `"low"` |
+
+## `content_refs[]`
+
+Array of references to story body content. The SOM message on Kafka carries metadata only — the actual body lives behind URIs listed here. Skills that need to process story text (fact-checking, summarization, etc.) fetch from the `uri` field.
+
+| Path | Type | Required | Description |
+|------|------|----------|-------------|
+| `content_refs[].uri` | string | yes | URL to fetch the story body |
+| `content_refs[].mime_type` | string | no | MIME type of the body (e.g. `"text/plain"`) |
+| `content_refs[].content_format` | string | no | Content format identifier (reserved for future use) |
+| `content_refs[].placement` | string | no | Where this content fits (e.g. `"sources"`) |
+| `content_refs[].provider` | string | no | Who provided this content (e.g. `"AP"`, `"NBCU"`) |
+| `content_refs[].role` | string | no | Role of this content reference (reserved for future use) |
+| `content_refs[].source_id` | string | no | Links back to a `sources[].source_id` for provenance |
+
+In the local dev environment, the starter serves canned body text at `GET /api/content/{story_id}` with open access. On hackathon day, AP will host content behind their own URLs (also open access for the hackathon).
+
+The `content/` directory contains `.txt` files keyed by `story_id` that the local endpoint serves. To add body text for a new seed story, drop a `{story_id}.txt` file in that directory.
 
 ## Using field paths in rules
 

@@ -29,7 +29,18 @@
       "default_severity": "flag",
       "output_message_type": "skill.warning.raised",
       "affected_fields": ["headline"],
-      "detail_template": "Informal term '{term}' in headline. Consider formal alternative."
+      "detail_template": "Informal term '{term}' in headline. Consider formal alternative.",
+      "citations": [
+        {
+          "source_id": "nbcu-style-guide-2026",
+          "quote": "Use 'police' or 'officers'. Avoid 'cops' in headlines and lower thirds."
+        },
+        {
+          "source_id": "nbcu-standards-handbook-3.4",
+          "quote": "Headlines must use formal register; newsroom shorthand belongs in scripts, not on air."
+        }
+      ],
+      "rationale": "Term flagged because the NBCU Standards 2026 style guide proscribes newsroom-informal language in story headlines. Editors should rewrite to a formal alternative before publish."
     },
     {
       "rule_id": "nbcu-compliance-001",
@@ -44,7 +55,14 @@
       "default_severity": "inform",
       "output_message_type": "skill.warning.raised",
       "affected_fields": ["compliance"],
-      "detail_template": "BREAKING story has no compliance flags. Verify with Standards desk."
+      "detail_template": "BREAKING story has no compliance flags. Verify with Standards desk.",
+      "citations": [
+        {
+          "source_id": "nbcu-standards-handbook-7.2",
+          "quote": "BREAKING phase stories MUST carry at least one compliance flag before air. Standards desk approval required."
+        }
+      ],
+      "rationale": "BREAKING phase without compliance flags violates NBCU Standards Handbook §7.2. Standards desk review required before any output reaches air."
     }
   ]
 }
