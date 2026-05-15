@@ -37,6 +37,14 @@ variable "cloudbuild_bucket" {
   type        = string
 }
 
+variable "tailscale_auth_key" {
+  description = "Optional Tailscale auth key to auto-authenticate the subnet router. Generate from Tailscale admin panel."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+
 variable "github_owner" {
   description = "The GitHub owner of the repository"
   type        = string
