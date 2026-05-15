@@ -1,0 +1,28 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', '$_LOCATION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/som-skill-worker:latest', '.']
+
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', '$_LOCATION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/som-skill-worker:latest']
+
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args:
+  - 'run'
+  - 'services'
+  - 'update'
+  - 'som-skill-worker'
+  - '--region=$_LOCATION'
+  - '--image=$_LOCATION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/som-skill-worker:latest'
+
+images:
+- '$_LOCATION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/som-skill-worker:latest'
+
+substitutions:
+  _LOCATION: europe-west1
+  _REPOSITORY: som-repo
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/som-cloudbuild-sa@$PROJECT_ID.iam.gserviceaccount.com'

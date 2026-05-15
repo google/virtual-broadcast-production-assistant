@@ -310,6 +310,38 @@ The dashboard is served on port `5050` both inside the container (via `ASPNETCOR
 
 Update the `Dockerfile` base image tags from `10.0-preview` to `10.0` once .NET 10 reaches GA.
 
+## Deployment to Google Cloud
+
+This repository includes a `terraform` directory for deploying the application to Google Cloud using Managed Service for Apache Kafka and Cloud Run.
+
+Due to circular dependencies between Artifact Registry, Cloud Build, and Cloud Run, follow these steps for the initial deployment:
+
+1.  **Initialize Terraform**:
+    ```bash
+    cd terraform
+    terraform init
+    ```
+2.  **Enable Artifact Registry API**:
+    ```bash
+    terraform apply -target=google_project_service.artifactregistry
+    ```
+3.  **Create the Repository**:
+    ```bash
+    terraform apply -target=google_artifact_registry_repository.repo
+    ```
+4.  **Build and Push Image**:
+    Use the provided `cloudbuild.yaml` to build and push the image. You may need to update the substitutions in `cloudbuild.yaml` to match your region and repository name.
+    ```bash
+    cd ..
+    gcloud builds submit --config cloudbuild.yaml .
+    ```
+5.  **Complete Deployment**:
+    Run a full apply to create Cloud Run and Kafka resources.
+    ```bash
+    cd terraform
+    terraform apply
+    ```
+
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE).
