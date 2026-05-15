@@ -228,7 +228,7 @@
       "description": "Non-firing sentinel rule. AP demographics advisor execution is handled by the AP SOM bridge and Ireland processing service, not by this dashboard rule engine.",
       "type": "field_present",
       "config": {
-        "field": "extensions.ap.registration_only_force_demographics_advisor"
+        "field": "extensions.com.ap.registration_only_force_demographics_advisor"
       },
       "default_severity": "inform",
       "output_message_type": "skill.warning.raised",
