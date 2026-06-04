@@ -1,0 +1,6 @@
+project_id         = "your-gcp-project-id"
+region             = "europe-west1"
+short_project_name = "your-short-name" # Optional, used as prefix for bucket. Defaults to project_id if omitted.
+firestore_db_name  = "tams-db"
+repository_name    = "tams-repo"
+image_name         = "gcr.io/cloudrun/hello" # Keep this for first apply
