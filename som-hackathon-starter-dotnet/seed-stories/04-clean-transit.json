@@ -4,13 +4,6 @@
   "correlation_id": "019536a0-4444-7000-8000-000000000004",
   "message_type": "story.context",
   "timestamp": "2026-05-12T11:00:00.000000Z",
-  "source": {
-    "system_id": "ncs-nbcu-nyc-01",
-    "system_type": "ncs",
-    "system_name": "iNEWS NYC",
-    "vendor": "Avid",
-    "version": "7.0.1"
-  },
   "topic": "som.story.context",
   "payload": {
     "story_id": "transit-expansion-2026-0512",
@@ -29,7 +22,7 @@
     },
     "priority": {
       "level": "ROUTINE",
-      "reason": "Planned coverage — council vote expected"
+      "reason": "Planned coverage \u2014 council vote expected"
     },
     "premise": {
       "expected_outcome": "council_approves_plan",
@@ -45,7 +38,11 @@
       "how": "Council vote tally confirmed via the City Council Clerk, complemented by an MTA press release and WNBC City Hall Bureau crew on site.",
       "summary": "The New York City Council voted 7-2 to approve a $2.1 billion expansion of the public-transit system, adding three new rail lines expected to be operational by 2030. The story is editorially verified with an official tally, and ran across WNBC News 4 New York at Noon, NBCNewYork.com, and NBC New York Social channels.",
       "confidence": 0.97,
-      "provenance_refs": ["src-nyc-council-clerk", "src-mta-press", "src-wnbc-crew-03"]
+      "provenance_refs": [
+        "src-nyc-council-clerk",
+        "src-mta-press",
+        "src-wnbc-crew-03"
+      ]
     },
     "compliance": [
       {
@@ -56,40 +53,15 @@
         "jurisdiction": "US",
         "raised_by": "editor-kwilliams",
         "raised_at": "2026-05-12T10:15:00Z",
-        "status": "RESOLVED",
-        "resolved_at": "2026-05-12T10:25:00Z"
+        "status": "RESOLVED"
       }
     ],
     "editorial_gates": [],
-    "sources": [
-      {
-        "source_id": "src-nyc-council-clerk",
-        "source_type": "government",
-        "provider": "NYC City Council Clerk",
-        "credibility": "OFFICIAL",
-        "received_at": "2026-05-12T10:05:00Z",
-        "content_hash": "sha256:e5f6a7b8..."
-      },
-      {
-        "source_id": "src-mta-press",
-        "source_type": "press_release",
-        "provider": "Metropolitan Transportation Authority",
-        "credibility": "OFFICIAL",
-        "received_at": "2026-05-12T10:10:00Z"
-      },
-      {
-        "source_id": "src-wnbc-crew-03",
-        "source_type": "field_crew",
-        "provider": "WNBC City Hall Bureau",
-        "credibility": "PRIMARY",
-        "received_at": "2026-05-12T10:00:00Z"
-      }
-    ],
     "assets": [
       {
         "asset_id": "pkg-transit-vote-v1",
         "asset_type": "x-package",
-        "status": "AIRED",
+        "status": "READY",
         "delivery_spec": {
           "format": "mxf",
           "resolution": "1920x1080",
@@ -98,44 +70,53 @@
         "standards_clearance": {
           "status": "CLEARED",
           "last_reviewed": "2026-05-12T10:20:00Z"
-        }
+        },
+        "evidential_position": "TERTIARY"
       },
       {
         "asset_id": "gfx-transit-map-v1",
         "asset_type": "FULL_FRAME",
-        "status": "AIRED",
+        "status": "READY",
         "delivery_spec": {
           "format": "ndi",
           "resolution": "1920x1080",
           "frame_rate": 59.94
-        }
+        },
+        "evidential_position": "TERTIARY"
       },
       {
         "asset_id": "lt-council-vote",
         "asset_type": "LOWER_THIRD",
-        "status": "AIRED"
+        "status": "READY",
+        "evidential_position": "TERTIARY"
       },
       {
         "asset_id": "map-new-rail-lines",
         "asset_type": "MAP",
-        "status": "LIVE",
+        "status": "READY",
         "delivery_spec": {
           "format": "html5",
           "resolution": "1920x1080"
-        }
+        },
+        "evidential_position": "TERTIARY"
       }
     ],
     "ai_enrichments": [
       {
         "enrichment_id": "ai-summary-004",
         "model": "claude-sonnet-4-20250514",
-        "enrichment_type": "summary",
+        "enrichment_type": "SUMMARY",
         "confidence": 0.95,
         "content": "New York City Council voted 7-2 to approve a $2.1 billion expansion of the public transit system, adding three new rail lines expected to be operational by 2030.",
         "provenance": {
-          "input_sources": ["src-nyc-council-clerk", "src-mta-press"],
+          "input_sources": [
+            "src-nyc-council-clerk",
+            "src-mta-press"
+          ],
           "prompt_hash": "sha256:f6a7b8c9...",
-          "guardrails_applied": ["factual_grounding"]
+          "guardrails_applied": [
+            "factual_grounding"
+          ]
         },
         "human_reviewed": true,
         "generated_at": "2026-05-12T10:12:00Z"
@@ -143,42 +124,24 @@
       {
         "enrichment_id": "ai-social-post-001",
         "model": "claude-sonnet-4-20250514",
-        "enrichment_type": "social_post",
+        "enrichment_type": "SOCIAL_POST",
         "confidence": 0.88,
-        "content": "JUST IN: NYC Council approves $2.1B transit expansion — 3 new rail lines coming by 2030. The 7-2 vote caps months of debate over funding sources.",
+        "content": "JUST IN: NYC Council approves $2.1B transit expansion \u2014 3 new rail lines coming by 2030. The 7-2 vote caps months of debate over funding sources.",
         "provenance": {
-          "input_sources": ["src-nyc-council-clerk"],
+          "input_sources": [
+            "src-nyc-council-clerk"
+          ],
           "prompt_hash": "sha256:a7b8c9d0...",
-          "guardrails_applied": ["factual_grounding", "character_limit_280"]
+          "guardrails_applied": [
+            "factual_grounding",
+            "character_limit_280"
+          ]
         },
         "human_reviewed": false,
         "generated_at": "2026-05-12T10:14:00Z"
       }
     ],
-    "instances": [
-      {
-        "instance_id": "inst-wnbc-midday",
-        "platform": "linear",
-        "program": "News 4 New York at Noon",
-        "status": "COMPLETED",
-        "instance_assets": ["pkg-transit-vote-v1", "lt-council-vote", "gfx-transit-map-v1"]
-      },
-      {
-        "instance_id": "inst-nbcny-web",
-        "platform": "web",
-        "program": "NBCNewYork.com",
-        "status": "ACTIVE"
-      },
-      {
-        "instance_id": "inst-nbcny-social",
-        "platform": "social",
-        "program": "NBC New York Social",
-        "status": "PENDING",
-        "instance_assets": []
-      }
-    ],
     "skills_config": {
-      "broadcaster": "NBCU",
       "skills_spec_version": "2.0.0",
       "skill_executor_id": "executor-nbcu-nyc-01",
       "scope_context": "WNBC Local News",
@@ -186,33 +149,64 @@
         {
           "skill_id": "nbcu/editorial-standards",
           "skill_version": "0.1.0",
-          "skill_type": "broadcaster",
+          "skill_type": "NEWSROOM",
           "disclosure_level": "L2",
-          "migration_policy": "gated",
-          "skill_priority": "critical"
+          "migration_policy": "GATED",
+          "skill_priority": "CRITICAL"
         },
         {
           "skill_id": "nbcu/social-poster",
           "skill_version": "0.1.0",
-          "skill_type": "broadcaster",
+          "skill_type": "NEWSROOM",
           "disclosure_level": "L2",
-          "migration_policy": "gated",
-          "skill_priority": "normal"
+          "migration_policy": "GATED",
+          "skill_priority": "NORMAL"
         }
-      ]
+      ],
+      "newsroom": "NBCU"
     },
     "updated_at": "2026-05-12T11:00:00Z",
     "sequence_number": 8,
     "content_refs": [
       {
-        "content_format": null,
         "mime_type": "text/plain",
         "placement": "sources",
         "provider": "NBCU",
-        "role": null,
         "source_id": "src-mta-presser",
         "uri": "http://localhost:5050/api/content/transit-expansion-2026-0512"
       }
-    ]
+    ],
+    "editorial_source": [
+      {
+        "source_id": "src-nyc-council-clerk",
+        "source_type": "GOVERNMENT",
+        "provider": "NYC City Council Clerk",
+        "credibility": "ENDORSED",
+        "received_at": "2026-05-12T10:05:00Z",
+        "content_hash": "sha256:e5f6a7b8..."
+      },
+      {
+        "source_id": "src-mta-press",
+        "source_type": "PRESS_RELEASE",
+        "provider": "Metropolitan Transportation Authority",
+        "credibility": "ENDORSED",
+        "received_at": "2026-05-12T10:10:00Z"
+      },
+      {
+        "source_id": "src-wnbc-crew-03",
+        "source_type": "FIELD_CREW",
+        "provider": "WNBC City Hall Bureau",
+        "credibility": "TRUSTED",
+        "received_at": "2026-05-12T10:00:00Z"
+      }
+    ],
+    "newsroom_id": "nbcu-news"
+  },
+  "originating_system": {
+    "system_id": "ncs-nbcu-nyc-01",
+    "system_type": "ncs",
+    "system_name": "iNEWS NYC",
+    "vendor": "Avid",
+    "version": "7.0.1"
   }
 }

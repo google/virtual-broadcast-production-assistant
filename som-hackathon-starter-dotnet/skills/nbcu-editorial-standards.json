@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "name": "NBCU Editorial Standards",
   "description": "Editorial standards skill for breaking news. Flags informal language in headlines and surfaces missing compliance flags on BREAKING stories.",
-  "skill_type": "broadcaster",
+  "skill_type": "NEWSROOM",
   "disclosure_level": "L2",
-  "migration_policy": "gated",
+  "migration_policy": "GATED",
   "reads": [
     "headline",
     "lifecycle.phase",

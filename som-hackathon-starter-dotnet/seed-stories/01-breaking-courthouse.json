@@ -4,18 +4,11 @@
   "correlation_id": "019536a0-1111-7000-8000-000000000001",
   "message_type": "story.context",
   "timestamp": "2026-04-01T14:45:00.123456Z",
-  "source": {
-    "system_id": "ncs-nbcu-nyc-01",
-    "system_type": "ncs",
-    "system_name": "iNEWS NYC",
-    "vendor": "Avid",
-    "version": "7.0.1"
-  },
   "topic": "som.story.context",
   "payload": {
     "story_id": "sentencing-2026-0401",
     "slug": "JONES-SENTENCING-FED-CT",
-    "headline": "Jones Sentencing — Federal Court Verdict Overturns Expectations",
+    "headline": "Jones Sentencing \u2014 Federal Court Verdict Overturns Expectations",
     "story_type": "ACTIVE",
     "lifecycle": {
       "phase": "BREAKING",
@@ -29,7 +22,7 @@
     },
     "priority": {
       "level": "URGENT",
-      "reason": "Verdict contradicts premise — assets invalid",
+      "reason": "Verdict contradicts premise \u2014 assets invalid",
       "escalated_by": "ncs-nbcu-nyc-01",
       "escalated_at": "2026-04-01T14:45:00Z"
     },
@@ -39,7 +32,11 @@
       "premise_changed": true,
       "previous_outcome": "guilty_verdict_custodial",
       "actual_outcome": "not_guilty",
-      "affected_assets": ["gfx-guilty-pack", "script-summary-v2", "lt-sentencing-001"],
+      "affected_assets": [
+        "gfx-guilty-pack",
+        "script-summary-v2",
+        "lt-sentencing-001"
+      ],
       "change_detected_at": "2026-04-01T14:44:55Z",
       "change_detected_by": "wire-ap-feed"
     },
@@ -52,10 +49,13 @@
       "how": "Reported via AP wire and court pool camera; outcome cross-checked against the pre-prepared coverage plan now blocked by legal review (gate-legal-001).",
       "summary": "A US federal jury returned a not-guilty verdict in the Jones fraud trial, reversing the widely expected conviction. The reversal invalidated the network's pre-prepared graphics, scripts, and lower thirds, and triggered a CRITICAL premise-contradiction compliance flag plus an editorial legal-review gate blocking the existing assets ahead of NBC Nightly News.",
       "confidence": 0.65,
-      "provenance_refs": ["src-ap-20260401-1444", "src-pool-camera-01"]
+      "provenance_refs": [
+        "src-ap-20260401-1444",
+        "src-pool-camera-01"
+      ]
     },
     "government_approval": {
-      "status": "not_required",
+      "status": "NOT_REQUIRED",
       "jurisdiction": "US"
     },
     "compliance": [
@@ -80,24 +80,10 @@
         "gate_rule_id": "usc-rule-defamation-001",
         "resolution_event_type": "skill.suggestion.resolved",
         "assigned_to": "legal-desk",
-        "blocks": ["gfx-guilty-pack", "lt-sentencing-001"]
-      }
-    ],
-    "sources": [
-      {
-        "source_id": "src-ap-20260401-1444",
-        "source_type": "wire",
-        "provider": "Associated Press",
-        "credibility": "VERIFIED",
-        "received_at": "2026-04-01T14:44:00Z",
-        "content_hash": "sha256:a1b2c3d4e5f6..."
-      },
-      {
-        "source_id": "src-pool-camera-01",
-        "source_type": "pool_feed",
-        "provider": "Court Pool Camera",
-        "credibility": "PRIMARY",
-        "received_at": "2026-04-01T14:44:30Z"
+        "blocks": [
+          "gfx-guilty-pack",
+          "lt-sentencing-001"
+        ]
       }
     ],
     "assets": [
@@ -108,62 +94,50 @@
         "invalidated_by": "cf-019536a2-0001",
         "standards_clearance": {
           "status": "BLOCKED",
-          "blocked_by": ["cf-019536a2-0001"],
+          "blocked_by": [
+            "cf-019536a2-0001"
+          ],
           "last_reviewed": "2026-04-01T14:45:00Z"
-        }
+        },
+        "evidential_position": "TERTIARY"
       },
       {
         "asset_id": "script-summary-v2",
         "asset_type": "SCRIPT",
         "status": "INVALIDATED",
-        "invalidated_by": "cf-019536a2-0001"
+        "invalidated_by": "cf-019536a2-0001",
+        "evidential_position": "TERTIARY"
       },
       {
         "asset_id": "lt-sentencing-001",
         "asset_type": "LOWER_THIRD",
         "status": "INVALIDATED",
-        "invalidated_by": "cf-019536a2-0001"
+        "invalidated_by": "cf-019536a2-0001",
+        "evidential_position": "TERTIARY"
       }
     ],
     "ai_enrichments": [
       {
         "enrichment_id": "ai-summary-001",
         "model": "claude-sonnet-4-20250514",
-        "enrichment_type": "summary",
+        "enrichment_type": "SUMMARY",
         "confidence": 0.92,
         "content": "Federal jury returns surprise not-guilty verdict in Jones fraud trial, contradicting widely expected conviction.",
         "provenance": {
-          "input_sources": ["src-ap-20260401-1444"],
+          "input_sources": [
+            "src-ap-20260401-1444"
+          ],
           "prompt_hash": "sha256:f1e2d3c4...",
-          "guardrails_applied": ["factual_grounding", "legal_sensitivity"]
+          "guardrails_applied": [
+            "factual_grounding",
+            "legal_sensitivity"
+          ]
         },
         "human_reviewed": false,
         "generated_at": "2026-04-01T14:45:05Z"
       }
     ],
-    "instances": [
-      {
-        "instance_id": "inst-nbc-nightly-001",
-        "platform": "linear",
-        "program": "NBC Nightly News",
-        "status": "ACTIVE",
-        "instance_assets": ["gfx-guilty-pack", "lt-sentencing-001"]
-      },
-      {
-        "instance_id": "inst-nbcnews-web-001",
-        "platform": "web",
-        "program": "NBCNews.com",
-        "status": "ACTIVE"
-      },
-      {
-        "instance_id": "inst-nbcnews-social-001",
-        "platform": "social",
-        "program": "NBC News Social",
-        "status": "PENDING"
-      }
-    ],
     "skills_config": {
-      "broadcaster": "NBCU",
       "skills_spec_version": "2.0.0",
       "skill_executor_id": "executor-nbcu-nyc-01",
       "scope_context": "NBC Nightly News",
@@ -171,33 +145,57 @@
         {
           "skill_id": "nbcu/editorial-standards",
           "skill_version": "0.1.0",
-          "skill_type": "broadcaster",
+          "skill_type": "NEWSROOM",
           "disclosure_level": "L2",
-          "migration_policy": "gated",
-          "skill_priority": "critical"
+          "migration_policy": "GATED",
+          "skill_priority": "CRITICAL"
         },
         {
           "skill_id": "nbcu/social-poster",
           "skill_version": "0.1.0",
-          "skill_type": "broadcaster",
+          "skill_type": "NEWSROOM",
           "disclosure_level": "L2",
-          "migration_policy": "gated",
-          "skill_priority": "normal"
+          "migration_policy": "GATED",
+          "skill_priority": "NORMAL"
         }
-      ]
+      ],
+      "newsroom": "NBCU"
     },
     "updated_at": "2026-04-01T14:45:12Z",
     "sequence_number": 47,
     "content_refs": [
       {
-        "content_format": null,
         "mime_type": "text/plain",
         "placement": "sources",
         "provider": "NBCU",
-        "role": null,
         "source_id": "src-ap-20260401-1444",
         "uri": "http://localhost:5050/api/content/sentencing-2026-0401"
       }
-    ]
+    ],
+    "editorial_source": [
+      {
+        "source_id": "src-ap-20260401-1444",
+        "source_type": "WIRE",
+        "provider": "Associated Press",
+        "credibility": "VERIFIED",
+        "received_at": "2026-04-01T14:44:00Z",
+        "content_hash": "sha256:a1b2c3d4e5f6..."
+      },
+      {
+        "source_id": "src-pool-camera-01",
+        "source_type": "POOL_FEED",
+        "provider": "Court Pool Camera",
+        "credibility": "TRUSTED",
+        "received_at": "2026-04-01T14:44:30Z"
+      }
+    ],
+    "newsroom_id": "nbcu-news"
+  },
+  "originating_system": {
+    "system_id": "ncs-nbcu-nyc-01",
+    "system_type": "ncs",
+    "system_name": "iNEWS NYC",
+    "vendor": "Avid",
+    "version": "7.0.1"
   }
 }

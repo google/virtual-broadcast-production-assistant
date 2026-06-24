@@ -290,11 +290,17 @@ public sealed class DashboardService : BackgroundService
     // mutation triggers a fresh story.context publish, so the skill re-runs
     // and any pending warnings get cleared as stale.
 
-    private static readonly string[] PhaseOrder = { "PLANNED", "GATHERING", "DEVELOPING", "READY_TO_AIR", "ON_AIR", "PUBLISHED" };
+    // SOM v0.3 lifecycle phases (decision #19): nested under story_type ACTIVE,
+    // traversed in this order. LIVE/AIRED are NOT phases — they are derived from
+    // the Telling (decision #16). PLANNED is a story_type, not a phase.
+    private static readonly string[] PhaseOrder = { "DEVELOPING", "READY_TO_AIR", "BREAKING", "PUBLISHED" };
+    // Tolerate legacy/v0.2 phase values on inbound seeds by mapping them onto the v0.3 set.
     private static readonly Dictionary<string, string> PhaseAlias = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["BREAKING"] = "DEVELOPING",
-        ["COMPLETE"] = "PUBLISHED",
+        ["PLANNED"]   = "DEVELOPING",   // PLANNED is a story_type in v0.3; treat as the first active phase here
+        ["GATHERING"] = "DEVELOPING",
+        ["ON_AIR"]    = "BREAKING",     // on-air is derived from the Telling; nearest editorial phase is BREAKING
+        ["COMPLETE"]  = "PUBLISHED",
     };
 
     public Task<RerunResult> AdvancePhaseAsync(string storyId, CancellationToken ct) =>
@@ -430,10 +436,15 @@ public sealed class DashboardService : BackgroundService
 
     // ─── Helpers ────────────────────────────────────────────────────────────
 
-    private static string? ExtractOutputId(JsonNode node) =>
-        node["warning_id"]?.GetValue<string>()
-        ?? node["suggestion_id"]?.GetValue<string>()
-        ?? node["enrichment_id"]?.GetValue<string>();
+    private static string? ExtractOutputId(JsonNode node)
+    {
+        // Skill outputs are now wrapped in a SOM envelope (the typed fields live under
+        // "payload"); tolerate both enveloped and legacy bare-payload messages.
+        var p = node["payload"] ?? node;
+        return p["warning_id"]?.GetValue<string>()
+            ?? p["suggestion_id"]?.GetValue<string>()
+            ?? p["enrichment_id"]?.GetValue<string>();
+    }
 
     private void ApplyAuth(ClientConfig config)
     {

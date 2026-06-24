@@ -4,13 +4,6 @@
   "correlation_id": "019536a0-5555-7000-8000-000000000005",
   "message_type": "story.context",
   "timestamp": "2026-05-06T18:02:14.000000Z",
-  "source": {
-    "system_id": "ncs-nbcu-nyc-01",
-    "system_type": "ncs",
-    "system_name": "iNEWS NYC",
-    "vendor": "Avid",
-    "version": "7.0.1"
-  },
   "topic": "som.story.context",
   "payload": {
     "story_id": "manhattan-explosion-2026-0506",
@@ -20,7 +13,7 @@
     "lifecycle": {
       "phase": "BREAKING",
       "phase_entered_at": "2026-05-06T18:01:30Z",
-      "previous_phase": "PLANNED",
+      "previous_phase": "DEVELOPING",
       "phase_owner": {
         "user_id": "editor-mgarcia",
         "display_name": "Maria Garcia",
@@ -46,44 +39,15 @@
       "why": "Active scene with unverified casualty and cause information; story entered the bus before NBCU compliance flags or assets were attached.",
       "how": "Initial reporting via AP wire and FDNY dispatch radio; downstream skills are expected to flag the absence of compliance metadata under the BREAKING phase.",
       "summary": "An explosion has been reported at a Midtown Manhattan office tower, with facts still developing. The story entered the bus with no compliance flags and no prepared assets, intentionally exercising the editorial-standards skill's BREAKING-phase compliance check. Coverage is rolling across MSNBC and NBCNews.com while details from FDNY and AP are confirmed.",
-      "confidence": 0.70,
-      "provenance_refs": ["src-ap-20260506-1801", "src-fdny-radio-01"]
+      "confidence": 0.7,
+      "provenance_refs": [
+        "src-ap-20260506-1801",
+        "src-fdny-radio-01"
+      ]
     },
-    "sources": [
-      {
-        "source_id": "src-ap-20260506-1801",
-        "source_type": "wire",
-        "provider": "Associated Press",
-        "credibility": "VERIFIED",
-        "received_at": "2026-05-06T18:01:45Z",
-        "content_hash": "sha256:9f8e7d6c5b4a..."
-      },
-      {
-        "source_id": "src-fdny-radio-01",
-        "source_type": "scanner",
-        "provider": "FDNY Dispatch",
-        "credibility": "PRIMARY",
-        "received_at": "2026-05-06T18:01:50Z"
-      }
-    ],
     "assets": [],
     "ai_enrichments": [],
-    "instances": [
-      {
-        "instance_id": "inst-msnbc-rolling-001",
-        "platform": "linear",
-        "program": "MSNBC Rolling Coverage",
-        "status": "ACTIVE"
-      },
-      {
-        "instance_id": "inst-nbcnews-web-002",
-        "platform": "web",
-        "program": "NBCNews.com",
-        "status": "ACTIVE"
-      }
-    ],
     "skills_config": {
-      "broadcaster": "NBCU",
       "skills_spec_version": "2.0.0",
       "skill_executor_id": "executor-nbcu-nyc-01",
       "scope_context": "MSNBC Rolling Coverage",
@@ -91,25 +55,49 @@
         {
           "skill_id": "nbcu/editorial-standards",
           "skill_version": "0.1.0",
-          "skill_type": "broadcaster",
+          "skill_type": "NEWSROOM",
           "disclosure_level": "L2",
-          "migration_policy": "gated",
-          "skill_priority": "critical"
+          "migration_policy": "GATED",
+          "skill_priority": "CRITICAL"
         }
-      ]
+      ],
+      "newsroom": "NBCU"
     },
     "updated_at": "2026-05-06T18:02:14Z",
     "sequence_number": 1,
     "content_refs": [
       {
-        "content_format": null,
         "mime_type": "text/plain",
         "placement": "sources",
         "provider": "NBCU",
-        "role": null,
         "source_id": "src-fdny-pio",
         "uri": "http://localhost:5050/api/content/manhattan-explosion-2026-0506"
       }
-    ]
+    ],
+    "editorial_source": [
+      {
+        "source_id": "src-ap-20260506-1801",
+        "source_type": "WIRE",
+        "provider": "Associated Press",
+        "credibility": "VERIFIED",
+        "received_at": "2026-05-06T18:01:45Z",
+        "content_hash": "sha256:9f8e7d6c5b4a..."
+      },
+      {
+        "source_id": "src-fdny-radio-01",
+        "source_type": "SCANNER",
+        "provider": "FDNY Dispatch",
+        "credibility": "TRUSTED",
+        "received_at": "2026-05-06T18:01:50Z"
+      }
+    ],
+    "newsroom_id": "nbcu-news"
+  },
+  "originating_system": {
+    "system_id": "ncs-nbcu-nyc-01",
+    "system_type": "ncs",
+    "system_name": "iNEWS NYC",
+    "vendor": "Avid",
+    "version": "7.0.1"
   }
 }
