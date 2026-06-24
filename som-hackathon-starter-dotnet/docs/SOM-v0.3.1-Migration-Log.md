@@ -64,3 +64,17 @@ _Branch `som-v031-ibc-readiness`. Running record of changes. Companion to `SOM-v
 - Identity reconciled: bridge is `originating_system`; MOS device id in `extensions.com.som.mos-bridge`; **no signing** (#18 removed `signature`).
 - ⏳ **PENDING:** `Destination` + `rundown_context` shapes (the `destination.upserted` emission is best-effort); bidirectional SOM→MOS (v0.4).
 - 📌 **Process rule added** (also in SOM `schema/README.md` and the SOM working-context): **any schema change to envelope / story.context / distribution layer / identity must be checked against the MOS-bridge map** before it lands. Companion spec: `SOM-MOS-Bridge-v0.3.1`.
+
+## 2026-06-24 — schemas vendored + validation
+
+- ✅ **Vendored the SOM JSON Schemas into `schema/`** (released `som-v0.3-*` + `v0.3.1-proposed/*` + examples), copied from the SOM spec folder (source of truth). The repo can now validate without reaching OneDrive.
+- ✅ **`schema/validate.py`** — validates `seed-stories/*`, `schema/examples/*`, `v0.3.1-proposed/examples/*`, and `mos-bridge/samples/*.expected.json` (envelope + payload-by-type). **13/13 PASS.**
+- ✅ **`schema/sync-from-spec.sh`** — one-command re-vendor from the spec folder (`SOM_SPEC_DIR` overridable).
+- 📌 **Sync rule** (`schema/README.md` + root `CLAUDE.md`): spec changes → `sync-from-spec.sh` then `validate.py`; code-driven schema needs → change the spec original first (check MOS-bridge impact), never hand-edit vendored files. Run `validate.py` after touching `seed-stories/` or the message builders.
+
+## 2026-06-24 — `skill.warning.scope` semantics reconciliation
+
+- ⚠️ **Conflict found** checking the `SOM/skills` Claude-skill proposals against the vendored schema: system-level `scope` is stated three ways — schema description says **Delivery**, the `som-skills-firing` skill says **the Asset**, the worker + `som-message-author` + `CLAUDE.md` say **`story:{id}`**. All validate (`scope` is a free string), so it's semantic drift, not a schema failure.
+- ✅ **Proposal written:** `docs/SOM-v0.3.1-scope-reconciliation.md` — recommend a typed `{level}:{id}` reference, level ∈ `story`/`asset`/`link`; **drop "Delivery"** (wrong layer + PENDING). PROPOSED, awaiting schema-authority ratification.
+- 🟡 **Applied in-repo:** `SkillWorker.cs` comment (emitted value stays `story:{story_id}` — correct for the current story-wide `RuleEngine`; `RuleMatch` carries no `asset_id`) + `CLAUDE.md` scope-levels line. `dotnet build` re-verified green.
+- ⏳ **At source (not applied here):** the schema-description edit lands in the SOM spec folder then re-vendors (`sync-from-spec.sh`); the `SOM/skills` edits land in OneDrive. Optional `scope` `pattern: ^(story|asset|link):` deferred to the 30 June lock. `asset:{id}` emission belongs to the PENDING firing-rule upgrade.

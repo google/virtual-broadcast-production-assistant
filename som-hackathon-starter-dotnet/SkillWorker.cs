@@ -139,8 +139,13 @@ public class SkillWorker : BackgroundService
         var rule = match.Rule;
         // Twelve-field SkillWarning payload (decision #21). No payload-level timestamp or
         // message_type — those live on the envelope (decision #18, see BuildEnvelope).
-        // scope is the firing level: this skill is system-level, so it scopes to the story
-        // (destination-specific skills would scope to the link, e.g. "link:{link_id}").
+        // scope is the firing level, as {level}:{id} (see docs/SOM-v0.3.1-scope-reconciliation.md):
+        //   story:{id}  — system-level skill on story-wide context (what we emit here; RuleEngine
+        //                 matches whole-story paths and RuleMatch carries no asset_id yet)
+        //   asset:{id}  — system-level skill on one asset; awaits the firing-rule upgrade that
+        //                 threads the matched asset_id into RuleMatch
+        //   link:{id}   — destination-specific skill, fired at a link's Compliance Gate
+        // Never an instance_ref (#3/#21).
         var warning = new JsonObject
         {
             ["warning_id"] = Guid.NewGuid().ToString(),
