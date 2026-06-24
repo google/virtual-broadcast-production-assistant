@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<!-- Sample MOS v4.0 roCreate: a running order with one lead story.
+     Input to MosToSomBridge.Translate(). Expected SOM output is in this folder. -->
+<mos>
+  <ncsID>NBC-NY-INEWS</ncsID>
+  <roCreate>
+    <roID>RO-1800-BULLETIN</roID>
+    <roSlug>1800 BULLETIN</roSlug>
+    <roChannel>NBC4-NY</roChannel>
+    <roEdStart>2026-06-23T18:00:00Z</roEdStart>
+    <story>
+      <storyID>LEAD-FLOOD-0623</storyID>
+      <storySlug>TAMPA FLOODING - LEAD</storySlug>
+      <storyBody>Severe flooding across Tampa Bay as the storm makes landfall.</storyBody>
+      <item>
+        <itemID>1</itemID>
+        <objID>GFX-FLOOD-MAP-01</objID>
+        <mosID>vizrt.nbc.com</mosID>
+        <objSlug>Flood map full-frame</objSlug>
+      </item>
+    </story>
+  </roCreate>
+</mos>

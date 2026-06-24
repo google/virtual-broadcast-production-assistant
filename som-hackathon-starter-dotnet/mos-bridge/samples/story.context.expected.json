@@ -1,0 +1,30 @@
+{
+  "som_version": "0.2.0",
+  "message_id": "0190e100-0001-7000-8000-000000000001",
+  "correlation_id": "0190e100-aaaa-7aaa-8aaa-000000000001",
+  "message_type": "story.context",
+  "timestamp": "2026-06-23T17:30:00.000000Z",
+  "originating_system": {
+    "system_id": "mos-bridge-london-01",
+    "system_type": "ncs",
+    "system_name": "MOS-SOM Bridge",
+    "vendor": "NBCU"
+  },
+  "topic": "som.story.LEAD-FLOOD-0623",
+  "payload": {
+    "story_id": "LEAD-FLOOD-0623",
+    "slug": "TAMPA-FLOODING-LEAD",
+    "headline": "TAMPA FLOODING - LEAD",
+    "story_type": "PLANNED",
+    "sequence_number": 1,
+    "updated_at": "2026-06-23T17:30:00.000000Z",
+    "newsroom_id": "nbc-news",
+    "extensions": {
+      "com.som.mos-bridge": {
+        "bridge_id": "mos-bridge-london-01",
+        "ro_id": "RO-1800-BULLETIN",
+        "mos_story_id": "LEAD-FLOOD-0623"
+      }
+    }
+  }
+}
