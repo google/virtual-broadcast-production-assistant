@@ -1,0 +1,11 @@
+{
+  "message_type": "delivery.media_available",
+  "delivery_id": "0190a000-0000-7000-8000-00000000aaa1",
+  "asset_id": "a2",
+  "story_id": "hurricane-2026-0915",
+  "flow_id": "tams:flow/9f2e7c1a",
+  "tc_in": "00:00:00",
+  "tc_out": "00:02:14",
+  "arrived_in": "tams-gcp-store",
+  "arrived_at": "2026-06-12T09:30:00Z"
+}

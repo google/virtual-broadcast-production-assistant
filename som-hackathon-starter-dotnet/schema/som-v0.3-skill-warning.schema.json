@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://som.spec/schema/v0.3/skill-warning",
+  "title": "SOM v0.3 skill.warning.raised payload (DRAFT 2, 2026-06-10)",
+  "description": "Twelve-field SkillWarning per Skills Integration Spec v2 §4.4.2, ratified as the normative contract by decision #21. Severities are the permanent lower-case carve-out (decision #13). timestamp lives on the ENVELOPE (decision #18). instance_ref is RETIRED (decisions #3/#21) and hard-rejected — outputs scope to their firing level.",
+  "type": "object",
+  "required": ["warning_id", "skill_id", "skill_version", "story_id", "scope", "severity", "rule_id", "non_overridable", "affected_fields", "detail", "blocks", "skill_warning_ref"],
+  "properties": {
+    "warning_id": { "type": "string", "format": "uuid", "description": "UUIDv7" },
+    "skill_id": { "type": "string", "examples": ["nbcu/editorial-standards"] },
+    "skill_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "story_id": { "type": "string" },
+    "scope": { "type": "string", "description": "The level the skill fired at — the link (destination-specific skills) or Delivery (system-level skills)" },
+    "severity": { "type": "string", "enum": ["hold", "flag", "inform"], "description": "Permanent lower-case carve-out (decision #13). hold: executor MUST withhold output on affected fields; flag: mark for review; inform: advisory" },
+    "rule_id": { "type": "string" },
+    "non_overridable": { "type": "boolean" },
+    "affected_fields": { "type": "array", "items": { "type": "string" } },
+    "detail": { "type": "string" },
+    "blocks": { "type": "array", "items": { "type": "string" } },
+    "skill_warning_ref": { "type": "string" },
+    "content_type": { "type": "string", "description": "Governed render key added by decision #21 (e.g. sync.ai.banner); vendor-extended via extensions.com.{vendor}.*" },
+    "message_type": { "type": "string", "const": "skill.warning.raised", "description": "Suffixed form per SOM-049; rides on the wire for topic routing" },
+    "extensions": {
+      "type": "object",
+      "patternProperties": { "^com\\.[a-z0-9-]+\\.": {} },
+      "additionalProperties": false
+    },
+    "instance_ref": false,
+    "timestamp": false
+  },
+  "additionalProperties": false
+}

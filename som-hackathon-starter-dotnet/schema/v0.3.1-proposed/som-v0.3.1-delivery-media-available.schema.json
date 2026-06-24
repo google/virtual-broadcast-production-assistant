@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://som.spec/schema/v0.3.1-proposed/delivery-media-available",
+  "title": "SOM v0.3.1 PROPOSED — delivery.media_available payload",
+  "description": "Operational media-arrival event on som.delivery.* (v0.3.1 Proposal §3.3). The TAMS junction: TAMS posts media-available events to the SOM bus; flow_id is the only shared key (deck §22).",
+  "type": "object",
+  "required": ["message_type", "delivery_id", "asset_id", "flow_id", "arrived_in", "arrived_at"],
+  "properties": {
+    "message_type": { "type": "string", "const": "delivery.media_available" },
+    "delivery_id": { "type": "string", "format": "uuid" },
+    "asset_id": { "type": "string" },
+    "story_id": { "type": "string" },
+    "flow_id": { "type": "string", "pattern": "^tams:flow/.+", "description": "TAMS flow reference — frame-addressable, permanent" },
+    "tc_in": { "$ref": "#/$defs/timecode" },
+    "tc_out": { "$ref": "#/$defs/timecode" },
+    "arrived_in": { "type": "string", "description": "Receiving system (system_id)" },
+    "arrived_at": { "type": "string", "format": "date-time" },
+    "extensions": { "type": "object", "patternProperties": { "^com\\.[a-z0-9-]+\\.": {} }, "additionalProperties": false }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "timecode": { "type": "string", "pattern": "^\\d{2}:\\d{2}:\\d{2}([:;]\\d{2})?$", "description": "HH:MM:SS or HH:MM:SS:FF / HH:MM:SS;FF" }
+  }
+}

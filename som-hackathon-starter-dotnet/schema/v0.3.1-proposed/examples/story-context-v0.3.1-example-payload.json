@@ -1,0 +1,133 @@
+{
+  "story_id": "sentencing-2026-0401",
+  "slug": "COURT-SENTENCING",
+  "headline": "Judge hands down sentence",
+  "story_type": "ACTIVE",
+  "lifecycle": {
+    "phase": "BREAKING",
+    "phase_entered_at": "2026-06-10T14:00:00Z",
+    "phase_owner": {
+      "user_id": "u1",
+      "display_name": "A. Editor",
+      "role": "editor"
+    }
+  },
+  "sequence_number": 7,
+  "updated_at": "2026-06-10T14:01:00Z",
+  "newsroom_id": "nbcu-nyc",
+  "priority": {
+    "level": "URGENT",
+    "reason": "verdict in"
+  },
+  "editorial_source": [
+    {
+      "source_id": "src-1",
+      "source_type": "WIRE",
+      "provider": "AP",
+      "credibility": "VERIFIED",
+      "received_at": "2026-06-10T13:00:00Z"
+    },
+    {
+      "source_id": "src-2",
+      "source_type": "x-newsdesk_tip",
+      "provider": "NBCU",
+      "credibility": "UNVERIFIED",
+      "received_at": "2026-06-10T13:05:00Z"
+    }
+  ],
+  "assets": [
+    {
+      "asset_id": "a1",
+      "asset_type": "LOWER_THIRD",
+      "status": "READY",
+      "evidential_position": "TERTIARY",
+      "derived_from": [
+        "a0"
+      ],
+      "usage": [
+        {
+          "link_id": "l1",
+          "destination_id": "d1",
+          "state": "committed"
+        }
+      ],
+      "standards_clearance": {
+        "status": "CLEARED",
+        "blocked_by": [],
+        "last_reviewed": "2026-06-10T12:00:00Z"
+      }
+    },
+    {
+      "asset_id": "a2",
+      "asset_type": "VIDEO",
+      "status": "IN_PRODUCTION",
+      "evidential_position": "PRIMARY",
+      "acquisition_state": "CAPTURING",
+      "media_refs": [
+        {
+          "flow_id": "tams:flow/9f2e7c1a",
+          "label": "landfall feed",
+          "tc_in": "00:00:00",
+          "tc_out": "00:02:14"
+        }
+      ],
+      "voice_count": 1
+    }
+  ],
+  "ai_enrichments": [
+    {
+      "enrichment_id": "e1",
+      "model": "claude-sonnet-4",
+      "enrichment_type": "SUMMARY",
+      "confidence": 0.9,
+      "content": "Two-line summary.",
+      "generated_at": "2026-06-10T13:30:00Z"
+    }
+  ],
+  "skills_config": {
+    "newsroom": "NBCU",
+    "active_skills": [
+      {
+        "skill_id": "nbcu/editorial-standards",
+        "skill_version": "0.2.0",
+        "skill_type": "NEWSROOM",
+        "disclosure_level": "L2",
+        "migration_policy": "GATED",
+        "skill_priority": "CRITICAL"
+      }
+    ]
+  },
+  "content_refs": [
+    {
+      "uri": "https://content.example/s1",
+      "content_format": "ap-som-body-json-v1",
+      "source_id": "src-1"
+    }
+  ],
+  "story_meaning": {
+    "who": "Judge",
+    "what": "Sentencing handed down",
+    "summary": "Sentencing concluded in the courthouse case.",
+    "confidence": 0.8
+  },
+  "government_approval": {
+    "status": "NOT_REQUIRED",
+    "jurisdiction": "US"
+  },
+  "compliance": [
+    {
+      "flag_id": "f1",
+      "type": "LEGAL_REVIEW",
+      "severity": "HIGH",
+      "detail": "restriction",
+      "raised_by": "standards",
+      "raised_at": "2026-06-12T08:00:00Z",
+      "status": "ACTIVE",
+      "media_range": {
+        "flow_id": "tams:flow/9f2e7c1a",
+        "tc_in": "00:00:14",
+        "tc_out": "00:00:31"
+      }
+    }
+  ]
+}
