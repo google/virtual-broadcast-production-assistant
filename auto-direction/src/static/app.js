@@ -6,6 +6,7 @@
 // Global state variables
 let state = 'IDLE'; // 'IDLE' | 'LISTENING' | 'THINKING' | 'SPEAKING'
 let ws = null;
+let directorWs = null;
 let audioCtx = null;
 let micStream = null;
 let micProcessor = null;
@@ -96,8 +97,6 @@ async function startMicrophone() {
         micProcessor = audioCtx.createScriptProcessor(2048, 1, 1);
         
         micProcessor.onaudioprocess = (e) => {
-            if (state !== 'LISTENING' || !ws || ws.readyState !== WebSocket.OPEN) return;
-            
             const inputFloat32 = e.inputBuffer.getChannelData(0);
             const nativeSampleRate = e.inputBuffer.sampleRate;
             
@@ -114,8 +113,15 @@ async function startMicrophone() {
                 pcmInt16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
             }
             
-            // Send binary PCM chunk over websocket
-            ws.send(pcmInt16.buffer);
+            // 1. Send binary PCM chunk over FOH websocket if listening
+            if (state === 'LISTENING' && ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(pcmInt16.buffer);
+            }
+            
+            // 2. Send continuous binary PCM chunk to Director websocket if broadcast is live
+            if (directorWs && directorWs.readyState === WebSocket.OPEN) {
+                directorWs.send(pcmInt16.buffer);
+            }
         };
         
         micSource.connect(micProcessor);
@@ -175,51 +181,192 @@ function playPCMChunk(arrayBuffer) {
     pcmPlayQueueNextTime += audioBuffer.duration;
 }
 
-// --- 4. WEBSOCKET PROXY CONNECTOR ---
-function connectWebSocket() {
+// --- 4. WEBSOCKET PROXY CONNECTORS (DUAL SYSTEM) ---
+function connectFOHWebSocket() {
     const wsUrl = `ws://${window.location.host}/api/ws`;
-    console.log(`Connecting to WebSocket: ${wsUrl}`);
+    console.log(`Connecting FOH WebSocket: ${wsUrl}`);
     
     ws = new WebSocket(wsUrl);
     ws.binaryType = 'arraybuffer';
     
     ws.onopen = () => {
-        console.log("WebSocket connected.");
+        console.log("FOH WebSocket connected.");
         connectionBeacon.className = "glowing-beacon connected";
         systemStatusBadge.textContent = "HOST CONNECTED";
     };
     
     ws.onmessage = (event) => {
         if (event.data instanceof ArrayBuffer) {
-            // Binary audio chunk received from Gemini Live
             if (state !== 'SPEAKING') {
                 updateVoiceState('SPEAKING');
             }
             playPCMChunk(event.data);
         } else {
-            // Text subtitle/transcript payload
             try {
                 const msg = JSON.parse(event.data);
                 if (msg.type === 'text') {
                     handleFOHSpeechTranscript(msg.text);
                 }
             } catch (err) {
-                console.error("Error parsing websocket JSON:", err);
+                console.error("Error parsing FOH websocket JSON:", err);
             }
         }
     };
     
     ws.onclose = () => {
-        console.log("WebSocket disconnected. Retrying in 5 seconds...");
+        console.log("FOH WebSocket disconnected. Retrying in 5 seconds...");
         connectionBeacon.className = "glowing-beacon";
         systemStatusBadge.textContent = "OFFLINE";
         updateVoiceState('IDLE');
-        setTimeout(connectWebSocket, 5000);
+        setTimeout(connectFOHWebSocket, 5000);
     };
     
     ws.onerror = (err) => {
-        console.error("WebSocket error:", err);
+        console.error("FOH WebSocket error:", err);
     };
+}
+
+let videoFrameInterval = null;
+
+function connectDirectorWebSocket(directorWsUrl) {
+    const wsUrl = directorWsUrl.replace(/^http/, 'ws') + '/api/ws/director';
+    console.log(`Connecting Director WebSocket: ${wsUrl}`);
+    
+    directorWs = new WebSocket(wsUrl);
+    
+    directorWs.onopen = () => {
+        console.log("Director WebSocket connected.");
+        // Begin sending real-time JPEG visual frames at 1 frame per second
+        if (videoFrameInterval) clearInterval(videoFrameInterval);
+        videoFrameInterval = setInterval(sendStudioVideoFrame, 1000);
+    };
+    
+    directorWs.onmessage = (event) => {
+        // The Director Agent doesn't talk back, it performs cuts/PTZ changes via tools.
+        // We log any text thought updates for dashboard feedback.
+        try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'text') {
+                console.log(`[Director Thought]: ${msg.text}`);
+            }
+        } catch (err) {}
+    };
+    
+    directorWs.onclose = () => {
+        console.log("Director WebSocket disconnected. Retrying in 5 seconds...");
+        if (videoFrameInterval) {
+            clearInterval(videoFrameInterval);
+            videoFrameInterval = null;
+        }
+        setTimeout(() => fetchConfigAndConnect(), 5000);
+    };
+    
+    directorWs.onerror = (err) => {
+        console.error("Director WebSocket error:", err);
+    };
+}
+
+async function fetchConfigAndConnect() {
+    try {
+        const response = await fetch('/api/config');
+        if (response.ok) {
+            const data = await response.json();
+            connectDirectorWebSocket(data.director_ws_url);
+        } else {
+            connectDirectorWebSocket("http://127.0.0.1:8003");
+        }
+    } catch (err) {
+        console.error("Error fetching config for Director WS:", err);
+        connectDirectorWebSocket("http://127.0.0.1:8003");
+    }
+}
+
+// --- 4.5 STUDIO LIVE STREAM CANVAS (1 FPS MULTIMODAL INGESTION) ---
+const feedCanvas = document.createElement('canvas');
+feedCanvas.width = 320;
+feedCanvas.height = 240;
+const feedCtx = feedCanvas.getContext('2d');
+
+function sendStudioVideoFrame() {
+    if (!directorWs || directorWs.readyState !== WebSocket.OPEN) return;
+    
+    // Draw visual studio status on hidden canvas to represent video feed
+    feedCtx.fillStyle = '#0b0a12';
+    feedCtx.fillRect(0, 0, feedCanvas.width, feedCanvas.height);
+    
+    // Outer border representing on-air camera boundary
+    feedCtx.strokeStyle = '#8a3ffc';
+    feedCtx.lineWidth = 4;
+    feedCtx.strokeRect(8, 8, feedCanvas.width - 16, feedCanvas.height - 16);
+    
+    // Draw record indicator and camera name
+    feedCtx.fillStyle = '#ef4444';
+    feedCtx.font = 'bold 11px monospace';
+    const activeCam = window.lastActiveCamera || 'cam_1';
+    feedCtx.fillText("REC ● LIVE: " + activeCam.toUpperCase(), 16, 26);
+    
+    // Draw segment name
+    feedCtx.fillStyle = '#c084fc';
+    feedCtx.font = '9px sans-serif';
+    const activeSeg = window.lastActiveSegment || 'Intro Bumper';
+    feedCtx.fillText("SEGMENT: " + activeSeg, 16, 42);
+    
+    // Draw Speaker A (Host) and Speaker B (Guest) frames
+    feedCtx.fillStyle = '#1e1b4b';
+    feedCtx.fillRect(24, 70, 112, 110);
+    feedCtx.fillRect(184, 70, 112, 110);
+    
+    feedCtx.fillStyle = '#ffffff';
+    feedCtx.font = 'bold 10px sans-serif';
+    feedCtx.fillText("HOST", 64, 195);
+    feedCtx.fillText("GUEST", 224, 195);
+    
+    const activeSpeaker = window.lastActiveSpeaker || 'mic_host';
+    
+    // Draw Host Speaker Mouth/Ring highlight
+    if (activeSpeaker === 'mic_host') {
+        feedCtx.strokeStyle = '#eab308';
+        feedCtx.lineWidth = 2;
+        feedCtx.strokeRect(22, 68, 116, 114);
+        
+        // Host Mouth Open
+        feedCtx.fillStyle = '#eab308';
+        feedCtx.beginPath();
+        feedCtx.arc(80, 125, 12, 0, Math.PI * 2);
+        feedCtx.fill();
+    } else {
+        feedCtx.fillStyle = '#a1a1aa';
+        feedCtx.beginPath();
+        feedCtx.arc(80, 125, 8, 0, Math.PI);
+        feedCtx.fill();
+    }
+    
+    // Draw Guest Speaker Mouth/Ring highlight
+    if (activeSpeaker === 'mic_guest') {
+        feedCtx.strokeStyle = '#eab308';
+        feedCtx.lineWidth = 2;
+        feedCtx.strokeRect(182, 68, 116, 114);
+        
+        // Guest Mouth Open
+        feedCtx.fillStyle = '#eab308';
+        feedCtx.beginPath();
+        feedCtx.arc(240, 125, 12, 0, Math.PI * 2);
+        feedCtx.fill();
+    } else {
+        feedCtx.fillStyle = '#a1a1aa';
+        feedCtx.beginPath();
+        feedCtx.arc(240, 125, 8, 0, Math.PI);
+        feedCtx.fill();
+    }
+    
+    // Convert canvas to jpeg base64
+    const dataUrl = feedCanvas.toDataURL('image/jpeg', 0.55);
+    const base64Str = dataUrl.split(',')[1];
+    
+    directorWs.send(JSON.stringify({
+        type: "image",
+        data: base64Str
+    }));
 }
 
 // --- 5. STATE MACHINE COORDINATOR ---
@@ -459,6 +606,18 @@ async function pollSystemStatus() {
         
         const data = await response.json();
         
+        // Save current variables to window state for live video frame generator
+        window.lastActiveCamera = data.camera_on_air;
+        window.lastActiveSegment = data.active_segment;
+        window.lastActiveSpeaker = data.active_speaker;
+        
+        // Auto microphone activation for continuous director ingestion when broadcast starts
+        if (data.live_production_active && !micStream) {
+            console.log("[Director Ingestion] Broadcast is active! Auto-enabling microphone stream...");
+            initAudio();
+            startMicrophone().catch(err => console.error("Auto mic activation failed:", err));
+        }
+        
         // 1. On-Air feed metadata
         const camMap = {
             "cam_1": "CAM 1 - WIDE STUDIO",
@@ -590,7 +749,8 @@ stopShowBtn.addEventListener('click', async () => {
 
 // --- 9. STARTUP & POOLING INITIALIZATIONS ---
 window.addEventListener('DOMContentLoaded', () => {
-    connectWebSocket();
+    connectFOHWebSocket();
+    fetchConfigAndConnect();
     statusInterval = setInterval(pollSystemStatus, 800); // Poll state every 800ms
     pollSystemStatus(); // Run initial status check
 });
@@ -600,4 +760,6 @@ window.addEventListener('beforeunload', () => {
     if (statusInterval) clearInterval(statusInterval);
     stopMicrophone();
     if (ws) ws.close();
+    if (directorWs) directorWs.close();
+    if (videoFrameInterval) clearInterval(videoFrameInterval);
 });
