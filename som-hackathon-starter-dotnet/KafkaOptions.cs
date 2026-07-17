@@ -19,5 +19,10 @@ public sealed class KafkaOptions
     public string SkillStagingTopic { get; set; } = "som.skills.staging";
     public string SkillRejectedTopic { get; set; } = "som.skills.rejected";
 
+    // v0.3.1 distribution layer (§3.3) — TAMS junction, produced by MockMamService
+    // until a real MAM/TAMS participant joins. Remaining families (som.link.*,
+    // som.telling.*, som.system.audit) are WS1 of the Aug hackathon.
+    public string DeliveryTopic { get; set; } = "som.delivery.media_available";
+
     public string DashboardGroupId { get; set; } = "som-dashboard";
 }

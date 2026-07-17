@@ -37,6 +37,7 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<DashboardService>(
 builder.Services.AddHostedService<SkillWorker>();
 builder.Services.AddSingleton<SimulatorService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SimulatorService>());
+builder.Services.AddSingleton<MockMamService>();
 
 // Bind to localhost:5050 only when ASPNETCORE_URLS is unset (i.e. local `dotnet run`).
 // In containers the Dockerfile sets ASPNETCORE_URLS=http://+:5050 so Kestrel binds to
@@ -225,6 +226,21 @@ app.MapPost("/api/stories/{storyId}/add-compliance", async (
         : Results.NotFound(new { error = r.Status });
 });
 
+// ── Mock MAM (TAMS stand-in — no MAM participant in the IBC PoC) ──
+// Write-only on the bus: emits som.delivery.media_available for catalogued Sources.
+// These endpoints drive the mock from the dashboard/simulator; they are NOT a MAM
+// query API for other bus participants (nothing like that is ratified).
+app.MapGet("/api/mam/catalog", (MockMamService mam) => Results.Ok(mam.Catalog));
+
+app.MapPost("/api/mam/emit/{sourceId}", async (
+    string sourceId, MamEmitRequest? body, MockMamService mam, CancellationToken ct) =>
+{
+    var envelope = await mam.EmitAsync(sourceId, body?.TimeRange, body?.AssetId, ct);
+    return envelope is null
+        ? Results.BadRequest(new { error = "unknown_source_or_invalid_range", source_id = sourceId })
+        : Results.Ok(envelope);
+});
+
 // ── Simulator (local-dev fallback for AP ENPS) ─────────
 app.MapGet("/api/simulator/status", (SimulatorService sim) => Results.Ok(sim.GetStatus()));
 
@@ -295,5 +311,6 @@ app.Map("/ws", async (HttpContext ctx, DashboardService dash) =>
 app.Run();
 
 internal sealed record DecisionRequest(string Decision, string? Reviewer);
+internal sealed record MamEmitRequest(string? TimeRange, string? AssetId);
 internal sealed record AddComplianceRequest(string? Type, string? Severity, string? Detail);
 internal sealed record AutoStartRequest(int? IntervalSeconds);

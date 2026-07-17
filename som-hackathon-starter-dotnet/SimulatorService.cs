@@ -26,6 +26,7 @@ public sealed class SimulatorService : BackgroundService
 {
     private readonly ILogger<SimulatorService> _logger;
     private readonly DashboardService _dashboard;
+    private readonly MockMamService _mockMam;
     private readonly KafkaOptions _kafkaOptions;
     private readonly Random _rng = new();
 
@@ -36,10 +37,11 @@ public sealed class SimulatorService : BackgroundService
     private bool _autoEnabled;
     private int _autoIntervalSeconds = 20;
 
-    public SimulatorService(ILogger<SimulatorService> logger, DashboardService dashboard, IOptions<KafkaOptions> kafkaOptions)
+    public SimulatorService(ILogger<SimulatorService> logger, DashboardService dashboard, MockMamService mockMam, IOptions<KafkaOptions> kafkaOptions)
     {
         _logger = logger;
         _dashboard = dashboard;
+        _mockMam = mockMam;
         _kafkaOptions = kafkaOptions.Value;
     }
 
@@ -194,6 +196,11 @@ public sealed class SimulatorService : BackgroundService
             case "rerun":
                 if (action.StoryId is not null) await _dashboard.RerunSkillAsync(action.StoryId, ct);
                 break;
+            case "media-available":
+                // Mock MAM emits som.delivery.media_available (TAMS stand-in — see MockMamService).
+                if (action.SourceId is not null)
+                    await _mockMam.EmitAsync(action.SourceId, action.TimeRange, ct: ct);
+                break;
             default:
                 _logger.LogWarning("Unknown simulator action type: {Type}", action.Type);
                 break;
@@ -210,7 +217,9 @@ public sealed record SimAction(
     string? StoryId = null,
     string? FlagType = null,
     string? Severity = null,
-    string? Detail = null);
+    string? Detail = null,
+    string? SourceId = null,
+    string? TimeRange = null);
 
 public sealed record SimulationScenario(
     string Id,
@@ -283,6 +292,19 @@ internal static class SimScenarios
                               Detail: "Election Decision Desk projection conditions"),
                 new SimAction(35, "advance-phase",  StoryId: ElectionVa),
                 new SimAction(45, "advance-phase",  StoryId: ElectionVa),
+            }),
+
+        ["media-arrival"] = new(
+            Id: "media-arrival",
+            Name: "Media arrival (mock MAM / TAMS junction)",
+            Description: "D1·B5 proof without a MAM participant: breaking story publishes, then the mock MAM emits delivery.media_available three times with a GROWING TAMS timerange — authentic TAMS behaviour, a recording is addressable while still being captured. Final emit is the full range. Pair with a story.context update flipping acquisition_state CAPTURING → CAPTURED once seeds carry media_refs[] (WS2).",
+            DurationSeconds: 30,
+            Actions: new[]
+            {
+                new SimAction(0,  "publish",         Scenario: "breaking"),
+                new SimAction(6,  "media-available", SourceId: "landfall-feed-01", TimeRange: "[0:0_30:0)"),
+                new SimAction(16, "media-available", SourceId: "landfall-feed-01", TimeRange: "[0:0_75:0)"),
+                new SimAction(26, "media-available", SourceId: "landfall-feed-01", TimeRange: "[0:0_1260:0)"),
             }),
 
         ["compliance-review"] = new(
