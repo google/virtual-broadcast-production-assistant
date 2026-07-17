@@ -157,7 +157,7 @@ Two current partner patterns and their recommended homes:
 
 | Need | Today (spec-legal) | Target-state direction |
 |---|---|---|
-| **Livestream URL to transcribe** (a live ingest source, not arrived TAMS media) | `extensions.com.{vendor}.livestream_url` on `story.context` | First-class "live ingest source URI" — v0.3.2 candidate. The SOM-native end state: the livestream becomes a Source in a MAM and `som.delivery.media_available` announces it with a growing `time_range` (exactly what `MockMamService` demonstrates). |
+| **Livestream URL to transcribe** (a live ingest source, not arrived stored media) | `extensions.com.{vendor}.livestream_url` on `story.context` | To be **proposed** as a first-class "live ingest source" field in the v0.3.2 window — not yet in the v0.3.2 scaffold. Its natural companion IS already drafted there: locator-on-arrival generalises `delivery.media_available` beyond TAMS (`anyOf(source \| locator)`, mirroring `media_refs[]`). |
 | **"Monitor for X" directive** (e.g. "casualty figures") — a skill/task parameter | `extensions.com.{vendor}.monitor_prompt` on `story.context` | First-class **skill directive / task parameter** — part of the skills-model alignment work (declared skill conditions + parameters). |
 
 Example on a `story.context` payload:
