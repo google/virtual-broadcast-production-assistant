@@ -1,0 +1,8 @@
+{
+  "audit_id": "0190e000-0008-7000-8000-0000000000f3",
+  "action": "SUPPRESSED",
+  "target": { "kind": "ASSET", "id": "pkg-acquit" },
+  "actor": { "actor_id": "automation-01", "actor_type": "system" },
+  "reason": "Acquit package suppressed; never linked to air",
+  "recorded_at": "2026-06-23T14:30:02.000000Z"
+}

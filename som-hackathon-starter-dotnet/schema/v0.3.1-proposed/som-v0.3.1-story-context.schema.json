@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://som.spec/schema/v0.3.1-proposed/story-context",
   "title": "SOM v0.3.1 PROPOSED \u2014 story.context payload (point update)",
-  "description": "Payload schema per v0.3 Technical \u00a74.2\u2013\u00a74.8. TARGET shape \u2014 current 0.2.0 wire payloads will NOT validate (by design; see SOM-048 migration). instances[] and broadcaster_id are hard-rejected. verification_status/provider_type intentionally absent pending the 10 Jun WG fork decision (\u00a74.3). v0.3.1 PROPOSED additions: asset.media_refs[] (the media_source leg, TAMS flow references), asset.voice_count (#22 publisher-asserted marking), compliance[].media_range (frame-pinned flags). verification_status/provider_type remain absent \u2014 proposal \u00a71 resolves the fork by dropping both.",
+  "description": "Payload schema per v0.3 Technical \u00a74.2\u2013\u00a74.8. TARGET shape \u2014 current 0.2.0 wire payloads will NOT validate (by design; see SOM-048 migration). instances[] and broadcaster_id are hard-rejected. verification_status/provider_type intentionally absent pending the 10 Jun WG fork decision (\u00a74.3). v0.3.1 additions: asset.media_refs[] (the media_source leg, TAMS Source-URI references + time ranges \u2014 Source re-key 29 Jun, lazy-consensus to 1 Jul), asset.voice_count (#22 publisher-asserted marking), compliance[].media_range (Source+time restricted-stretch flag). verification_status/provider_type remain absent \u2014 proposal \u00a71 resolves the fork by dropping both. ERRATA 15 Jul 2026: asset_type gains TRANSCRIPT (locked 29 Jun, omitted from the 30 Jun re-cut).",
   "type": "object",
   "required": [
     "story_id",
@@ -407,22 +407,56 @@
         },
         "media_range": {
           "type": "object",
-          "required": [
-            "flow_id",
-            "tc_in",
-            "tc_out"
+          "anyOf": [
+            {
+              "required": [
+                "source",
+                "time_range"
+              ]
+            },
+            {
+              "required": [
+                "locator",
+                "time_range"
+              ]
+            }
           ],
-          "description": "PROPOSED \u00a73.3: pins the flag to exact frames; the flag holds through edit-by-reference.",
+          "description": "CONFIRMED (v0.3.1, Source re-key 29 Jun): flags a restricted stretch of the asset's media by Source URI + time range (was flow_id). The what/why/type live on the compliance flag. NOTE: a re-edit mints new TAMS media, so this pin does not automatically survive re-editing; the fuller structured-restriction shape is settled after the lock.",
           "properties": {
-            "flow_id": {
+            "source": {
               "type": "string",
-              "pattern": "^tams:flow/.+"
+              "pattern": "^tams://[^/]+/.+",
+              "description": "Fully-qualified TAMS Source URI \u2014 tams://store/id."
             },
-            "tc_in": {
-              "$ref": "#/$defs/timecode"
+            "locator": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "store",
+                "ref"
+              ],
+              "properties": {
+                "store": {
+                  "type": "string"
+                },
+                "ref": {
+                  "type": "string"
+                }
+              }
             },
-            "tc_out": {
-              "$ref": "#/$defs/timecode"
+            "time_range": {
+              "description": "TAMS time range (or list) for the restricted stretch.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/timerange"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/timerange"
+                  }
+                }
+              ]
             }
           },
           "additionalProperties": false
@@ -559,6 +593,7 @@
                 "FULL_FRAME",
                 "MAP",
                 "SOCIAL_CARD",
+                "TRANSCRIPT",
                 "CUSTOM"
               ]
             },
@@ -566,7 +601,8 @@
               "type": "string",
               "pattern": "^x-[a-z0-9_]+$"
             }
-          ]
+          ],
+          "description": "ERRATA 15 Jul 2026: TRANSCRIPT added \u2014 locked at v0.3.1 (29 Jun AI-outputs decision, glossary v0.345 CONFIRMED) but omitted from the 30 Jun re-cut. Caught by Janet Gardner. No other change."
         },
         "status": {
           "type": "string",
@@ -674,34 +710,95 @@
         },
         "media_refs": {
           "type": "array",
-          "description": "PROPOSED \u00a73.3/\u00a75: TAMS flow references \u2014 the media_source leg of the four-way disambiguation. Thin by design: flow_id is the only shared key.",
+          "description": "CONFIRMED (v0.3.1, Source re-key 29 Jun; lazy-consensus window to 1 Jul): the media_source leg. TAMS media referenced by a fully-qualified Source URI (tams://store/id) + optional time range(s); non-TAMS via locator. One of source/locator required. flow_id removed \u2014 SOM references Source + time, not Flow.",
           "items": {
             "type": "object",
-            "required": [
-              "flow_id"
+            "additionalProperties": false,
+            "anyOf": [
+              {
+                "required": [
+                  "source"
+                ]
+              },
+              {
+                "required": [
+                  "locator"
+                ]
+              }
             ],
             "properties": {
-              "flow_id": {
+              "source": {
                 "type": "string",
-                "pattern": "^tams:flow/.+"
+                "pattern": "^tams://[^/]+/.+",
+                "description": "Fully-qualified TAMS Source URI \u2014 tams://store/id; resolves across remote/second-hand stores."
+              },
+              "locator": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "store",
+                  "ref"
+                ],
+                "properties": {
+                  "store": {
+                    "type": "string"
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "description": "Non-TAMS media store reference."
               },
               "label": {
                 "type": "string"
               },
-              "tc_in": {
-                "$ref": "#/$defs/timecode"
-              },
-              "tc_out": {
-                "$ref": "#/$defs/timecode"
+              "time_range": {
+                "description": "Optional TAMS time range, or list of ranges, onto the Source.",
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/timerange"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/timerange"
+                    }
+                  }
+                ]
               }
-            },
-            "additionalProperties": false
+            }
           }
         },
         "voice_count": {
           "type": "integer",
           "minimum": 1,
           "description": "PROPOSED \u00a74: publisher-asserted voice count (#22). voice_count: 1 MAY classify a package SECONDARY; absent or >1, the TERTIARY default stands."
+        },
+        "authenticity_credential": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "present"
+          ],
+          "description": "PROPOSED \u00a71: media-authenticity axis (C2PA). Distinct from credibility. present:false is recorded, not hidden.",
+          "properties": {
+            "present": {
+              "type": "boolean"
+            },
+            "standard": {
+              "type": "string"
+            },
+            "claim": {
+              "type": "string"
+            },
+            "validated_by": {
+              "type": "string"
+            }
+          }
+        },
+        "framing_treatment": {
+          "type": "string",
+          "description": "v0.3.2 (field) / v0.4 (registry): flat governed per-newsroom registry key (UPPER_SNAKE canonical, x-<lowercase> vendor). SECONDARY/TERTIARY assets; single value for v0.3.2."
         }
       },
       "additionalProperties": false
@@ -915,7 +1012,18 @@
     },
     "timecode": {
       "type": "string",
-      "pattern": "^\\d{2}:\\d{2}:\\d{2}([:;]\\d{2})?$"
+      "pattern": "^\\d{2}:\\d{2}:\\d{2}([:;]\\d{2})?$",
+      "description": "DEPRECATED for media references (replaced by the TAMS timerange in the 29 Jun Source re-key); retained for any non-media timecode use."
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^\\d+:\\d+$",
+      "description": "TAMS timestamp \u2014 seconds:nanoseconds (e.g. 0:500000000 = 0.5s)."
+    },
+    "timerange": {
+      "type": "string",
+      "pattern": "^[\\[(](\\d+:\\d+)?_(\\d+:\\d+)?[\\])]$",
+      "description": "TAMS timerange \u2014 bracketed inclusive/exclusive over seconds:nanoseconds timestamps (e.g. [0:500000000_1:0) ). Open-ended start or end permitted."
     }
   }
 }

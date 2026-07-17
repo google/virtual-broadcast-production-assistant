@@ -65,10 +65,9 @@
       "acquisition_state": "CAPTURING",
       "media_refs": [
         {
-          "flow_id": "tams:flow/9f2e7c1a",
+          "source": "tams://tams-gcp-store/9f2e7c1a",
           "label": "landfall feed",
-          "tc_in": "00:00:00",
-          "tc_out": "00:02:14"
+          "time_range": "[0:0_134:0)"
         }
       ],
       "voice_count": 1
@@ -124,9 +123,8 @@
       "raised_at": "2026-06-12T08:00:00Z",
       "status": "ACTIVE",
       "media_range": {
-        "flow_id": "tams:flow/9f2e7c1a",
-        "tc_in": "00:00:14",
-        "tc_out": "00:00:31"
+        "source": "tams://tams-gcp-store/9f2e7c1a",
+        "time_range": "[14:0_31:0)"
       }
     }
   ]

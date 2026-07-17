@@ -28,6 +28,7 @@ STORY31 = load(os.path.join(P, "som-v0.3.1-story-context.schema.json"))
 LINK    = load(os.path.join(P, "som-v0.3.1-link-event.schema.json"))
 TELL    = load(os.path.join(P, "som-v0.3.1-telling-event.schema.json"))
 DELIV   = load(os.path.join(P, "som-v0.3.1-delivery-media-available.schema.json"))
+AUDIT   = load(os.path.join(P, "som-v0.3.1-system-audit.schema.json"))
 
 # Payload schema by message_type. Seeds are v0.3.1-shaped → use the point-update story-context.
 BY_TYPE = {
@@ -36,6 +37,7 @@ BY_TYPE = {
     "link.committed": LINK, "link.gate_changed": LINK, "link.withdrawn": LINK,
     "telling.started": TELL, "telling.ended": TELL, "telling.exposed": TELL,
     "delivery.media_available": DELIV,
+    "system.audit": AUDIT,
 }
 
 def errs(schema, inst):
@@ -49,6 +51,7 @@ def payload_schema(d, path, released_story):
     if mt in BY_TYPE:
         return STORY if (released_story and mt == "story.context") else BY_TYPE[mt]
     if "skill-warning" in name or "warning_id" in d:           return WARN
+    if "audit" in name or "audit_id" in d:                      return AUDIT
     if "link" in name:                                          return LINK
     if "telling" in name:                                       return TELL
     if "delivery" in name:                                      return DELIV
