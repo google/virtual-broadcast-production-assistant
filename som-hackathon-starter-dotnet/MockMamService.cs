@@ -26,7 +26,7 @@ namespace SomSkillWorker;
 /// WS2 seed work should reference from asset.media_refs[].source so the D1·B5 join
 /// (arrival event ↔ asset) resolves.
 /// </summary>
-public sealed class MockMamService
+public sealed class MockMamService : IDisposable
 {
     public const string StoreName = "mock-mam-store";
 
@@ -43,6 +43,8 @@ public sealed class MockMamService
     private readonly KafkaOptions _kafka;
     private readonly object _catalogLock = new();
     private IReadOnlyList<MamCatalogEntry>? _catalog;
+    private readonly object _producerLock = new();
+    private IProducer<string, string>? _producer;
 
     public MockMamService(ILogger<MockMamService> logger, IOptions<KafkaOptions> kafka)
     {
@@ -56,7 +58,39 @@ public sealed class MockMamService
         {
             lock (_catalogLock)
             {
-                return _catalog ??= LoadCatalog();
+                // Cache only a SUCCESSFUL load. LoadCatalog returns null on
+                // not-found/parse failure, so a fixed file recovers on the next
+                // access — a memoized empty list would need a process restart.
+                if (_catalog is not null) return _catalog;
+                var loaded = LoadCatalog();
+                if (loaded is not null) _catalog = loaded;
+                return loaded ?? Array.Empty<MamCatalogEntry>();
+            }
+        }
+    }
+
+    // One long-lived producer, built on first emit and reused (matches
+    // DashboardService/SkillWorker). Routing auth through KafkaAuthHelper is what
+    // makes OAuthBearer token-refresh work on the authenticated GCP cluster — a
+    // hand-rolled SASL block works over local Plaintext but fails there.
+    private IProducer<string, string> Producer
+    {
+        get
+        {
+            if (_producer is not null) return _producer;
+            lock (_producerLock)
+            {
+                if (_producer is not null) return _producer;
+                var config = new ProducerConfig
+                {
+                    BootstrapServers = _kafka.BootstrapServers,
+                    Acks = Acks.Leader,
+                };
+                KafkaAuthHelper.Configure(config, _kafka);
+                var pb = new ProducerBuilder<string, string>(config);
+                KafkaAuthHelper.AttachOAuth(pb, _kafka);
+                _producer = pb.Build();
+                return _producer;
             }
         }
     }
@@ -69,9 +103,11 @@ public sealed class MockMamService
     /// timeRange defaults to the full catalogued duration; pass a shorter range to
     /// mimic TAMS growing-recording behaviour (a recording is addressable while
     /// still being captured), then emit again with a longer range.
-    /// Returns the envelope published, or null if the source is unknown / range invalid.
+    /// Returns a result carrying the published envelope, or the discriminated
+    /// reason nothing was emitted (unknown source / invalid range / missing asset /
+    /// publish failure) so callers surface the specific cause instead of a bare null.
     /// </summary>
-    public async Task<JsonObject?> EmitAsync(
+    public async Task<MamEmitResult> EmitAsync(
         string sourceId,
         string? timeRange = null,
         string? assetIdOverride = null,
@@ -81,21 +117,21 @@ public sealed class MockMamService
         if (entry is null)
         {
             _logger.LogWarning("MockMAM: unknown source_id {SourceId}", sourceId);
-            return null;
+            return MamEmitResult.Fail(MamEmitStatus.UnknownSource, $"unknown source_id '{sourceId}'");
         }
 
         var range = timeRange ?? $"[0:0_{entry.DurationSeconds}:0)";
         if (!TimerangePattern.IsMatch(range))
         {
             _logger.LogWarning("MockMAM: invalid TAMS timerange '{Range}' for {SourceId}", range, sourceId);
-            return null;
+            return MamEmitResult.Fail(MamEmitStatus.InvalidRange, $"invalid TAMS timerange '{range}'");
         }
 
         var assetId = assetIdOverride ?? entry.AssetId;
         if (string.IsNullOrWhiteSpace(assetId))
         {
             _logger.LogWarning("MockMAM: no asset_id for {SourceId} (catalog or override required)", sourceId);
-            return null;
+            return MamEmitResult.Fail(MamEmitStatus.MissingAsset, $"no asset_id for source '{sourceId}' (catalog or override required)");
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -132,35 +168,36 @@ public sealed class MockMamService
             ["payload"] = payload,
         };
 
-        var config = new ProducerConfig
+        try
         {
-            BootstrapServers = _kafka.BootstrapServers,
-            Acks = Acks.Leader,
-        };
-        if (_kafka.SecurityProtocol.Equals("SaslSsl", StringComparison.OrdinalIgnoreCase))
-        {
-            config.SecurityProtocol = SecurityProtocol.SaslSsl;
-            config.SaslMechanism = SaslMechanism.Plain;
-            config.SaslUsername = _kafka.SaslUsername;
-            config.SaslPassword = _kafka.SaslPassword;
+            var result = await Producer.ProduceAsync(_kafka.DeliveryTopic, new Message<string, string>
+            {
+                Key = assetId,
+                Value = envelope.ToJsonString(),
+            }, ct);
+
+            _logger.LogInformation(
+                "MockMAM → {Topic} · source={Source} range={Range} asset={AssetId} (p{Partition}/o{Offset})",
+                _kafka.DeliveryTopic, payload["source"], range, assetId,
+                result.Partition.Value, result.Offset.Value);
+
+            return MamEmitResult.Success(envelope);
         }
-
-        using var producer = new ProducerBuilder<string, string>(config).Build();
-        var result = await producer.ProduceAsync(_kafka.DeliveryTopic, new Message<string, string>
+        catch (Exception ex)
         {
-            Key = assetId,
-            Value = envelope.ToJsonString(),
-        }, ct);
-
-        _logger.LogInformation(
-            "MockMAM → {Topic} · source={Source} range={Range} asset={AssetId} (p{Partition}/o{Offset})",
-            _kafka.DeliveryTopic, payload["source"], range, assetId,
-            result.Partition.Value, result.Offset.Value);
-
-        return envelope;
+            // Broker unreachable, SASL/ACL failure, topic denied, oversize message,
+            // or a build/DNS failure from the lazy Producer getter. Surface it —
+            // don't let ProduceAsync throw out as an opaque 500 / silent scenario abort.
+            _logger.LogError(ex, "MockMAM: publish to {Topic} failed for source {SourceId}",
+                _kafka.DeliveryTopic, sourceId);
+            return MamEmitResult.Fail(MamEmitStatus.PublishFailed,
+                $"publish to {_kafka.DeliveryTopic} failed: {ex.Message}");
+        }
     }
 
-    private IReadOnlyList<MamCatalogEntry> LoadCatalog()
+    // Returns null on not-found/parse failure (distinct from an empty catalog) so
+    // the caller does not memoize a failed load — see the Catalog property.
+    private IReadOnlyList<MamCatalogEntry>? LoadCatalog()
     {
         // Same resolution order as /api/content: source tree for `dotnet run`,
         // BaseDirectory for the published container.
@@ -173,8 +210,8 @@ public sealed class MockMamService
                  : null;
         if (file is null)
         {
-            _logger.LogWarning("MockMAM: catalog not found at {Path} — catalog is empty", relPath);
-            return Array.Empty<MamCatalogEntry>();
+            _logger.LogWarning("MockMAM: catalog not found at {Path} — will retry on next access", relPath);
+            return null;
         }
 
         try
@@ -187,9 +224,16 @@ public sealed class MockMamService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "MockMAM: failed to parse {File}", file);
-            return Array.Empty<MamCatalogEntry>();
+            _logger.LogError(ex, "MockMAM: failed to parse {File} — will retry on next access", file);
+            return null;
         }
+    }
+
+    public void Dispose()
+    {
+        if (_producer is null) return;
+        _producer.Flush(TimeSpan.FromSeconds(5));
+        _producer.Dispose();
     }
 }
 
@@ -200,3 +244,17 @@ public sealed record MamCatalogEntry(
     int DurationSeconds,
     string? AssetId,
     string? Notes);
+
+public enum MamEmitStatus { Emitted, UnknownSource, InvalidRange, MissingAsset, PublishFailed }
+
+/// <summary>
+/// Outcome of a MockMAM emit. Carries the discriminated failure reason so callers
+/// (the /api/mam/emit endpoint, the simulator) surface the specific cause rather
+/// than collapsing every miss to a bare null.
+/// </summary>
+public sealed record MamEmitResult(MamEmitStatus Status, JsonObject? Envelope, string? Error)
+{
+    public bool Ok => Status == MamEmitStatus.Emitted;
+    public static MamEmitResult Success(JsonObject envelope) => new(MamEmitStatus.Emitted, envelope, null);
+    public static MamEmitResult Fail(MamEmitStatus status, string error) => new(status, null, error);
+}

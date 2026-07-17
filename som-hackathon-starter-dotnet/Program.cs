@@ -235,10 +235,14 @@ app.MapGet("/api/mam/catalog", (MockMamService mam) => Results.Ok(mam.Catalog));
 app.MapPost("/api/mam/emit/{sourceId}", async (
     string sourceId, MamEmitRequest? body, MockMamService mam, CancellationToken ct) =>
 {
-    var envelope = await mam.EmitAsync(sourceId, body?.TimeRange, body?.AssetId, ct);
-    return envelope is null
-        ? Results.BadRequest(new { error = "unknown_source_or_invalid_range", source_id = sourceId })
-        : Results.Ok(envelope);
+    var result = await mam.EmitAsync(sourceId, body?.TimeRange, body?.AssetId, ct);
+    return result.Status switch
+    {
+        MamEmitStatus.Emitted => Results.Ok(result.Envelope),
+        // Infra failure (broker/SASL/topic) is not the caller's fault → 502, not 400.
+        MamEmitStatus.PublishFailed => Results.Problem(detail: result.Error, statusCode: 502),
+        _ => Results.BadRequest(new { error = result.Status.ToString(), detail = result.Error, source_id = sourceId }),
+    };
 });
 
 // ── Simulator (local-dev fallback for AP ENPS) ─────────

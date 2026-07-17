@@ -198,8 +198,16 @@ public sealed class SimulatorService : BackgroundService
                 break;
             case "media-available":
                 // Mock MAM emits som.delivery.media_available (TAMS stand-in — see MockMamService).
-                if (action.SourceId is not null)
-                    await _mockMam.EmitAsync(action.SourceId, action.TimeRange, ct: ct);
+                if (action.SourceId is null)
+                {
+                    _logger.LogWarning("Simulator 'media-available' action missing SourceId — skipped");
+                    break;
+                }
+                var emit = await _mockMam.EmitAsync(action.SourceId, action.TimeRange, ct: ct);
+                if (!emit.Ok)
+                    _logger.LogError(
+                        "Simulator 'media-available' did NOT emit for source {SourceId}: {Status} — {Error}",
+                        action.SourceId, emit.Status, emit.Error);
                 break;
             default:
                 _logger.LogWarning("Unknown simulator action type: {Type}", action.Type);
