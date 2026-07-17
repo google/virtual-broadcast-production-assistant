@@ -1,0 +1,207 @@
+{
+  "id": "ap/wire-fact-check",
+  "version": "0.1.0",
+  "name": "AP Wire Fact Check",
+  "description": "Dashboard registration for AP's Ireland-backed wire fact-check skill. The production AP skill consumes story.context, fetches open AP content_refs[].uri body JSON when available, compares hard facts against the one AP Media API story most likely to be about the same topic, and publishes flat skill.warning.raised or skill.suggestion.created outputs to som.skills.staging plus skill.run.completed audit records to som.skills.runs. This JSON keeps the skill visible in the Google dashboard; real processing runs in AP infrastructure.",
+  "skill_type": "vendor",
+  "disclosure_level": "L1",
+  "migration_policy": "cold",
+  "reads": [
+    "story_id",
+    "sequence_number",
+    "headline",
+    "premise",
+    "sources",
+    "sources.content_ref",
+    "content_refs[].uri",
+    "content_refs[].mime_type",
+    "content_refs[].content_format",
+    "compliance",
+    "updated_at"
+  ],
+  "produces": [
+    "skill.warning.raised",
+    "skill.suggestion.created",
+    "skill.run.completed"
+  ],
+  "runtime": {
+    "owner": "Associated Press",
+    "executor_id": "ap-wire-fact-check-01",
+    "system_type": "compliance_engine",
+    "deployment_region": "eu-west-1",
+    "deployment_name": "AP SOM Ireland remote-processing service",
+    "execution_model": "external Kafka consumer/publisher",
+    "dashboard_file_purpose": "registration_only"
+  },
+  "kafka": {
+    "consumes": [
+      "som.story.context"
+    ],
+    "publishes": {
+      "approval_staging": "som.skills.staging",
+      "run_audit": "som.skills.runs"
+    },
+    "does_not_embed_topic_field": true,
+    "approval_flow": "DashboardService approves staged outputs and republishes accepted items to som.skills.events."
+  },
+  "content_ref_contract": {
+    "preferred_path": "payload.content_refs[].uri",
+    "fallback_path": "payload.sources[].content_ref",
+    "mime_type": "application/json",
+    "content_format": "ap-som-body-json-v1",
+    "required_body_field": "body_text",
+    "body_html": "HTML fragment for display only"
+  },
+  "business_logic": {
+    "full_body_path": [
+      "Fetch body_text from content_ref JSON.",
+      "Use the AP Media API reference search settings from the AP publisher dashboard, including product filters and AP's demo exclusions.",
+      "Select one AP reference story most likely to be about the same topic.",
+      "Use one OpenAI function call to extract up to six definitive hard facts from the provided story.",
+      "Use a second OpenAI function call to rate those facts against only the selected AP reference story as VALID, INVALID, or SKIP.",
+      "Publish skill.warning.raised only when a clear INVALID mismatch is found; otherwise publish a completion suggestion."
+    ],
+    "missing_content_ref_path": [
+      "Do not synthesize a story body.",
+      "Run only an inline metadata AP Media API reference search when headline or premise is enough.",
+      "Publish skill.run.completed with outcome SKIPPED when required inputs are unavailable."
+    ],
+    "llm_guardrails": [
+      "The LLM must not use training data, memory, live web search, or external facts to verify claims.",
+      "The AP reference story is the only verification material."
+    ]
+  },
+  "output_contracts": [
+    {
+      "message_type": "skill.warning.raised",
+      "topic": "som.skills.staging",
+      "shape": "flat_som_v0_2_dashboard_compatible",
+      "id_field": "warning_id",
+      "required_top_level_fields": [
+        "som_version",
+        "message_id",
+        "message_type",
+        "timestamp",
+        "source",
+        "warning_id",
+        "skill_id",
+        "skill_version",
+        "story_id",
+        "story_version",
+        "scope",
+        "severity",
+        "rule_id",
+        "affected_fields",
+        "detail",
+        "blocks",
+        "evidence",
+        "human_review_required"
+      ],
+      "severity_enum": [
+        "hold",
+        "flag",
+        "inform"
+      ],
+      "notes": "AP warning events expose warning_id at the top level for dashboard approval."
+    },
+    {
+      "message_type": "skill.suggestion.created",
+      "topic": "som.skills.staging",
+      "shape": "flat_som_v0_2_dashboard_compatible",
+      "id_field": "suggestion_id",
+      "required_top_level_fields": [
+        "som_version",
+        "message_id",
+        "message_type",
+        "timestamp",
+        "source",
+        "suggestion_id",
+        "skill_id",
+        "skill_version",
+        "story_id",
+        "story_version",
+        "scope",
+        "suggestion_type",
+        "confidence",
+        "content_type",
+        "variants",
+        "output",
+        "tools_invoked",
+        "disclosure_levels_used",
+        "context_snapshot"
+      ],
+      "variant_fields": [
+        "variant_id",
+        "content_type",
+        "format",
+        "label",
+        "confidence",
+        "payload",
+        "preview",
+        "title",
+        "detail"
+      ],
+      "notes": "Used when the comparison completes without INVALID hard-fact mismatches."
+    },
+    {
+      "message_type": "skill.run.completed",
+      "topic": "som.skills.runs",
+      "shape": "flat_som_v0_2_dashboard_compatible",
+      "id_field": "run_id",
+      "required_top_level_fields": [
+        "som_version",
+        "message_id",
+        "message_type",
+        "timestamp",
+        "source",
+        "run_id",
+        "skill_id",
+        "skill_version",
+        "story_id",
+        "story_version",
+        "triggered_by",
+        "inputs",
+        "outputs",
+        "latency_ms",
+        "outcome",
+        "human_review_required"
+      ],
+      "outcome_enum": [
+        "COMPLETED",
+        "FAILED",
+        "SKIPPED",
+        "CONFLICTED"
+      ],
+      "inputs_required": [
+        "reads",
+        "content_ref",
+        "input_digest"
+      ],
+      "outputs_fields": [
+        "warning_ids",
+        "suggestion_ids",
+        "enrichment_ids"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "ap-wire-fact-check-registration-only",
+      "name": "Registration sentinel",
+      "description": "Non-firing sentinel rule. AP wire fact-check execution is handled by the AP SOM bridge and Ireland processing service, not by this dashboard rule engine.",
+      "type": "field_present",
+      "config": {
+        "field": "extensions.com.ap.registration_only_force_wire_fact_check"
+      },
+      "default_severity": "inform",
+      "output_message_type": "skill.warning.raised",
+      "affected_fields": [
+        "headline",
+        "content_refs[].uri",
+        "sources.content_ref"
+      ],
+      "detail_template": "AP Wire Fact Check registration sentinel fired. Real AP processing should be performed by the AP Ireland-backed skill worker.",
+      "rationale": "This file registers AP's real external skill with the Google dashboard. The sentinel should not fire on normal SOM stories."
+    }
+  ]
+}

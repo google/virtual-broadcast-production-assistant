@@ -310,6 +310,82 @@ The dashboard is served on port `5050` both inside the container (via `ASPNETCOR
 
 Update the `Dockerfile` base image tags from `10.0-preview` to `10.0` once .NET 10 reaches GA.
 
+## Deployment to Google Cloud
+
+This repository includes a `terraform` directory for deploying the application to Google Cloud using Managed Service for Apache Kafka and Cloud Run.
+
+Due to circular dependencies between Artifact Registry, Cloud Build, and Cloud Run, follow these steps for the initial deployment:
+
+1.  **Initialize Terraform**:
+    ```bash
+    cd terraform
+    terraform init
+    ```
+2.  **Enable Artifact Registry API**:
+    ```bash
+    terraform apply -target=google_project_service.artifactregistry
+    ```
+3.  **Create the Repository**:
+    ```bash
+    terraform apply -target=google_artifact_registry_repository.repo
+    ```
+4.  **Build and Push Image**:
+    Use the provided `cloudbuild.yaml` to build and push the image. You may need to update the substitutions in `cloudbuild.yaml` to match your region and repository name.
+    ```bash
+    cd ..
+    gcloud builds submit --config cloudbuild.yaml .
+    ```
+5.  **Complete Deployment**:
+    Run a full apply to create Cloud Run, Kafka resources, and the Tailscale Subnet Router.
+    ```bash
+    cd terraform
+    terraform apply
+    ```
+
+### Connecting Remotely via Tailscale (for Developers)
+
+To subscribe to Managed Kafka topics or run a local skill worker against the cloud cluster, developers need network-level access to the GCP VPC. We use Tailscale as a subnet router.
+
+#### 1. Administrator Setup (Once after deployment)
+If you did not provide a `tailscale_auth_key` in `terraform.tfvars`, the subnet router VM was provisioned but not authenticated.
+1. SSH into the router VM using the command from Terraform outputs:
+   ```bash
+   gcloud compute ssh som-tailscale-router --tunnel-through-iap --project <project_id> --zone <zone>
+   ```
+2. Run `sudo tailscale up --advertise-routes=10.0.0.0/24` and follow the printed URL to authenticate.
+3. In your **Tailscale Admin Console**:
+   - Locate the `som-tailscale-router` device.
+   - Go to **Route settings** (under the meatball menu next to the device).
+   - Enable the advertised route `10.0.0.0/24`.
+   - Optionally disable key expiry on this device so it doesn't disconnect.
+
+#### 2. Developer Laptop Configuration
+Each developer who needs to connect from their local machine must do the following:
+
+1. **Install Tailscale**: Download and install Tailscale from [tailscale.com](https://tailscale.com).
+2. **Join the Tailnet**: Log in to the same Tailscale network used by the project.
+3. **Accept Subnet Routes**:
+   - **macOS / Windows**: Open Tailscale settings and ensure **Use Subnet Routes** (or "Accept Subnet Routes") is toggled ON.
+   - **Linux**: Run `sudo tailscale up --accept-routes`.
+4. **Authenticate with GCP (ADC)**:
+   Ensure you have the GCP SDK installed, then run:
+   ```bash
+   gcloud auth login
+   gcloud auth application-default login
+   ```
+   *Note: Your GCP user account must be granted the `roles/managedkafka.client` role in the GCP project to authenticate with Kafka.*
+5. **Run the Application**:
+   Configure the application to use the GCP Managed Kafka bootstrap server (find the actual URL in your terraform outputs or ask the administrator):
+   ```bash
+   export Kafka__BootstrapServers="bootstrap.som-kafka-cluster.[...].managedkafka.[...].cloud.goog:9092"
+   export Kafka__SecurityProtocol="SaslSsl"
+   export Kafka__SaslMechanism="Plain"
+   export Kafka__SaslUsername="YOUR_GCP_EMAIL@example.com" # must match the ADC login identity
+   
+   dotnet run
+   ```
+
+
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE).

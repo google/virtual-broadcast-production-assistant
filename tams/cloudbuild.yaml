@@ -1,0 +1,33 @@
+steps:
+# Step 1: Build the Docker image inside the tams/ subdirectory
+- name: 'gcr.io/cloud-builders/docker'
+  dir: 'tams'
+  args: ['build', '-t', '$_LOCATION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/tams-api:latest', '.']
+
+# Step 2: Push the built image to GCP Artifact Registry
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', '$_LOCATION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/tams-api:latest']
+
+# Step 3: Automatically deploy/update the Cloud Run service
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args:
+  - 'run'
+  - 'services'
+  - 'update'
+  - 'tams-api'
+  - '--region=$_LOCATION'
+  - '--image=$_LOCATION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/tams-api:latest'
+
+images:
+- '$_LOCATION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/tams-api:latest'
+
+substitutions:
+  _LOCATION: europe-west1
+  _REPOSITORY: tams-repo
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+# Using the same high-security custom service account provisioned in your starter
+serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/som-cloudbuild-sa@$PROJECT_ID.iam.gserviceaccount.com'

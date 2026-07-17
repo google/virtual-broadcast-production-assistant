@@ -83,15 +83,11 @@ public static class TestProducer
             Acks = Acks.Leader,
         };
 
-        if (options.SecurityProtocol.Equals("SaslSsl", StringComparison.OrdinalIgnoreCase))
-        {
-            config.SecurityProtocol = SecurityProtocol.SaslSsl;
-            config.SaslMechanism = SaslMechanism.Plain;
-            config.SaslUsername = options.SaslUsername;
-            config.SaslPassword = options.SaslPassword;
-        }
+        KafkaAuthHelper.Configure(config, options);
 
-        using var producer = new ProducerBuilder<string, string>(config).Build();
+        var pb = new ProducerBuilder<string, string>(config);
+        KafkaAuthHelper.AttachOAuth(pb, options);
+        using var producer = pb.Build();
 
         // If no scenario specified, publish all seed stories
         var scenarios = scenario is null

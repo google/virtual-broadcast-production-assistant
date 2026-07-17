@@ -1,0 +1,5 @@
+aiohttp
+av>=14.1.0
+m3u8
+mediatimestamp
+mediajson

@@ -41,8 +41,13 @@ public class SkillWorker : BackgroundService
         var producerConfig = BuildProducerConfig();
         var consumerConfig = BuildConsumerConfig();
 
-        _producer = new ProducerBuilder<string, string>(producerConfig).Build();
-        _consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
+        var pb = new ProducerBuilder<string, string>(producerConfig);
+        var cb = new ConsumerBuilder<string, string>(consumerConfig);
+        KafkaAuthHelper.AttachOAuth(pb, _options);
+        KafkaAuthHelper.AttachOAuth(cb, _options);
+
+        _producer = pb.Build();
+        _consumer = cb.Build();
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -296,13 +301,7 @@ public class SkillWorker : BackgroundService
 
     private void ApplyAuth(ClientConfig config)
     {
-        if (_options.SecurityProtocol.Equals("SaslSsl", StringComparison.OrdinalIgnoreCase))
-        {
-            config.SecurityProtocol = SecurityProtocol.SaslSsl;
-            config.SaslMechanism = SaslMechanism.Plain;
-            config.SaslUsername = _options.SaslUsername;
-            config.SaslPassword = _options.SaslPassword;
-        }
+        KafkaAuthHelper.Configure(config, _options);
     }
 
     public override void Dispose()

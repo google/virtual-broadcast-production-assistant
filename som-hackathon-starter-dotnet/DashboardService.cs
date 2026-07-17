@@ -47,7 +47,9 @@ public sealed class DashboardService : BackgroundService
             EnableIdempotence = true,
         };
         ApplyAuth(producerConfig);
-        _producer = new ProducerBuilder<string, string>(producerConfig).Build();
+        var pb = new ProducerBuilder<string, string>(producerConfig);
+        KafkaAuthHelper.AttachOAuth(pb, _options);
+        _producer = pb.Build();
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -64,8 +66,10 @@ public sealed class DashboardService : BackgroundService
             TopicMetadataRefreshIntervalMs = 3000,
         };
         ApplyAuth(consumerConfig);
+        var cb = new ConsumerBuilder<string, string>(consumerConfig);
+        KafkaAuthHelper.AttachOAuth(cb, _options);
 
-        using var consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
+        using var consumer = cb.Build();
         consumer.Subscribe(new[]
         {
             _options.StoryContextTopic,
@@ -448,13 +452,7 @@ public sealed class DashboardService : BackgroundService
 
     private void ApplyAuth(ClientConfig config)
     {
-        if (_options.SecurityProtocol.Equals("SaslSsl", StringComparison.OrdinalIgnoreCase))
-        {
-            config.SecurityProtocol = SecurityProtocol.SaslSsl;
-            config.SaslMechanism = SaslMechanism.Plain;
-            config.SaslUsername = _options.SaslUsername;
-            config.SaslPassword = _options.SaslPassword;
-        }
+        KafkaAuthHelper.Configure(config, _options);
     }
 
     public override void Dispose()
