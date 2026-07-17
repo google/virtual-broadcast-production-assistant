@@ -71,3 +71,34 @@ Premise propagation with `change_detected_at` (seed 01:43–44) ≈ Beat 3 (Accu
 6. Firing-rule upgrade (§4) — richest; do last / scope down. **[PENDING]**
 
 See `SOM-v0.3.1-Migration-Log.md` for the running record of changes on this branch.
+
+---
+
+## Status addendum — 9 July 2026
+
+v0.3.1 **locked 30 June** (by email; Source re-key folded in, objection window closed 1 Jul with no objections). Everything above marked [PENDING] on the schema side is now RATIFIED — the remaining gaps are build work, not spec risk.
+
+### Done since 23 June (items 1–2 of the suggested order)
+
+- ✅ §2 payload migration — all 5 seeds validate against the v0.3.1 story-context + envelope schemas.
+- ✅ §3 lifecycle phases — `PhaseOrder` fixed to `DEVELOPING → READY_TO_AIR → BREAKING → PUBLISHED`; simulator descriptions updated.
+- ✅ §4 output contract — skill-warning envelope, `scope`, `skill_warning_ref`, `correlation_id` threading.
+- ✅ MOS→SOM bridge scaffold (`mos-bridge/`, emits `story.context` + `link.committed`).
+- ✅ v0.3.1 schemas vendored (`schema/v0.3.1-proposed/` + `validate.py`); **30 Jun Source-re-key re-cut synced on disk but UNCOMMITTED** — commit before hackathon so participants build against the locked shapes.
+
+### Still open (= the August hackathon scope; see `SOM-Hackathon-Aug-2026-Scope.md`)
+
+- ⏳ §1 distribution-layer families — `som.link.*`, `som.telling.*`, `som.delivery.media_available`, `som.system.audit`: topics, producers/consumers, `usage[]` maintenance (§5 idempotent upsert). Biggest build; demo-critical (D1·B4 Reach, D2·B3 Audit).
+- ⏳ §2 media leg on seeds — `media_refs[]` (Source URI + TAMS timerange, NOT `flow_id` — re-keyed 29 Jun), `authenticity_credential`, `voice_count`, `compliance[].media_range`.
+- ⏳ §4 firing-rule upgrade — (evidential_position × outlet/path) anchor in `RuleEngine.cs`.
+- ⏳ §5 scripted hurricane/verdict scenarios + schema validation wired into producer tests/CI.
+- ⏳ Editorial pass on `evidential_position` (everything defaulted TERTIARY on migration).
+- ⏳ `dotnet build` on the C# changes (needs the Mac).
+
+### Errata
+
+- ⚠️ **`TRANSCRIPT` missing from `asset_type`** in the vendored `som-v0.3.1-story-context.schema.json` (and the SOM-folder original). TRANSCRIPT-as-Asset was **locked at v0.3.1** (29 Jun AI-outputs decision, glossary v0.345 CONFIRMED) but the 30 Jun re-cut omitted the enum value. Fix both copies — one-line enum addition.
+
+### v0.3.1 / v0.3.2 boundary — the rule for August
+
+**The IBC PoC ships on v0.3.1 only.** v0.3.2 exists solely as a rough draft (`SOM/schema/v0.3.2-proposed/` — assertions[], authorship provenance, ORPHAN story_type, telling.transforms[]); nothing in it is WG-agreed, and its freeze (~1 Aug) lands mid-hackathon. Because the worker is schema-agnostic, v0.3.2 is seed-data + schema work with **no C# refactor implied** — the only code-adjacent v0.3.2 item (the firing-rule anchor) is already on the v0.3.1 list above. Do not vendor v0.3.2 schemas into this branch; a v0.3.2 beat (orphan clip / edge transforms) is a stretch goal on a separate branch **only if** the WG accepts before the freeze.

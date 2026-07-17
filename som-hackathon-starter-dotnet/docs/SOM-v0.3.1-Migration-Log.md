@@ -78,3 +78,12 @@ _Branch `som-v031-ibc-readiness`. Running record of changes. Companion to `SOM-v
 - ✅ **Proposal written:** `docs/SOM-v0.3.1-scope-reconciliation.md` — recommend a typed `{level}:{id}` reference, level ∈ `story`/`asset`/`link`; **drop "Delivery"** (wrong layer + PENDING). PROPOSED, awaiting schema-authority ratification.
 - 🟡 **Applied in-repo:** `SkillWorker.cs` comment (emitted value stays `story:{story_id}` — correct for the current story-wide `RuleEngine`; `RuleMatch` carries no `asset_id`) + `CLAUDE.md` scope-levels line. `dotnet build` re-verified green.
 - ⏳ **At source (not applied here):** the schema-description edit lands in the SOM spec folder then re-vendors (`sync-from-spec.sh`); the `SOM/skills` edits land in OneDrive. Optional `scope` `pattern: ^(story|asset|link):` deferred to the 30 June lock. `asset:{id}` emission belongs to the PENDING firing-rule upgrade.
+
+## 2026-07-09 — Mock MAM (TAMS stand-in) scaffold
+
+- ✅ **`MockMamService.cs`** — no MAM participant in the IBC PoC, so this stands in for the TAMS media store's bus contract: naming authority for `tams://mock-mam-store/<id>` Source URIs + `som.delivery.media_available` producer. Full v0.3.1 envelopes (`originating_system.system_type: "archive"`), Source URI + TAMS timerange per the 29 Jun re-key (no `flow_id`). **Write-only on the bus by design** — no query API, nothing other participants read. Payload + envelope shapes verified against the vendored schemas (offline validation; see `docs/SOM-Hackathon-Aug-2026-Scope.md` WS2a).
+- ✅ **`content/mam-catalog.json`** — 3 catalogued Sources (courthouse pool feed keyed to worked-example `a2`; hurricane landfall feed for D1·B5; UGC clip reserved for the v0.3.2 orphan stretch). WS2 wires these IDs into the seeds' `media_refs[]`.
+- ✅ **`KafkaOptions.DeliveryTopic`** (+ `appsettings.json`) — first distribution-layer topic; `som.link.*` / `som.telling.*` / `som.system.audit` remain WS1.
+- ✅ **Simulator** — new `media-available` action + `media-arrival` scenario: publish → three growing-timerange emits (`[0:0_30:0)` → `[0:0_75:0)` → `[0:0_1260:0)`), mimicking a TAMS recording addressable while still growing. `SimAction` gains `SourceId`/`TimeRange`.
+- ✅ **Endpoints** — `GET /api/mam/catalog`, `POST /api/mam/emit/{sourceId}` (optional body `{timeRange, assetId}`).
+- 🟡 **Not yet compiled** — written off-Mac; `dotnet build` + smoke-test is the first hackathon-prep step.
