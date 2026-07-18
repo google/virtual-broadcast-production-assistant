@@ -19,6 +19,15 @@ namespace SomSkillWorker;
 ///                                Fires when field is missing or null/empty.
 ///   field_regex                → field, pattern, case_sensitive?
 ///                                Fires when field matches the regex.
+///   field_changed              → field, to?, from?
+///                                Fires when field's value differs from the PREVIOUS story
+///                                version (skills-model field-change condition). Needs the
+///                                caller to supply the previous snapshot; never fires on the
+///                                first sighting of a story. `field` may contain one `[]`
+///                                array wildcard (e.g. assets[].acquisition_state) — items
+///                                are matched across versions by asset_id/source_id/flag_id/
+///                                id, falling back to index. Optional `to`/`from` restrict
+///                                which transitions fire.
 ///
 /// Detail strings come from rule.detail_template with {term} / {value} substitutions
 /// where applicable. Returning multiple matches per rule is supported (e.g. term_match
@@ -26,7 +35,7 @@ namespace SomSkillWorker;
 /// </summary>
 public sealed class RuleEngine
 {
-    public IEnumerable<RuleMatch> Evaluate(SkillRule rule, JsonNode story) => rule.Type switch
+    public IEnumerable<RuleMatch> Evaluate(SkillRule rule, JsonNode story, JsonNode? previous = null) => rule.Type switch
     {
         "term_match"               => EvalTermMatch(rule, story),
         "phase_with_missing_field" => EvalPhaseMissingField(rule, story),
@@ -34,6 +43,7 @@ public sealed class RuleEngine
         "field_present"            => EvalFieldPresent(rule, story, expectPresent: true),
         "field_absent"             => EvalFieldPresent(rule, story, expectPresent: false),
         "field_regex"              => EvalFieldRegex(rule, story),
+        "field_changed"            => EvalFieldChanged(rule, story, previous),
         _                          => Array.Empty<RuleMatch>(),
     };
 
@@ -119,7 +129,94 @@ public sealed class RuleEngine
             yield return new RuleMatch(rule, RenderDetail(rule, ("match", m.Value), ("field", field), ("value", value)));
     }
 
+    private static IEnumerable<RuleMatch> EvalFieldChanged(SkillRule rule, JsonNode story, JsonNode? previous)
+    {
+        var field = GetString(rule.Config, "field");
+        if (field is null || previous is null) yield break;
+
+        var to = GetString(rule.Config, "to");
+        var from = GetString(rule.Config, "from");
+
+        // Last-wins on duplicate identities — the schema doesn't enforce asset_id uniqueness,
+        // and a throw here would silently disable field_changed for the story (the worker's
+        // catch would skip the snapshot store).
+        var current = new Dictionary<string, JsonNode?>();
+        foreach (var (k, n) in GetByPathMulti(story, field)) current[k] = n;
+        var prior = new Dictionary<string, JsonNode?>();
+        foreach (var (k, n) in GetByPathMulti(previous, field)) prior[k] = n;
+
+        static string? ValueOf(JsonNode? n) => n switch
+        {
+            null => null,
+            JsonValue => n.ToString(),
+            _ => n.ToJsonString(),
+        };
+
+        foreach (var (key, node) in current)
+        {
+            // Only items present in BOTH versions can have "changed"; additions are not changes.
+            if (!prior.TryGetValue(key, out var priorNode)) continue;
+
+            var newValue = ValueOf(node);
+            var oldValue = ValueOf(priorNode);
+            if (string.Equals(newValue, oldValue, StringComparison.Ordinal)) continue;
+
+            if (to is not null && !string.Equals(newValue, to, StringComparison.OrdinalIgnoreCase)) continue;
+            if (from is not null && !string.Equals(oldValue, from, StringComparison.OrdinalIgnoreCase)) continue;
+
+            yield return new RuleMatch(rule, RenderDetail(rule,
+                ("field", field), ("item", key), ("from", oldValue ?? "∅"), ("to", newValue ?? "∅")));
+        }
+    }
+
     // ─── Helpers ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Like GetByPath, but a segment ending in "[]" expands over an array, yielding one
+    /// (key, node) pair per element. Element identity is the child's asset_id / source_id /
+    /// flag_id / id when present (stable across republished story versions), else its index.
+    /// At most one wildcard is supported — enough for assets[].acquisition_state-style paths.
+    /// </summary>
+    public static IEnumerable<(string Key, JsonNode? Node)> GetByPathMulti(JsonNode root, string path)
+    {
+        var parts = path.Split('.');
+        var results = new List<(string Key, JsonNode? Node)> { ("", root) };
+
+        foreach (var part in parts)
+        {
+            var next = new List<(string Key, JsonNode? Node)>();
+            var isWildcard = part.EndsWith("[]", StringComparison.Ordinal);
+            var name = isWildcard ? part[..^2] : part;
+
+            foreach (var (key, node) in results)
+            {
+                var child = node is JsonObject obj && obj.ContainsKey(name) ? obj[name] : null;
+                if (child is null) continue;
+
+                if (!isWildcard)
+                {
+                    next.Add((key, child));
+                    continue;
+                }
+
+                if (child is not JsonArray arr) continue;
+                for (var i = 0; i < arr.Count; i++)
+                {
+                    var item = arr[i];
+                    var idNode = item?["asset_id"] ?? item?["source_id"] ?? item?["flag_id"] ?? item?["id"];
+                    var identity = idNode is JsonValue ? idNode.ToString() : i.ToString();
+                    next.Add((key.Length == 0 ? identity : $"{key}.{identity}", item));
+                }
+            }
+
+            results = next;
+            if (results.Count == 0) yield break;
+        }
+
+        foreach (var r in results) yield return r;
+    }
+
+    // ─── Helpers (continued) ────────────────────────────────────────────────
 
     /// <summary>
     /// Walk a dotted path through a JsonNode, e.g. "lifecycle.phase".

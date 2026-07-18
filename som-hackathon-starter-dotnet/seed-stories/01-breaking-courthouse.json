@@ -114,6 +114,21 @@
         "status": "INVALIDATED",
         "invalidated_by": "cf-019536a2-0001",
         "evidential_position": "TERTIARY"
+      },
+      {
+        "asset_id": "a2",
+        "asset_type": "VIDEO",
+        "status": "READY",
+        "evidential_position": "PRIMARY",
+        "acquisition_state": "CAPTURED",
+        "media_refs": [
+          {
+            "source": "tams://mock-mam-store/9f2e7c1a",
+            "label": "courthouse pool feed",
+            "time_range": "[0:0_134:0)"
+          }
+        ],
+        "voice_count": 1
       }
     ],
     "ai_enrichments": [

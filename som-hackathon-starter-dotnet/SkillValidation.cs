@@ -28,6 +28,7 @@ public static class SkillValidation
         ["field_present"]            = new[] { "field" },
         ["field_absent"]              = new[] { "field" },
         ["field_regex"]              = new[] { "field", "pattern" },
+        ["field_changed"]            = new[] { "field" },
     };
 
     public static ValidationResult Validate(SkillDefinition? skill)

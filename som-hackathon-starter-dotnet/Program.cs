@@ -38,6 +38,7 @@ builder.Services.AddHostedService<SkillWorker>();
 builder.Services.AddSingleton<SimulatorService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SimulatorService>());
 builder.Services.AddSingleton<MockMamService>();
+builder.Services.AddHostedService<MediaCoordinatorService>();
 
 // Bind to localhost:5050 only when ASPNETCORE_URLS is unset (i.e. local `dotnet run`).
 // In containers the Dockerfile sets ASPNETCORE_URLS=http://+:5050 so Kestrel binds to
@@ -235,7 +236,7 @@ app.MapGet("/api/mam/catalog", (MockMamService mam) => Results.Ok(mam.Catalog));
 app.MapPost("/api/mam/emit/{sourceId}", async (
     string sourceId, MamEmitRequest? body, MockMamService mam, CancellationToken ct) =>
 {
-    var result = await mam.EmitAsync(sourceId, body?.TimeRange, body?.AssetId, ct);
+    var result = await mam.EmitAsync(sourceId, body?.TimeRange, body?.AssetId, body?.CaptureComplete ?? false, ct);
     return result.Status switch
     {
         MamEmitStatus.Emitted => Results.Ok(result.Envelope),
@@ -315,6 +316,6 @@ app.Map("/ws", async (HttpContext ctx, DashboardService dash) =>
 app.Run();
 
 internal sealed record DecisionRequest(string Decision, string? Reviewer);
-internal sealed record MamEmitRequest(string? TimeRange, string? AssetId);
+internal sealed record MamEmitRequest(string? TimeRange, string? AssetId, bool? CaptureComplete);
 internal sealed record AddComplianceRequest(string? Type, string? Severity, string? Detail);
 internal sealed record AutoStartRequest(int? IntervalSeconds);

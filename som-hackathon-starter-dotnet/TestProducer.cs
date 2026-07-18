@@ -27,6 +27,7 @@ public static class TestProducer
         ["informal"]                = "seed-stories/03-informal-headline.json",
         ["clean"]                   = "seed-stories/04-clean-transit.json",
         ["breaking-no-compliance"]  = "seed-stories/05-breaking-no-compliance.json",
+        ["hurricane"]               = "seed-stories/06-breaking-hurricane.json",
     };
 
     /// <summary>Available scenarios in the order they should appear in the UI.</summary>

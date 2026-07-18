@@ -203,7 +203,7 @@ public sealed class SimulatorService : BackgroundService
                     _logger.LogWarning("Simulator 'media-available' action missing SourceId — skipped");
                     break;
                 }
-                var emit = await _mockMam.EmitAsync(action.SourceId, action.TimeRange, ct: ct);
+                var emit = await _mockMam.EmitAsync(action.SourceId, action.TimeRange, captureComplete: action.CaptureComplete, ct: ct);
                 if (!emit.Ok)
                     _logger.LogError(
                         "Simulator 'media-available' did NOT emit for source {SourceId}: {Status} — {Error}",
@@ -227,7 +227,8 @@ public sealed record SimAction(
     string? Severity = null,
     string? Detail = null,
     string? SourceId = null,
-    string? TimeRange = null);
+    string? TimeRange = null,
+    bool CaptureComplete = false);
 
 public sealed record SimulationScenario(
     string Id,
@@ -275,7 +276,7 @@ internal static class SimScenarios
         ["multi-vendor-stream"] = new(
             Id: "multi-vendor-stream",
             Name: "Multi-vendor stream",
-            Description: "Publishes all 5 seed stories in quick succession over ~12 seconds. Useful for testing vendor skills against a realistic newsroom load — concurrent stories at different lifecycle stages.",
+            Description: "Publishes the five original seed stories in quick succession over ~12 seconds. Useful for testing vendor skills against a realistic newsroom load — concurrent stories at different lifecycle stages.",
             DurationSeconds: 12,
             Actions: new[]
             {
@@ -305,14 +306,24 @@ internal static class SimScenarios
         ["media-arrival"] = new(
             Id: "media-arrival",
             Name: "Media arrival (mock MAM / TAMS junction)",
-            Description: "D1·B5 proof without a MAM participant: breaking story publishes, then the mock MAM emits delivery.media_available three times with a GROWING TAMS timerange — authentic TAMS behaviour, a recording is addressable while still being captured. Final emit is the full range. Pair with a story.context update flipping acquisition_state CAPTURING → CAPTURED once seeds carry media_refs[] (WS2).",
+            Description: "The full D1·B5 loop: the hurricane story publishes with its live-feed asset CAPTURING, then the mock MAM emits delivery.media_available three times with a GROWING TAMS timerange. The final emit carries the capture-complete extension — the media coordinator flips the asset to CAPTURED and republishes the story, and the capture-complete skill rule fires an inform into Pending Approval. End to end, one scenario.",
             DurationSeconds: 30,
             Actions: new[]
             {
-                new SimAction(0,  "publish",         Scenario: "breaking"),
+                new SimAction(0,  "publish",         Scenario: "hurricane"),
                 new SimAction(6,  "media-available", SourceId: "landfall-feed-01", TimeRange: "[0:0_30:0)"),
                 new SimAction(16, "media-available", SourceId: "landfall-feed-01", TimeRange: "[0:0_75:0)"),
-                new SimAction(26, "media-available", SourceId: "landfall-feed-01", TimeRange: "[0:0_1260:0)"),
+                new SimAction(26, "media-available", SourceId: "landfall-feed-01", TimeRange: "[0:0_1260:0)", CaptureComplete: true),
+            }),
+
+        ["media-unmatched"] = new(
+            Id: "media-unmatched",
+            Name: "Unmatched media (safe-state / orphan preview)",
+            Description: "The mock MAM announces a UGC clip (ugc-flood-77aa41b0) that NO story references. The media coordinator resolves nothing, declines to act, and records a WITHHELD audit on som.system.audit — the skills-model safe-state stop made observable. With Coordinator:OrphanPreview=true it instead authors a clearly-labeled v0.3.2-preview ORPHAN story wrapping the clip, which then flows through skills like any other story.",
+            DurationSeconds: 5,
+            Actions: new[]
+            {
+                new SimAction(0, "media-available", SourceId: "ugc-flood-77aa41b0"),
             }),
 
         ["compliance-review"] = new(

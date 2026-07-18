@@ -1,0 +1,125 @@
+{
+  "som_version": "0.2.0",
+  "message_id": "019536a2-7c3f-7d8e-a1b2-000000000006",
+  "correlation_id": "019536a0-1111-7000-8000-000000000006",
+  "message_type": "story.context",
+  "timestamp": "2026-07-18T12:00:00.123456Z",
+  "topic": "som.story.context",
+  "payload": {
+    "story_id": "hurricane-landfall-2026-0718",
+    "slug": "HURRICANE-GULF-LANDFALL",
+    "headline": "Hurricane Makes Landfall Near Gulf Coast as Category 3 Storm",
+    "story_type": "ACTIVE",
+    "lifecycle": {
+      "phase": "BREAKING",
+      "phase_entered_at": "2026-07-18T11:58:00Z",
+      "previous_phase": "DEVELOPING",
+      "phase_owner": {
+        "user_id": "editor-jharlow",
+        "display_name": "Jess Harlow",
+        "role": "output_editor"
+      }
+    },
+    "priority": {
+      "level": "URGENT",
+      "reason": "Landfall in progress — live feed on air path",
+      "escalated_by": "ncs-nbcu-nyc-01",
+      "escalated_at": "2026-07-18T11:58:30Z"
+    },
+    "story_meaning": {
+      "who": "National Hurricane Center, Gulf Coast emergency services, and NBC News weather and field teams.",
+      "what": "A Category 3 hurricane is making landfall near the Gulf Coast; a live affiliate feed of the landfall is being captured while coverage is on air.",
+      "when": "Landfall began at 11:55 ET on 18 July 2026; the story entered BREAKING at 11:58Z and the feed is still being captured.",
+      "where": "Gulf Coast landfall zone; affiliate feed position at the seawall.",
+      "why": "A major-hurricane landfall on a populated coastline is a rolling public-safety story with continuous new material.",
+      "how": "Covered via a continuously captured affiliate live feed referenced into TAMS, cross-checked against NHC advisories.",
+      "summary": "A Category 3 hurricane is making landfall near the Gulf Coast. The landfall feed is being captured continuously — the asset is open-ended (CAPTURING) and availability rolls in segment by segment while the story is on air.",
+      "confidence": 0.9,
+      "provenance_refs": [
+        "src-nhc-advisory-24",
+        "src-affiliate-feed-01"
+      ]
+    },
+    "government_approval": {
+      "status": "NOT_REQUIRED",
+      "jurisdiction": "US"
+    },
+    "compliance": [
+      {
+        "flag_id": "cf-019536a2-0006",
+        "type": "EDITORIAL_REVIEW",
+        "severity": "MEDIUM",
+        "detail": "Live landfall feed — delay buffer active; watch for distressing imagery during rescue phases",
+        "jurisdiction": "US",
+        "raised_by": "standards-desk-01",
+        "raised_at": "2026-07-18T11:59:00Z",
+        "status": "ACTIVE"
+      }
+    ],
+    "assets": [
+      {
+        "asset_id": "asset-landfall-feed",
+        "asset_type": "VIDEO",
+        "status": "IN_PRODUCTION",
+        "evidential_position": "PRIMARY",
+        "acquisition_state": "CAPTURING",
+        "media_refs": [
+          {
+            "source": "tams://mock-mam-store/landfall-feed-01",
+            "label": "hurricane landfall live feed",
+            "time_range": "[0:0_)"
+          }
+        ],
+        "voice_count": 1
+      },
+      {
+        "asset_id": "lt-hurricane-001",
+        "asset_type": "LOWER_THIRD",
+        "status": "READY",
+        "evidential_position": "TERTIARY"
+      }
+    ],
+    "skills_config": {
+      "skills_spec_version": "2.0.0",
+      "skill_executor_id": "executor-nbcu-nyc-01",
+      "scope_context": "NBC News NOW",
+      "active_skills": [
+        {
+          "skill_id": "nbcu/editorial-standards",
+          "skill_version": "0.1.0",
+          "skill_type": "NEWSROOM",
+          "disclosure_level": "L2",
+          "migration_policy": "GATED",
+          "skill_priority": "CRITICAL"
+        }
+      ],
+      "newsroom": "NBCU"
+    },
+    "updated_at": "2026-07-18T12:00:00Z",
+    "sequence_number": 3,
+    "editorial_source": [
+      {
+        "source_id": "src-nhc-advisory-24",
+        "source_type": "WIRE",
+        "provider": "National Hurricane Center",
+        "credibility": "VERIFIED",
+        "received_at": "2026-07-18T11:50:00Z"
+      },
+      {
+        "source_id": "src-affiliate-feed-01",
+        "source_type": "POOL_FEED",
+        "provider": "Gulf Coast affiliate live feed",
+        "credibility": "TRUSTED",
+        "received_at": "2026-07-18T11:55:00Z"
+      }
+    ],
+    "newsroom_id": "nbcu-news"
+  },
+  "originating_system": {
+    "system_id": "ncs-nbcu-nyc-01",
+    "system_type": "ncs",
+    "system_name": "iNEWS NYC",
+    "vendor": "Avid",
+    "version": "7.0.1"
+  }
+}

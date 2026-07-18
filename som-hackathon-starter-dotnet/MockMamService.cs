@@ -111,6 +111,7 @@ public sealed class MockMamService : IDisposable
         string sourceId,
         string? timeRange = null,
         string? assetIdOverride = null,
+        bool captureComplete = false,
         CancellationToken ct = default)
     {
         var entry = Find(sourceId);
@@ -147,6 +148,18 @@ public sealed class MockMamService : IDisposable
             ["arrived_in"] = StoreName,
             ["arrived_at"] = now.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"),
         };
+
+        // "Capture finished" is not a first-class delivery field in v0.3.1, so it rides the
+        // designed com.{vendor}.* extension namespace — a live example of the escape hatch
+        // partners are told to use. MediaCoordinatorService reacts by flipping the asset's
+        // acquisition_state CAPTURING → CAPTURED.
+        if (captureComplete)
+        {
+            payload["extensions"] = new JsonObject
+            {
+                ["com.ibc-poc.capture_complete"] = true,
+            };
+        }
 
         var envelope = new JsonObject
         {

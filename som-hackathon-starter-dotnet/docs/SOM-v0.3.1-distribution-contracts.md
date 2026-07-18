@@ -4,7 +4,7 @@ _Service: `som-hackathon-starter-dotnet` · schema pack: [`schema/v0.3.1-propose
 
 This is the partner-facing reference for the **v0.3.1 distribution layer** — the message families that sit under `som.link.*`, `som.telling.*`, `som.delivery.*`, and `som.system.*`. For each family: the topic, the JSON Schema, one canonical example, and which IBC demo beat it proves. Every payload here validates against the vendored schemas via [`schema/validate.py`](../schema/validate.py).
 
-> **Schema vs producer status.** All the schemas below are **ratified v0.3.1** and safe to build against. The reference implementation does **not** yet produce/consume all of them — `som.delivery.media_available` has a mock producer today (`MockMamService`); `som.link.*`, `som.telling.*`, and `som.system.audit` are the 6 Aug hackathon build (WS1). "Producer" columns say which is which. The contract is stable regardless of implementation status — integrate against the schema.
+> **Schema vs producer status.** All the schemas below are **ratified v0.3.1** and safe to build against. The reference implementation covers them unevenly — `som.delivery.media_available` has a mock producer (`MockMamService`) **and a reference consumer** (`MediaCoordinatorService`, which flips `acquisition_state` on capture-complete and records `WITHHELD` audits for unmatched arrivals); `som.system.audit` has that one live producer; `som.link.*` and `som.telling.*` are the 6 Aug hackathon build (WS1). "Producer" columns say which is which. The contract is stable regardless of implementation status — integrate against the schema.
 
 ---
 
@@ -48,10 +48,10 @@ Envelope rules that bite integrators:
 | `som.skills.events` | approved skill outputs | Dashboard (approve) | downstream | ✅ live |
 | `som.skills.rejected` | rejected skill outputs | Dashboard (reject) | audit | ✅ live |
 | `som.skills.runs` | `skill.run.completed` | SkillWorker | Dashboard (audit) | ✅ live |
-| `som.delivery.media_available` | `delivery.media_available` | MockMamService (TAMS stand-in) | (WS1 consumer) | 🟡 mock producer |
+| `som.delivery.media_available` | `delivery.media_available` | MockMamService (TAMS stand-in) | MediaCoordinatorService (reference consumer) | 🟡 mock producer + reference consumer |
 | `som.link.committed` · `.gate_changed` · `.withdrawn` | `link.committed`, `link.gate_changed`, `link.withdrawn` | (WS1) | (WS1) → maintains `usage[]` | ⏳ schema ready, Aug build |
 | `som.telling.started` · `.ended` · `.exposed` | `telling.started`, `telling.ended`, `telling.exposed` | (WS1) | (WS1) → derives on-air state | ⏳ schema ready, Aug build |
-| `som.system.audit` | `system.audit` | (WS1) | audit / dashboard | ⏳ schema ready, Aug build |
+| `som.system.audit` | `system.audit` | MediaCoordinatorService (`WITHHELD` non-actions) · (WS1 for the rest) | audit / dashboard | 🟡 one producer live |
 
 Message-type names are the **suffixed** forms on the wire (e.g. `skill.warning.raised`, not `skill.warning`).
 
@@ -78,6 +78,12 @@ Announces that media has **arrived in (or is growing inside) a TAMS/MAM store**.
 - `source` resolves to the same Source referenced by the asset's `story.context` → `assets[].media_refs[].source`, so the arrival event joins back to the asset. No `story_id` copy — resolve the story through `asset_id`.
 - `time_range` is a TAMS timerange (or list): bracketed `seconds:nanoseconds` bounds, e.g. `[0:0_134:0)`. Open-ended start/end permitted.
 - **Proves:** D1·B5 — media-arrival without a MAM participant. Drive it locally with the `media-arrival` simulator scenario, the Mock MAM panel in the dashboard's Simulator modal, or `POST /api/mam/emit/{sourceId}`.
+
+**What consumers do with it.** The event is an availability handshake — pub/sub, no orchestration. The reference consumer (`MediaCoordinatorService`) demonstrates the canonical reactions: a known asset's story is republished with `acquisition_state: CAPTURING → CAPTURED` when the arrival carries the capture-complete extension (below), rolling arrivals are noted without a state change, and an arrival matching **no** story yields a `WITHHELD` record on `som.system.audit` — never a new story (story-from-media is the v0.3.2 ORPHAN direction). "Capture finished" is not a first-class v0.3.1 delivery field, so the reference implementation carries it exactly the way partners are told to carry their own pre-ratification concepts:
+
+```json
+"extensions": { "com.ibc-poc.capture_complete": true }
+```
 
 **Not the right carrier for a public livestream URL you want to transcribe** — that is a *live ingest source*, not arrived TAMS media. See [Vendor extensions](#vendor-extensions--adding-fields-without-breaking-the-spec) for how to carry an ingest URL today.
 
@@ -159,6 +165,7 @@ Two current partner patterns and their recommended homes:
 |---|---|---|
 | **Livestream URL to transcribe** (a live ingest source, not arrived stored media) | `extensions.com.{vendor}.livestream_url` on `story.context` | To be **proposed** as a first-class "live ingest source" field in the v0.3.2 window — not yet in the v0.3.2 scaffold. Its natural companion IS already drafted there: locator-on-arrival generalises `delivery.media_available` beyond TAMS (`anyOf(source \| locator)`, mirroring `media_refs[]`). |
 | **"Monitor for X" directive** (e.g. "casualty figures") — a skill/task parameter | `extensions.com.{vendor}.monitor_prompt` on `story.context` | First-class **skill directive / task parameter** — part of the skills-model alignment work (declared skill conditions + parameters). |
+| **"Capture finished" signal** on a delivery event | `extensions.com.ibc-poc.capture_complete` on `delivery.media_available` — **live in this repo**: the mock MAM emits it, the media coordinator acts on it | Candidate first-class delivery field alongside locator-on-arrival; until then it's the working example of the extension mechanism |
 
 Example on a `story.context` payload:
 

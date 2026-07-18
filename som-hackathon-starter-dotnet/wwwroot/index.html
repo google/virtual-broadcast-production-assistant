@@ -481,6 +481,9 @@ button { font: inherit; cursor: pointer; }
       <button onclick="publish('election')" title="DEVELOPING phase, clean copy, compliance OK. Skill runs but emits no warnings.">
         <strong>Election</strong><small>DEVELOPING, clean → 0</small>
       </button>
+      <button onclick="publish('hurricane')" title="BREAKING with a live feed asset still CAPTURING (open-ended TAMS range). The media-arrival scenario and the mock MAM act on this story.">
+        <strong>Hurricane</strong><small>BREAKING, feed CAPTURING</small>
+      </button>
     </div>
     <div class="header-spacer"></div>
     <button class="theme-toggle" id="auto-indicator" style="display:none;color:#6ee7b7;border-color:#2a5a4a;" onclick="openSimulator('auto')" title="Auto-stream is publishing a random seed story on an interval — click to manage"></button>
@@ -614,6 +617,7 @@ const SCENARIO_LABELS = {
   'breaking-no-compliance': 'Breaking (no compliance)',
   clean: 'Clean',
   election: 'Election',
+  hurricane: 'Hurricane',
 };
 
 // Tabler icon shortcut for use inside template literals.
@@ -934,6 +938,7 @@ function renderDecisions() {
 const KNOWN_TOPICS = [
   'som.story.context',
   'som.delivery.media_available',
+  'som.system.audit',
   'som.skills.staging',
   'som.skills.events',
   'som.skills.rejected',
@@ -1299,6 +1304,9 @@ function summarize(topic, payload) {
   }
   if (topic.endsWith('delivery.media_available')) {
     return `MEDIA ${p.source || '?'} range=${p.time_range || '?'}`;
+  }
+  if (topic.endsWith('system.audit')) {
+    return `AUDIT ${p.action || '?'} ${p.target?.kind || ''}:${p.target?.id || ''} — ${(p.reason || '').slice(0, 90)}`;
   }
   return JSON.stringify(payload).slice(0, 120);
 }
@@ -1710,6 +1718,7 @@ async function renderSimulator() {
       </div>
       <div class="actions" style="margin-top:10px;">
         <button class="btn approve" onclick="emitMam('${escapeHtml(m.sourceId)}')">${ic('player-play','icon-sm')} Emit media_available</button>
+        <button class="btn" onclick="emitMam('${escapeHtml(m.sourceId)}', true)" title="Adds extensions['com.ibc-poc.capture_complete'] — the media coordinator flips the asset to CAPTURED and skills re-run">${ic('check','icon-sm')} Emit final (capture complete)</button>
       </div>
     </div>`).join('');
 
@@ -1728,10 +1737,13 @@ async function renderSimulator() {
       <div style="display:grid;gap:8px;">${scenarioCards}</div>`,
     mam: `
       <div style="font-size:11px;color:var(--text-secondary);line-height:1.5;margin-bottom:8px;">
-        A stand-in for a TAMS/MAM store. Each button emits one schema-valid <code>som.delivery.media_available</code>
-        envelope for the source's full time range — watch it arrive in the <strong>Bus event log</strong> below
-        (filter chip <code>delivery.media_available</code>) or in Kafka UI (:8080 with the bundled compose).
-        The <code>media-arrival</code> scenario drives the same emitter with a growing time range.
+        A stand-in for a TAMS/MAM store. <strong>Emit media_available</strong> announces one arrival
+        (a <code>MEDIA</code> line in the Bus event log); the <strong>media coordinator</strong> consumes every
+        arrival and reacts: a known asset gets its story republished with <code>acquisition_state: CAPTURED</code>
+        on <strong>Emit final</strong> (skills then re-run — watch Pending Approval), and an <em>unmatched</em>
+        source (the UGC clip, until a story references it) produces a <code>WITHHELD</code> audit on
+        <code>som.system.audit</code>. Publish the <strong>Hurricane</strong> seed first to see the matched path.
+        The <code>media-arrival</code> scenario runs the whole loop scripted.
       </div>
       <div style="display:grid;gap:8px;">${mamCards}</div>`,
     auto: `
@@ -1756,9 +1768,13 @@ async function renderSimulator() {
     ${tabContent[simTab] || tabContent.scenarios}`;
 }
 
-async function emitMam(sourceId) {
+async function emitMam(sourceId, captureComplete) {
   try {
-    const res = await fetch(`/api/mam/emit/${encodeURIComponent(sourceId)}`, { method: 'POST' });
+    const res = await fetch(`/api/mam/emit/${encodeURIComponent(sourceId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(captureComplete ? { captureComplete: true } : {}),
+    });
     const payload = await res.json().catch(() => null);
     if (!res.ok) {
       showToast(`MAM emit failed: ${payload?.error || res.status}${payload?.detail ? ' — ' + payload.detail : ''}`, 'danger');

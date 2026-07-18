@@ -9,12 +9,20 @@
   "reads": [
     "headline",
     "lifecycle.phase",
-    "compliance"
+    "compliance",
+    "assets"
   ],
   "produces": [
     "skill.warning.raised",
     "skill.run.completed"
   ],
+  "advert": {
+    "role": "compliance check",
+    "operates_on": ["story.context"],
+    "produces": ["skill.warning.raised", "skill.run.completed"],
+    "target_system_types": ["automation"],
+    "fires_on": ["headline", "lifecycle.phase", "compliance", "assets[].acquisition_state"]
+  },
   "rules": [
     {
       "rule_id": "nbcu-style-001",
@@ -63,6 +71,27 @@
         }
       ],
       "rationale": "BREAKING phase without compliance flags violates NBCU Standards Handbook §7.2. Standards desk review required before any output reaches air."
+    },
+    {
+      "rule_id": "nbcu-capture-001",
+      "name": "Capture complete — final compliance pass",
+      "description": "Inform-severity warning when an asset's acquisition_state transitions to CAPTURED: the material is now fixed, so run the final compliance pass on the full extent (a live-feed hold raised mid-capture may need re-review against the complete recording).",
+      "type": "field_changed",
+      "config": {
+        "field": "assets[].acquisition_state",
+        "to": "CAPTURED"
+      },
+      "default_severity": "inform",
+      "output_message_type": "skill.warning.raised",
+      "affected_fields": ["assets"],
+      "detail_template": "Asset '{item}' acquisition_state {from} → {to}: capture is complete. Run the final compliance pass on the fixed material.",
+      "citations": [
+        {
+          "source_id": "som-tams-join-2026-06-30",
+          "quote": "acquisition_state is itself a trigger: fire during capture, or on the CAPTURING → CAPTURED transition (a final pass once material is fixed)."
+        }
+      ],
+      "rationale": "The skills model's field-change condition, anchored on the CAPTURING → CAPTURED transition: once the extent is fixed, mid-capture judgements should be confirmed against the complete material."
     }
   ]
 }

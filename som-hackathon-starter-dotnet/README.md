@@ -109,15 +109,17 @@ The skill worker never publishes directly to `som.skills.events`. Every output f
 | `skills/*.json` | **Data-driven skill definitions.** Drop a JSON file here to register a new skill — no code changes needed. Each file defines id, version, rules, fields read, and outputs produced. |
 | `SkillDefinition.cs` | Record types for skills and rules, with JSON serialization. |
 | `SkillRegistry.cs` | In-memory registry backed by `skills/*.json`. Supports CRUD via REST API — changes persist to disk. |
-| `RuleEngine.cs` | Generic rule interpreter. Supports 6 rule types: `term_match`, `phase_with_missing_field`, `field_value_in`, `field_present`, `field_absent`, `field_regex`. |
-| `SkillWorker.cs` | Background service. Consumes `som.story.context`, evaluates every registered skill's rules via the rule engine, publishes matches to `som.skills.staging`. |
-| `DashboardService.cs` | Background service. Consumes all 5 topics, fans out via WebSocket, holds pending outputs in-memory, executes approve/reject. Also provides lifecycle simulation (advance phase, add compliance). |
+| `RuleEngine.cs` | Generic rule interpreter. Supports 7 rule types: `term_match`, `phase_with_missing_field`, `field_value_in`, `field_present`, `field_absent`, `field_regex`, `field_changed` (compares against the previous story version; supports one `[]` array wildcard, e.g. `assets[].acquisition_state`). |
+| `SkillWorker.cs` | Background service. Consumes `som.story.context`, recall-filters skills by their `advert.operates_on`, evaluates rules via the rule engine (keeping a per-story previous snapshot for `field_changed`), publishes matches to `som.skills.staging`. |
+| `DashboardService.cs` | Background service. Consumes all 7 topics, fans out via WebSocket, holds pending outputs in-memory, executes approve/reject. Also provides lifecycle simulation (advance phase, add compliance). |
+| `MediaCoordinatorService.cs` | **Reference consumer** for `som.delivery.media_available`. Known asset + capture-complete → republishes the story with `acquisition_state: CAPTURED`; unmatched asset → `WITHHELD` audit on `som.system.audit` (or a v0.3.2-preview ORPHAN story with `Coordinator:OrphanPreview=true`). |
 | `SimulatorService.cs` | Local-dev fallback for AP ENPS. Scripted multi-step scenarios and auto-stream mode for demos. |
+| `MockMamService.cs` | Write-only TAMS stand-in: names Sources (`content/mam-catalog.json`) and emits `som.delivery.media_available`, optionally with the `com.ibc-poc.capture_complete` extension. |
 | `TestProducer.cs` | Loads `seed-stories/*.json`, extracts the payload, publishes to `som.story.context`. |
 | `Program.cs` | ASP.NET WebApplication. Hosts all background services + maps REST/WS endpoints + serves static files. |
 | `KafkaOptions.cs` | POCO bound from `appsettings.json`. |
 | `wwwroot/index.html` | Dashboard SPA — single file, no build step. |
-| `seed-stories/*.json` | Five SOM v0.2 envelopes for demo scenarios (each includes `content_refs[]`). |
+| `seed-stories/*.json` | Six SOM envelopes for demo scenarios (each includes `content_refs[]` where applicable). |
 | `content/*.txt` | Canned story body text served by `GET /api/content/{storyId}`. |
 | `appsettings.json` | Local dev config (Plaintext + localhost broker). |
 | `appsettings.Production.json` | Confluent Cloud SaslSsl placeholders, populated from env vars. |
@@ -155,17 +157,18 @@ The bus topology, dashboard, approval gate, audit trail, and WebSocket stream al
 
 ## Seed stories
 
-Five SOM v0.2 envelopes in `seed-stories/`, modeled on real broadcast scenarios:
+Six SOM envelopes in `seed-stories/` (v0.3.1-shaped payloads on a `som_version: "0.2.0"` wire), modeled on real broadcast scenarios:
 
 | Scenario | Headline | Phase | Tests |
 |----------|----------|-------|-------|
-| `breaking` | Jones Sentencing — Federal Court Verdict Overturns Expectations | BREAKING | BREAKING with full compliance — no warnings expected |
+| `breaking` | Jones Sentencing — Federal Court Verdict Overturns Expectations | BREAKING | BREAKING with full compliance — no warnings expected. Carries asset `a2` with a bounded, CAPTURED TAMS `media_refs[]` |
 | `breaking-no-compliance` | Explosion Reported at Midtown Manhattan Office Tower | BREAKING | BREAKING without compliance flags — fires `nbcu-compliance-001` |
 | `informal` | Cops Bust Ring of Kids Selling Counterfeit Sneakers… | DEVELOPING | Informal language — fires `nbcu-style-001` twice (cops, kids) |
 | `clean` | City Council Approves $2.1 Billion Public Transit Expansion | PUBLISHED | Clean copy — no warnings expected |
 | `election` | Virginia Governor Race Too Close to Call as Polls Close | DEVELOPING | Standard developing story — no warnings expected |
+| `hurricane` | Hurricane Makes Landfall Near Gulf Coast as Category 3 Storm | BREAKING | Live-feed asset `asset-landfall-feed` still **CAPTURING** with an open-ended TAMS range — the story the mock MAM and media coordinator act on |
 
-Each envelope is a full SOM v0.2 message (`som_version`, `message_id`, `correlation_id`, `source`, `payload`) with rich `payload` fields including `lifecycle`, `priority`, `premise`, `compliance[]`, `editorial_gates[]`, `sources[]`, `assets[]`, `ai_enrichments[]`, `instances[]`, `skills_config`, and `content_refs[]`.
+Each envelope is a full SOM message (`som_version`, `message_id`, `correlation_id`, `originating_system`, `payload`) with rich v0.3.1 `payload` fields including `lifecycle`, `priority`, `compliance[]`, `editorial_gates[]`, `editorial_source[]`, `assets[]` (with `media_refs[]`/`acquisition_state` where media-backed), `skills_config`, and `content_refs[]`.
 
 ### content_refs
 
@@ -180,9 +183,21 @@ Each seed story includes a `content_refs` array pointing to `GET /api/content/{s
 | `som.skills.events` | Dashboard (on approve) | downstream | Approved outputs on the production bus |
 | `som.skills.rejected` | Dashboard (on reject) | audit | Rejected outputs (with `rejected_by`) |
 | `som.skills.runs` | SkillWorker | Dashboard | Audit record per skill execution (latency, outcome) |
-| `som.delivery.media_available` | MockMamService (TAMS stand-in) | Dashboard (event log only) · real consumer is WS1, Aug build | Media-arrival announcements — see [`docs/SOM-v0.3.1-distribution-contracts.md`](docs/SOM-v0.3.1-distribution-contracts.md) |
+| `som.delivery.media_available` | MockMamService (TAMS stand-in) | **MediaCoordinatorService** (acts) · Dashboard (event log) | Media-arrival announcements — see [`docs/SOM-v0.3.1-distribution-contracts.md`](docs/SOM-v0.3.1-distribution-contracts.md) |
+| `som.system.audit` | MediaCoordinatorService (`WITHHELD` non-action reports) | Dashboard (event log) | Governance trail; WS1 (Aug) adds the remaining producers |
 
-Topics auto-create on first publish in local mode. The dashboard tails `som.delivery.media_available` for the bus event log (`MEDIA` lines + topic chip) but doesn't act on it — the consuming logic is the WS1 August build. Full envelopes: Kafka UI (:8080 with the bundled compose).
+Topics auto-create on first publish in local mode. The coordinator is the participant that *acts* on media arrivals (see below); the dashboard tails both distribution topics for the bus event log (`MEDIA` / `AUDIT` lines + topic chips). Full envelopes: Kafka UI (:8080 with the bundled compose).
+
+### Media coordinator — what happens after `media_available`
+
+`MediaCoordinatorService` is the **reference consumer** for the TAMS junction, so vendors can watch a complete loop in one process. Per the SOM↔TAMS join, an arrival joins to an **existing** story (`asset_id → Asset → Story`) — it never creates one:
+
+| Arrival | Coordinator behaviour |
+|---|---|
+| Known asset, rolling range | Availability noted (log + event-log `MEDIA` line); no story change — consumers take what exists so far |
+| Known asset + `extensions["com.ibc-poc.capture_complete"]` | Republishes the story with the asset flipped `CAPTURING → CAPTURED` and the final bounded range — skills re-run on the new version, and the `nbcu-capture-001` `field_changed` rule fires an inform into Pending Approval |
+| Unmatched asset | **Safe-state stop**: records a `WITHHELD` audit on `som.system.audit` ("no story references this asset; declined to act") — the skills-model non-action, observable |
+| Unmatched asset, `Coordinator:OrphanPreview=true` | **v0.3.2 preview**: authors a clearly-labeled `story_type: ORPHAN` story wrapping the media instead. Off by default; ORPHAN is not in locked v0.3.1 |
 
 ## NBCU Simulator (local-dev fallback for AP ENPS)
 
@@ -193,12 +208,13 @@ In production, **AP ENPS is the canonical native SOM publisher** — it emits `s
    | Scenario | Duration | What it demonstrates |
    |----------|----------|----------------------|
    | `breaking-news-cycle` | ~35s | BREAKING story arrives without compliance, Standards desk attaches a flag, story progresses to PUBLISHED |
-   | `multi-vendor-stream` | ~12s | All 5 seed stories published in quick succession — tests vendor skills under newsroom load |
+   | `multi-vendor-stream` | ~12s | All seed stories published in quick succession — tests vendor skills under newsroom load |
    | `election-night` | ~50s | DEVELOPING election story slowly progresses through phases with a late VOTING_RIGHTS flag attached |
    | `compliance-review` | ~18s | Existing-compliance BREAKING story gets an extra LEGAL_HOLD flag mid-flight |
-   | `media-arrival` | ~30s | D1·B5 TAMS junction: breaking story publishes, then the mock MAM emits `delivery.media_available` three times with a growing time range |
+   | `media-arrival` | ~30s | The full D1·B5 loop: hurricane story (feed CAPTURING) → three growing-range MAM emits → final emit carries capture-complete → coordinator flips the asset to CAPTURED → `nbcu-capture-001` fires into Pending Approval |
+   | `media-unmatched` | ~5s | The safe-state path: a UGC clip no story references → coordinator records a `WITHHELD` audit (or authors a v0.3.2-preview ORPHAN story with `Coordinator:OrphanPreview=true`) |
 
-2. **Mock MAM** — per-source **Emit media_available** buttons over the catalog in [`content/mam-catalog.json`](content/mam-catalog.json). Each click emits one schema-valid envelope for the source's full time range, visible immediately as a `MEDIA` line in the dashboard's bus event log (the `media-arrival` scenario drives the same emitter with a growing range). One-off emits with a custom range: `POST /api/mam/emit/{sourceId}` with `{"timeRange": "[0:0_30:0)"}`.
+2. **Mock MAM** — per-source **Emit media_available** / **Emit final (capture complete)** buttons over the catalog in [`content/mam-catalog.json`](content/mam-catalog.json). Each click emits one schema-valid envelope for the source's full time range, visible immediately as a `MEDIA` line in the dashboard's bus event log — and the media coordinator reacts (see the coordinator table above). One-off emits with a custom range: `POST /api/mam/emit/{sourceId}` with `{"timeRange": "[0:0_30:0)", "captureComplete": true}` (remember `-H 'Content-Type: application/json'` — without it ASP.NET returns a bare 415).
 
 3. **Auto-stream** — every N seconds, publish a random seed story. Useful for keeping the dashboard alive during demos and giving vendor skills a steady test load. It keeps running after the panel closes — the dashboard header shows an **Auto-stream ON** chip while it's active (click the chip to manage it).
 
@@ -229,7 +245,7 @@ Every skill submission is validated. The dashboard exposes all three layers as b
 | Layer | What it does | When to use |
 |-------|--------------|-------------|
 | **1. Static** | Schema + config-key check (required fields, recognized rule types, type-specific config keys, unique rule_ids, valid severity, regex compiles) | Auto-runs on every `POST/PUT /api/skills`. Returns 400 with structured errors. |
-| **2. Dry-run** | Evaluates the skill against all 5 seed stories without publishing. Returns `{scenario → matched_rules[]}`. | Click 🧪 Dry-run on any skill. Vendors can iterate on rules and see exactly which stories fire. |
+| **2. Dry-run** | Evaluates the skill against all seed stories without publishing. Returns `{scenario → matched_rules[]}`. | Click 🧪 Dry-run on any skill. Vendors can iterate on rules and see exactly which stories fire. |
 | **3. AI review** | Ships skill JSON + seed-story samples + dry-run result to an LLM. Returns structured findings (severity / category / message). | Click 🤖 AI review. Provider auto-selects: Gemini (preferred, since Google is providing keys) → Anthropic Claude → no-op. |
 
 **AI review setup:** Set one of these env vars and restart:
@@ -250,7 +266,7 @@ The skill registry header in the dashboard shows a status badge: `🤖 google/ge
 | `PUT` | `/api/skills/{id}` | Update a skill (validated) |
 | `DELETE` | `/api/skills/{id}` | Remove a skill |
 | `POST` | `/api/skills/validate` | Layer 1: static schema check (no save) |
-| `POST` | `/api/skills/dry-run` | Layer 2: dry-run a draft skill against all 5 seed stories |
+| `POST` | `/api/skills/dry-run` | Layer 2: dry-run a draft skill against all seed stories |
 | `POST` | `/api/skills/{id}/dry-run` | Layer 2: dry-run a registered skill |
 | `GET` | `/api/skills/ai-review/status` | Layer 3: AI provider availability/name |
 | `POST` | `/api/skills/{id}/ai-review` | Layer 3: AI review of a registered skill |
@@ -264,7 +280,7 @@ The skill registry header in the dashboard shows a status badge: `🤖 google/ge
 | `GET` | `/api/seed-stories` | List of seed scenario names |
 | `GET` | `/api/seed-stories/{scenario}` | Raw SOM v0.2 envelope JSON |
 | `GET` | `/api/mam/catalog` | Mock-MAM source catalog (TAMS stand-in) |
-| `POST` | `/api/mam/emit/{sourceId}` | Emit `som.delivery.media_available`; optional body `{timeRange, assetId}` |
+| `POST` | `/api/mam/emit/{sourceId}` | Emit `som.delivery.media_available`; optional body `{timeRange, assetId, captureComplete}` |
 | `GET` | `/api/simulator/status` | Current sim state (running scenario, auto-stream on/off) |
 | `GET` | `/api/simulator/scenarios` | All scripted scenarios available |
 | `POST` | `/api/simulator/run/{id}` | Start a scripted scenario |

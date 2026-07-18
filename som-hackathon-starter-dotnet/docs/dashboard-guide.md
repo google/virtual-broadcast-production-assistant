@@ -43,7 +43,7 @@ These are separate surfaces — knowing which is which is most of the learning c
 
 Every message on every subscribed topic, newest first — one line per message with a per-topic summary (stories show headline; runs show outcome + latency; MAM emits show `MEDIA <source> range=<timerange>`). The **topic chips** filter the view and double as live counters. **Clear** empties only this log display.
 
-Note `som.delivery.media_available` appears here for **observability** — the dashboard tails it for the log but doesn't act on it. The real consumer (maintaining `usage[]` etc.) is the WS1 August build.
+`som.delivery.media_available` and `som.system.audit` appear here for **observability** — the dashboard tails them for the log. The participant that *acts* on media arrivals is `MediaCoordinatorService` (see workflow 3); the remaining audit producers and the `som.link.*`/`som.telling.*` families are the WS1 August build.
 
 ## Other header controls
 
@@ -69,10 +69,15 @@ Note `som.delivery.media_available` appears here for **observability** — the d
 2. Narrate as it plays out — story arrives → skill fires → warning staged → approve → event on the production bus.
 3. For a continuously "alive" dashboard between beats, switch on **Auto-stream** (and mind the header chip).
 
-### 3. Prove the D1·B5 media-arrival beat (TAMS junction)
-1. **Simulator → Scripted scenarios → media-arrival**: publishes the hurricane story, then the mock MAM emits `delivery.media_available` three times with a **growing** TAMS timerange (`[0:0_30:0)` → `[0:0_75:0)` → `[0:0_1260:0)`) — a recording addressable while still being captured.
-2. Watch the `MEDIA` lines land in the bus event log (filter chip `delivery.media_available`), or inspect full envelopes in Kafka UI (:8080).
-3. One-off emits per source: **Simulator → Mock MAM → Emit media_available**; custom ranges via `POST /api/mam/emit/{sourceId}` with `{"timeRange": "[0:0_30:0)"}`.
+### 3. Prove the D1·B5 media-arrival beat — the full end-to-end loop
+1. **Simulator → Scripted scenarios → media-arrival**: publishes the hurricane story (its live-feed asset **CAPTURING**, open-ended TAMS range), then the mock MAM emits `delivery.media_available` three times with a **growing** timerange (`[0:0_30:0)` → `[0:0_75:0)` → `[0:0_1260:0)`) — a recording addressable while still being captured.
+2. Watch the `MEDIA` lines land in the bus event log. The first two arrivals are *rolling availability* — the media coordinator notes them, no story change.
+3. The final emit carries `extensions["com.ibc-poc.capture_complete"]` — the **media coordinator** flips the asset to **CAPTURED**, bounds its range, and republishes the story (a new version appears in Stories on Bus).
+4. Skills re-run on the new version and the `nbcu-capture-001` **field_changed** rule fires: an inform ("capture is complete — run the final compliance pass") lands in **Pending Approval**. Approve it to complete the loop on `som.skills.events`.
+5. Manual variant: publish the **Hurricane** seed, then **Simulator → Mock MAM → Emit final (capture complete)** on `landfall-feed-01`. Custom ranges via `POST /api/mam/emit/{sourceId}` with `{"timeRange": "[0:0_30:0)", "captureComplete": true}`.
+
+### 4. The safe-state path (unmatched media)
+Run **Simulator → Scripted scenarios → media-unmatched** (or Emit on the UGC clip): the arrival matches **no** story, so the coordinator declines to act and records a `WITHHELD` audit — an `AUDIT` line on the `som.system.audit` chip. That's by design (the skills-model safe-state stop), not a failure. With `Coordinator__OrphanPreview=true` set at app start, the coordinator instead authors a clearly-labeled **v0.3.2-preview ORPHAN story** that flows through skills like any other.
 
 ## Troubleshooting
 
@@ -80,4 +85,7 @@ Note `som.delivery.media_available` appears here for **observability** — the d
 - **Lanes flooding with random stories** → auto-stream is on; click the green header chip → Stop.
 - **"Run scenario" buttons disabled** → a scenario is already running; Stop it or let it finish.
 - **Mock MAM section empty** → `content/mam-catalog.json` missing or unparseable; check the app log.
+- **Emitted the UGC clip and "nothing happened"** → it matched no story, so the coordinator recorded a `WITHHELD` audit instead (check the `som.system.audit` chip). By design — see workflow 4.
+- **Emit final didn't flip the asset** → the story wasn't on the bus yet (publish the Hurricane seed first), or the asset is already CAPTURED. The coordinator re-checks twice (~1s) before giving up, so a just-published story is normally caught.
+- **Capture-complete inform didn't fire after an app restart** → `field_changed` rules compare against the previous story version *seen this session*; after a restart there's no baseline. Republish the story once (e.g. Re-run skill), then emit final.
 - **Everything frozen, ws pill says "reconnecting…"** → the app is down; restart `dotnet run`, the page reconnects itself.

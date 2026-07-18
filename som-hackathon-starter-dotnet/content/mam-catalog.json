@@ -4,20 +4,20 @@
     "label": "Courthouse pool feed",
     "duration_seconds": 134,
     "asset_id": "a2",
-    "notes": "Matches the v0.3.1 worked-example media_refs on the sentencing story (asset a2). Wire into seed 01 at WS2."
+    "notes": "Matches the v0.3.1 worked-example media_refs on the sentencing story (asset a2), wired into seed 01 (CAPTURED, bounded 134s)."
   },
   {
     "source_id": "landfall-feed-01",
     "label": "Hurricane landfall live feed",
     "duration_seconds": 1260,
     "asset_id": "asset-landfall-feed",
-    "notes": "D1·B5 TAMS-junction beat. Use growing time_range emits ([0:0_30:0) → [0:0_134:0) → full) while the asset sits at acquisition_state CAPTURING; pair the final emit with a story.context update flipping it to CAPTURED."
+    "notes": "D1·B5 TAMS-junction beat, wired into seed 06 (hurricane, CAPTURING, open-ended range). The media-arrival scenario emits growing ranges; the final capture-complete emit makes the coordinator flip the asset to CAPTURED."
   },
   {
     "source_id": "ugc-flood-77aa41b0",
     "label": "UGC flood clip (WhatsApp)",
     "duration_seconds": 42,
     "asset_id": "asset-ugc-flood-clip",
-    "notes": "Reserved for the v0.3.2 orphan-clip stretch beat (separate branch only — see SOM-Hackathon-Aug-2026-Scope.md)."
+    "notes": "Deliberately referenced by NO seed story: emitting it demos the coordinator's WITHHELD safe-state audit, or — with Coordinator:OrphanPreview=true — the v0.3.2-preview ORPHAN story."
   }
 ]

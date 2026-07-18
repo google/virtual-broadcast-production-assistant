@@ -77,11 +77,13 @@ public sealed class DashboardService : BackgroundService
             _options.SkillEventsTopic,
             _options.SkillRunsTopic,
             _options.SkillRejectedTopic,
-            // Observed for the bus event log only — the WS1 (Aug) build adds the real consumer.
+            // Observed for the bus event log only — MediaCoordinatorService is the delivery
+            // consumer that acts; the dashboard just shows the traffic.
             _options.DeliveryTopic,
+            _options.AuditTopic,
         });
 
-        _logger.LogInformation("Dashboard subscribed to 6 topics");
+        _logger.LogInformation("Dashboard subscribed to 7 topics");
 
         await Task.Yield();
 
@@ -368,10 +370,13 @@ public sealed class DashboardService : BackgroundService
                 kv.Value.Output["story_id"]?.GetValue<string>() == storyId)
             .Select(kv => kv.Key)
             .ToList();
-        foreach (var id in clearedIds) _pending.TryRemove(id, out _);
 
+        // Produce FIRST, clear after: if the publish fails, the pending warnings must
+        // survive — otherwise a failed republish silently loses them with no new version.
         await _producer.ProduceAsync(_options.StoryContextTopic,
             new Message<string, string> { Key = storyId, Value = clone.ToJsonString() }, ct);
+
+        foreach (var id in clearedIds) _pending.TryRemove(id, out _);
 
         await BroadcastAsync(new
         {
@@ -386,6 +391,36 @@ public sealed class DashboardService : BackgroundService
     }
 
     public sealed record RerunResult(bool Ok, string Status, int ClearedPending);
+
+    /// <summary>
+    /// Resolve the story that references {assetId} in its assets[] — the upward half of the
+    /// SOM↔TAMS join (delivery event → asset_id → Asset → Story). Returns null if no cached
+    /// story references the asset.
+    /// </summary>
+    public string? FindStoryIdByAssetId(string assetId)
+    {
+        foreach (var (storyId, node) in _stories)
+        {
+            // Tolerant reads throughout: one malformed story (e.g. a vendor publishing a
+            // non-string asset_id) must not poison the lookup for every other arrival.
+            var assets = (node["payload"] ?? node) is JsonObject p ? p["assets"] as JsonArray : null;
+            if (assets is null) continue;
+            foreach (var asset in assets)
+            {
+                if (asset?["asset_id"] is JsonValue v && v.TryGetValue<string>(out var id) && id == assetId)
+                    return storyId;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Public republish-with-mutation for other in-process participants (the media
+    /// coordinator). Same semantics as the lifecycle-simulator endpoints: bump
+    /// sequence_number, stamp updated_at, clear stale pending, republish.
+    /// </summary>
+    public Task<RerunResult> MutateStoryAsync(string storyId, Action<JsonNode> mutate, CancellationToken ct) =>
+        RepublishAsync(storyId, mutate, ct);
 
     /// <summary>
     /// Reset the dashboard view: clear the pending queue and tell every connected dashboard
@@ -406,6 +441,7 @@ public sealed class DashboardService : BackgroundService
             _options.SkillRejectedTopic,
             _options.SkillRunsTopic,
             _options.DeliveryTopic,
+            _options.AuditTopic,
         };
 
         _resetMarker = DateTimeOffset.UtcNow;
