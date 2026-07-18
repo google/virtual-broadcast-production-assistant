@@ -121,8 +121,8 @@ button { font: inherit; cursor: pointer; }
   padding: 10px 12px; cursor: pointer; transition: border-color .1s, transform .1s;
 }
 .card:hover { border-color: var(--border-hover); transform: translateY(-1px); }
-.card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-.card-id { font-family: "Consolas", monospace; font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.card-id { font-family: "Consolas", monospace; font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .card-title { font-weight: 700; font-size: 12px; line-height: 1.3; margin: 2px 0 6px; }
 .card-meta { font-size: 10px; color: var(--text-muted); display: flex; gap: 8px; flex-wrap: wrap; }
 .card-meta b { color: var(--text-secondary); font-weight: 600; }
@@ -379,12 +379,31 @@ button { font: inherit; cursor: pointer; }
 .modal-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
 .modal-head h3 { font-size: 14px; }
 .modal-close { background: none; border: none; color: var(--text-muted); font-size: 20px; }
-.modal-body { padding: 16px 18px; overflow-y: auto; }
+.modal-body { padding: 16px 18px; overflow-y: auto; overflow-x: hidden; }
+.modal-body .card { min-width: 0; }
+.modal-body .card-meta, .modal-body .card-title { overflow-wrap: anywhere; }
 .code-block {
   background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
   padding: 14px; font-family: "Consolas", "Fira Code", monospace; font-size: 12px;
   line-height: 1.6; color: var(--ice); white-space: pre; overflow-x: auto;
 }
+
+/* Rendered markdown (Help → User guide) */
+.md-doc { font-size: 12.5px; line-height: 1.65; color: var(--text-secondary); }
+.md-doc h1 { font-size: 17px; color: var(--text); margin: 4px 0 10px; }
+.md-doc h2 { font-size: 14px; color: var(--text); margin: 18px 0 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.md-doc h3, .md-doc h4 { font-size: 12.5px; color: var(--text); margin: 14px 0 6px; }
+.md-doc p { margin: 8px 0; overflow-wrap: anywhere; }
+.md-doc code { background: var(--code-bg); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; font-family: "Consolas", monospace; font-size: 11.5px; color: var(--ice); overflow-wrap: anywhere; }
+.md-doc pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-family: "Consolas", monospace; font-size: 11.5px; line-height: 1.5; color: var(--ice); white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; }
+.md-doc ul, .md-doc ol { margin: 8px 0 8px 20px; }
+.md-doc li { margin: 3px 0; overflow-wrap: anywhere; }
+.md-doc .md-table-wrap { overflow-x: auto; margin: 8px 0; }
+.md-doc table { border-collapse: collapse; font-size: 11.5px; width: 100%; }
+.md-doc th, .md-doc td { border: 1px solid var(--border); padding: 5px 8px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.md-doc th { color: var(--text); background: var(--bg-surface2); }
+.md-doc hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+.md-doc a { color: var(--ice); }
 
 .empty { text-align: center; padding: 24px; color: var(--text-muted); font-size: 12px; }
 .empty .icon { font-size: 28px; opacity: 0.4; margin-bottom: 4px; }
@@ -579,9 +598,7 @@ button { font: inherit; cursor: pointer; }
       <h3 id="modal-title">Payload</h3>
       <button class="modal-close" onclick="closeModal()">×</button>
     </div>
-    <div class="modal-body">
-      <pre class="code-block" id="modal-body"></pre>
-    </div>
+    <div class="modal-body" id="modal-body"></div>
   </div>
 </div>
 
@@ -999,7 +1016,9 @@ function openModal(title, payload) {
 // com.nbcu.* keys we surface them in a structured panel above the raw JSON
 // dump (D-002b). All other payloads fall through to plain JSON.
 function renderModalBody(payload) {
-  const json = escapeHtml(JSON.stringify(payload, null, 2));
+  // #modal-body is a normal div (rich views need wrapping text), so the raw JSON
+  // dump carries its own <pre> for monospace/pre formatting.
+  const json = `<pre class="code-block">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`;
   const ext = payload?.extensions;
   if (!ext || typeof ext !== 'object') return json;
 
@@ -1602,17 +1621,108 @@ function setSimTab(tab) {
   renderSimulator();
 }
 
-// ── Help ───────────────────────────────────────────────
-function openHelp() {
-  document.getElementById('modal-title').textContent = 'How this dashboard fits together';
+// ── Help (tabs: quick reference · rendered USER-GUIDE.md) ──
+let helpTab = 'quick';
+let _guideHtml = null;
+
+function openHelp(tab) {
+  if (typeof tab === 'string') helpTab = tab;
+  document.getElementById('modal-title').textContent = 'Help';
   document.getElementById('modal-bg').classList.add('show');
+  renderHelp();
+}
+
+async function renderHelp() {
+  const body = document.getElementById('modal-body');
+  const tabBtn = (id, label) => `
+    <button onclick="openHelp('${id}')" style="padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;border:1px solid ${helpTab === id ? 'var(--border)' : 'transparent'};border-bottom:none;background:${helpTab === id ? 'var(--bg-surface2)' : 'transparent'};color:${helpTab === id ? 'var(--text)' : 'var(--text-muted)'};">${label}</button>`;
+  const bar = `<div style="display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:12px;">${tabBtn('quick', 'Quick reference')}${tabBtn('guide', 'User guide')}</div>`;
+
+  if (helpTab === 'guide') {
+    body.innerHTML = bar + '<div class="empty">loading…</div>';
+    if (_guideHtml === null) {
+      try {
+        const res = await fetch('/api/docs/user-guide');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        _guideHtml = mdToHtml(await res.text());
+      } catch (err) {
+        body.innerHTML = bar + `<div class="empty">Couldn't load the user guide (${escapeHtml(err.message)}) — read <code>docs/USER-GUIDE.md</code> in the repo.</div>`;
+        return;
+      }
+    }
+    body.innerHTML = bar + `<div class="md-doc">${_guideHtml}</div>`;
+    return;
+  }
+
+  body.innerHTML = bar + quickReferenceHtml();
+}
+
+// Minimal renderer for the subset of markdown USER-GUIDE.md uses: headings, fenced
+// code, tables, lists, bold/italic/inline code, links, hr. Everything is HTML-escaped
+// first; http(s) links become anchors, repo-relative links render as plain code paths.
+function mdToHtml(md) {
+  const inline = (s) => escapeHtml(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '$1 (<code>$2</code>)')
+    .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,;:]|$)/g, '$1<i>$2</i>');
+
+  const lines = md.split('\n');
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+
+    if (/^```/.test(line)) {                       // fenced code
+      const buf = [];
+      i++;
+      while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]);
+      i++;
+      out.push(`<pre>${escapeHtml(buf.join('\n'))}</pre>`);
+      continue;
+    }
+    if (/^\|/.test(line)) {                        // table
+      const rows = [];
+      while (i < lines.length && /^\|/.test(lines[i])) rows.push(lines[i++]);
+      const cells = (r) => r.replace(/^\||\|$/g, '').split('|').map(c => inline(c.trim()));
+      const header = cells(rows[0]);
+      const bodyRows = rows.slice(2);              // rows[1] is the |---| separator
+      out.push(`<div class="md-table-wrap"><table><thead><tr>${header.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${
+        bodyRows.map(r => `<tr>${cells(r).map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+      continue;
+    }
+    const h = line.match(/^(#{1,4})\s+(.*)$/);     // headings
+    if (h) { out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); i++; continue; }
+    if (/^---+\s*$/.test(line)) { out.push('<hr>'); i++; continue; }
+    if (/^[-*]\s+/.test(line)) {                   // unordered list
+      const items = [];
+      while (i < lines.length && /^[-*]\s+/.test(lines[i])) items.push(lines[i++].replace(/^[-*]\s+/, ''));
+      out.push(`<ul>${items.map(t => `<li>${inline(t)}</li>`).join('')}</ul>`);
+      continue;
+    }
+    if (/^\d+\.\s+/.test(line)) {                  // ordered list
+      const items = [];
+      while (i < lines.length && /^\d+\.\s+/.test(lines[i])) items.push(lines[i++].replace(/^\d+\.\s+/, ''));
+      out.push(`<ol>${items.map(t => `<li>${inline(t)}</li>`).join('')}</ol>`);
+      continue;
+    }
+    if (/^\s*$/.test(line)) { i++; continue; }
+    const em = line.match(/^_(.+)_\s*$/);          // full-line italic (doc preambles)
+    out.push(`<p>${em ? `<i>${inline(em[1])}</i>` : inline(line)}</p>`);
+    i++;
+  }
+  return out.join('\n');
+}
+
+function quickReferenceHtml() {
   const sect = (title) => `<div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin:14px 0 6px;">${title}</div>`;
   const row = (name, desc) => `
     <div style="display:grid;grid-template-columns:180px 1fr;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:1.5;">
       <div style="font-weight:600;color:var(--text);overflow-wrap:break-word;">${name}</div>
       <div style="color:var(--text-secondary);">${desc}</div>
     </div>`;
-  document.getElementById('modal-body').innerHTML = `
+  return `
     <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">
       This dashboard is a window onto a Kafka bus carrying <b>SOM</b> (Story Object Model) messages. Stories arrive,
       skills run against them, their outputs wait for a human decision, and every decision goes back onto the bus.
@@ -1635,8 +1745,8 @@ function openHelp() {
     ${row('Topology / Skills / SOM JSON', 'Bus topology map · skill registry with validation, dry-run and AI review · raw seed envelopes.')}
 
     <div style="margin-top:14px;font-size:11px;color:var(--text-muted);line-height:1.5;">
-      In the repo: <code>docs/USER-GUIDE.md</code> (the full journey — concepts, demos, build a skill,
-      integrate your system) · <code>docs/dashboard-guide.md</code> (this UI in depth) ·
+      The <b>User guide</b> tab above has the full journey — concepts, demos, building a skill,
+      integrating your system. Also in the repo: <code>docs/dashboard-guide.md</code> (this UI in depth) ·
       <code>docs/SOM-v0.3.1-distribution-contracts.md</code> (message contracts).
     </div>`;
 }

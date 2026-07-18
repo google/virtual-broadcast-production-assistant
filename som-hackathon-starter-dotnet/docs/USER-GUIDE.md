@@ -19,7 +19,7 @@ _The front door for hackathon participants and vendors. This guide takes you fro
 
 ## 1. The big picture — SOM in five minutes
 
-**SOM (Story Object Model)** is an open JSON pub/sub standard for sharing *story context* across every tool in a newsroom — NRCS, MAM, transcription, graphics, compliance, playout. Instead of point-to-point integrations, every system reads and writes typed messages on a Kafka bus.
+**SOM (Story Object Model)** is an open JSON pub/sub standard for sharing *story context* across every tool in a newsroom — NRCS, MAM, transcription, graphics, compliance, playout. Instead of point-to-point integrations, every system reads and writes typed messages on a message bus. (SOM itself is transport-agnostic; **Kafka is this starter's transport**, so "topic" here means a Kafka topic.)
 
 The core loop this starter demonstrates:
 

@@ -159,6 +159,23 @@ app.MapGet("/api/seed-stories/{scenario}", async (string scenario) =>
         : Results.Content(json, "application/json");
 });
 
+// Serves docs/USER-GUIDE.md so the dashboard's Help modal can render it in-app.
+// Same dual path resolution as content/: next to the DLL in a container, three
+// levels up under `dotnet run`.
+app.MapGet("/api/docs/user-guide", async () =>
+{
+    var candidates = new[]
+    {
+        Path.Combine(AppContext.BaseDirectory, "docs", "USER-GUIDE.md"),
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "docs", "USER-GUIDE.md"),
+        Path.Combine("docs", "USER-GUIDE.md"),
+    };
+    var path = candidates.FirstOrDefault(File.Exists);
+    return path is null
+        ? Results.NotFound(new { error = "USER-GUIDE.md not shipped in this deployment — read it in the repo" })
+        : Results.Content(await File.ReadAllTextAsync(path), "text/markdown; charset=utf-8");
+});
+
 // ── Content endpoint (story body behind content_ref) ──
 // Resolution order differs from TestProducer.ResolveSeedPath because the published
 // container has content/ next to the DLL (BaseDirectory) per the Dockerfile, while

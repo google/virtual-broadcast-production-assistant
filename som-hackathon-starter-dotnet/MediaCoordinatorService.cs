@@ -153,6 +153,13 @@ public sealed class MediaCoordinatorService : BackgroundService
 
         var captureComplete = payload["extensions"]?[CaptureCompleteExt] is JsonValue ccv
             && ccv.TryGetValue<bool>(out var cc) && cc;
+
+        // Thread the arrival's correlation onto anything we produce in reaction to it, and
+        // record the arrival as the cause (causation_id) — correlation MUST survive end to end.
+        var envelope = node as JsonObject;
+        var correlationId = envelope?["correlation_id"]?.GetValue<string>();
+        var causationId = envelope?["message_id"]?.GetValue<string>();
+
         var storyId = _dashboard.FindStoryIdByAssetId(assetId);
 
         // The dashboard's consumer populates the story cache independently, so an arrival can
@@ -169,11 +176,11 @@ public sealed class MediaCoordinatorService : BackgroundService
         {
             if (_orphanPreview)
             {
-                await PublishOrphanStoryAsync(assetId, source, timeRange, captureComplete, ct);
+                await PublishOrphanStoryAsync(assetId, source, timeRange, captureComplete, correlationId, causationId, ct);
             }
             else
             {
-                await PublishWithheldAuditAsync(assetId, source, ct);
+                await PublishWithheldAuditAsync(assetId, source, correlationId, causationId, ct);
             }
             return;
         }
@@ -234,7 +241,7 @@ public sealed class MediaCoordinatorService : BackgroundService
     /// (action WITHHELD, system actor) — decision D2·B3's "the absence of an expected
     /// action is observable."
     /// </summary>
-    private async Task PublishWithheldAuditAsync(string assetId, string source, CancellationToken ct)
+    private async Task PublishWithheldAuditAsync(string assetId, string source, string? correlationId, string? causationId, CancellationToken ct)
     {
         var now = DateTimeOffset.UtcNow;
         var payload = new JsonObject
@@ -250,7 +257,7 @@ public sealed class MediaCoordinatorService : BackgroundService
 
         try
         {
-            await ProduceAsync(_kafka.AuditTopic, "system.audit", assetId, payload, ct);
+            await ProduceAsync(_kafka.AuditTopic, "system.audit", assetId, payload, correlationId, causationId, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -272,7 +279,7 @@ public sealed class MediaCoordinatorService : BackgroundService
     /// is a v0.3.2 scaffold story_type, NOT in locked v0.3.1 — the story is labeled and
     /// carries extensions["com.ibc-poc.orphan_preview"] so nobody mistakes it for ratified.
     /// </summary>
-    private async Task PublishOrphanStoryAsync(string assetId, string source, string? timeRange, bool captureComplete, CancellationToken ct)
+    private async Task PublishOrphanStoryAsync(string assetId, string source, string? timeRange, bool captureComplete, string? correlationId, string? causationId, CancellationToken ct)
     {
         var now = DateTimeOffset.UtcNow;
         var storyId = $"orphan-{assetId}-{now:yyyyMMddHHmmss}";
@@ -309,20 +316,23 @@ public sealed class MediaCoordinatorService : BackgroundService
             ["extensions"] = new JsonObject { ["com.ibc-poc.orphan_preview"] = true },
         };
 
-        await ProduceAsync(_kafka.StoryContextTopic, "story.context", storyId, payload, ct);
+        await ProduceAsync(_kafka.StoryContextTopic, "story.context", storyId, payload, correlationId, causationId, ct);
         _logger.LogWarning(
             "MediaCoordinator: ORPHAN PREVIEW — authored {StoryId} for unmatched asset {AssetId} (v0.3.2 behaviour, not ratified)",
             storyId, assetId);
     }
 
-    private async Task ProduceAsync(string topic, string messageType, string key, JsonObject payload, CancellationToken ct)
+    private async Task ProduceAsync(string topic, string messageType, string key, JsonObject payload,
+        string? correlationId, string? causationId, CancellationToken ct)
     {
         var now = DateTimeOffset.UtcNow;
         var envelope = new JsonObject
         {
             ["som_version"] = "0.2.0",
             ["message_id"] = Guid.NewGuid().ToString(),
-            ["correlation_id"] = Guid.NewGuid().ToString(),
+            // Echo the triggering arrival's correlation so the chain is traceable end to end;
+            // mint one only if the arrival had none (flat/legacy producer).
+            ["correlation_id"] = correlationId ?? Guid.NewGuid().ToString(),
             ["message_type"] = messageType,
             ["timestamp"] = now.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'"),
             ["originating_system"] = new JsonObject
@@ -336,6 +346,7 @@ public sealed class MediaCoordinatorService : BackgroundService
             ["topic"] = topic,
             ["payload"] = payload,
         };
+        if (causationId is not null) envelope["causation_id"] = causationId;
 
         await Producer.ProduceAsync(topic,
             new Message<string, string> { Key = key, Value = envelope.ToJsonString() }, ct);
