@@ -162,7 +162,7 @@ Two reference points apply:
 | `blocks` | string[] | MUST | ✓ | ✓ |
 | `skill_warning_ref` | string | MUST | — | **gap** |
 
-`scope` and `skill_warning_ref` are not yet emitted by the .NET starter — tracked as follow-ups against SOM-048 / SOM-049, **out of scope for the hackathon day**.
+`scope` and `skill_warning_ref` **are now emitted** by the .NET starter (landed with the v0.3.1 skill-warning contract fix on `som-v031-ibc-readiness`; see `SkillWorker.BuildWarning`).
 
 ### Severity semantics (normative per §4.4.2)
 

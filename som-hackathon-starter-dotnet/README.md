@@ -2,7 +2,9 @@
 
 > Skill worker template + live dashboard for the IBC 2026 SOM Hackathon
 
-A self-contained .NET 10 starter that demonstrates the full SOM (Semantic Object Model) v0.2 skill lifecycle on a Kafka bus, with a built-in browser dashboard for live editorial approval gating. Bring your own skill logic; the bus topology, audit trail, and approval workflow are wired in.
+A self-contained .NET 10 starter that demonstrates the full SOM (Story Object Model) skill lifecycle on a Kafka bus, with a built-in browser dashboard for live editorial approval gating. Bring your own skill logic; the bus topology, audit trail, and approval workflow are wired in.
+
+**New here?** [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md) is the front door — concepts, the full demo loop, building your own skill, and integrating your own system, with a map of every other doc.
 
 ## Quick start
 
@@ -236,7 +238,7 @@ The dashboard has three separate ways to put traffic on the bus. Knowing which i
 
 **Reset bus** (header 🗑) clears the dashboard *view* only: lanes, pending queue and timeline reset, and only new bus events show afterwards. It deliberately does **not** delete Kafka topics or messages (topic deletion destabilises live consumers on the single-broker setup) — old messages stay replayable via Kafka UI. For a truly empty bus: `docker compose down -v && docker compose up -d`.
 
-The header **? Help** button shows a condensed in-app version of all of this. The full walkthrough — every control, every lane, and the three workflows (test a vendor skill, drive a demo, prove the D1·B5 media-arrival beat) — is [`docs/dashboard-guide.md`](docs/dashboard-guide.md).
+The header **? Help** button shows a condensed in-app version of all of this. The full UI walkthrough is [`docs/dashboard-guide.md`](docs/dashboard-guide.md); the end-to-end journey (concepts → demos → build a skill → integrate your system) is [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md).
 
 ## Skill validation (3 layers)
 

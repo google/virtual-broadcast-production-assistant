@@ -1,6 +1,6 @@
 # Dashboard guide
 
-_A walkthrough of the SOM Skill Bus dashboard (`http://localhost:5050`): what every control does, what each lane means, and the three workflows it exists to support. Companion to the [README](../README.md) quick start and [`SOM-v0.3.1-distribution-contracts.md`](./SOM-v0.3.1-distribution-contracts.md) for the message shapes._
+_A walkthrough of the SOM Skill Bus dashboard (`http://localhost:5050`): what every control does, what each lane means, and the workflows it exists to support. Companion to the [README](../README.md) quick start, [`USER-GUIDE.md`](./USER-GUIDE.md) for the end-to-end journey, and [`SOM-v0.3.1-distribution-contracts.md`](./SOM-v0.3.1-distribution-contracts.md) for the message shapes._
 
 The dashboard is a **window onto a Kafka bus** carrying SOM (Story Object Model) messages. Stories arrive on `som.story.context`, the skill worker runs skills against them, outputs are staged for a human decision, and every decision goes back onto the bus. The dashboard renders that flow live over a WebSocket and gives you tools to generate traffic without any upstream newsroom system.
 

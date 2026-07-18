@@ -13,9 +13,12 @@ namespace SomSkillWorker;
 public static class SkillValidation
 {
     private static readonly string[] ValidSeverities = { "hold", "flag", "inform" };
-    private static readonly string[] ValidSkillTypes = { "broadcaster", "vendor", "reference" };
+    // v0.3.1 canonical values first (skill_type broadcaster→NEWSROOM rename), legacy v0.2
+    // lower-case forms kept so old skill files don't start warning. Checks are
+    // case-insensitive, so the shipped NEWSROOM/GATED skill validates clean.
+    private static readonly string[] ValidSkillTypes = { "NEWSROOM", "VENDOR", "REFERENCE", "broadcaster" };
     private static readonly string[] ValidDisclosureLevels = { "L1", "L2", "L3" };
-    private static readonly string[] ValidMigrationPolicies = { "hot", "cold", "gated" };
+    private static readonly string[] ValidMigrationPolicies = { "HOT", "COLD", "GATED" };
 
     /// <summary>
     /// Required config keys per rule type. Missing any of these is a validation error.
@@ -59,7 +62,7 @@ public static class SkillValidation
             warnings.Add(new ValidationIssue("warning", "description",
                 "Skill description is empty. Editors will see this in the dashboard manifest."));
 
-        if (!ValidSkillTypes.Contains(skill.SkillType))
+        if (!ValidSkillTypes.Contains(skill.SkillType, StringComparer.OrdinalIgnoreCase))
             warnings.Add(new ValidationIssue("warning", "skill_type",
                 $"skill_type '{skill.SkillType}' is unusual. Expected one of: {string.Join(", ", ValidSkillTypes)}."));
 
@@ -67,9 +70,9 @@ public static class SkillValidation
             warnings.Add(new ValidationIssue("warning", "disclosure_level",
                 $"disclosure_level '{skill.DisclosureLevel}' should be L1, L2, or L3."));
 
-        if (!ValidMigrationPolicies.Contains(skill.MigrationPolicy))
+        if (!ValidMigrationPolicies.Contains(skill.MigrationPolicy, StringComparer.OrdinalIgnoreCase))
             warnings.Add(new ValidationIssue("warning", "migration_policy",
-                $"migration_policy '{skill.MigrationPolicy}' should be hot, cold, or gated."));
+                $"migration_policy '{skill.MigrationPolicy}' should be one of: {string.Join(", ", ValidMigrationPolicies)}."));
 
         // ─── Rules ──────────────────────────────────────────────────────────
         if (skill.Rules is null || skill.Rules.Length == 0)
