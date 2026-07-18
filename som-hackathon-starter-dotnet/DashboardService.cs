@@ -357,7 +357,8 @@ public sealed class DashboardService : BackgroundService
             return new RerunResult(false, "story_not_seen", 0);
 
         var clone = cached.DeepClone();
-        // TestProducer publishes the payload directly; a real producer would publish a SOM v0.2 envelope wrapping it.
+        // Messages are SOM envelopes (payload-wrapped); tolerate bare payloads from
+        // external producers still on the v0.2 shortcut.
         var payload = clone["payload"] ?? clone;
 
         mutate(payload);
@@ -366,8 +367,16 @@ public sealed class DashboardService : BackgroundService
         payload["sequence_number"] = seq + 1;
         payload["updated_at"] = DateTimeOffset.UtcNow.ToString("o");
 
+        // A republish is a NEW message: fresh message_id + timestamp on the envelope,
+        // same correlation_id so the story lifecycle stays threaded.
+        if (clone["payload"] is not null)
+        {
+            clone["message_id"] = Guid.NewGuid().ToString();
+            clone["timestamp"] = DateTimeOffset.UtcNow.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'");
+        }
+
         var clearedIds = _pending.Where(kv =>
-                kv.Value.Output["story_id"]?.GetValue<string>() == storyId)
+                ((kv.Value.Output["payload"] ?? kv.Value.Output)?["story_id"]?.GetValue<string>()) == storyId)
             .Select(kv => kv.Key)
             .ToList();
 

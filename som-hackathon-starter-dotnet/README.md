@@ -117,7 +117,7 @@ The skill worker never publishes directly to `som.skills.events`. Every output f
 | `MediaCoordinatorService.cs` | **Reference consumer** for `som.delivery.media_available`. Known asset + capture-complete → republishes the story with `acquisition_state: CAPTURED`; unmatched asset → `WITHHELD` audit on `som.system.audit` (or a v0.3.2-preview ORPHAN story with `Coordinator:OrphanPreview=true`). |
 | `SimulatorService.cs` | Local-dev fallback for AP ENPS. Scripted multi-step scenarios and auto-stream mode for demos. |
 | `MockMamService.cs` | Write-only TAMS stand-in: names Sources (`content/mam-catalog.json`) and emits `som.delivery.media_available`, optionally with the `com.ibc-poc.capture_complete` extension. |
-| `TestProducer.cs` | Loads `seed-stories/*.json`, extracts the payload, publishes to `som.story.context`. |
+| `TestProducer.cs` | Loads `seed-stories/*.json` and publishes the **full SOM envelope** to `som.story.context` (fresh `message_id`/`timestamp` per publish; the seed's `correlation_id` kept so the story lifecycle threads). |
 | `Program.cs` | ASP.NET WebApplication. Hosts all background services + maps REST/WS endpoints + serves static files. |
 | `KafkaOptions.cs` | POCO bound from `appsettings.json`. |
 | `wwwroot/index.html` | Dashboard SPA — single file, no build step. |

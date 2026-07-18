@@ -35,7 +35,7 @@ The core loop this starter demonstrates:
 - A **story** is published as a `story.context` snapshot — the full editorial state (headline, lifecycle phase, compliance flags, assets, sources) every time it changes.
 - **Skills** are passive, data-driven automations (a compliance check, a style check). An **executor** (the `SkillWorker` here) watches the bus, works out which skills apply, and runs their rules against each snapshot.
 - Skill outputs go to a **staging** topic and wait for a **human decision** — nothing reaches the production bus without approval. That gate is the dashboard.
-- Every message is wrapped in a **SOM envelope** (`som_version`, `message_id`, `correlation_id`, `message_type`, `timestamp`, `originating_system`, `topic`, `payload`). Five rules bite integrators — see [§7](#7-integrating-your-own-system). **One honest wart:** this starter's own seed publisher currently puts *bare payloads* on `som.story.context` (a v0.2-era shortcut — skill outputs, delivery and audit messages are fully enveloped, and all consumers here tolerate both shapes). Publish full envelopes from your systems; don't copy the shortcut.
+- Every message is wrapped in a **SOM envelope** (`som_version`, `message_id`, `correlation_id`, `message_type`, `timestamp`, `originating_system`, `topic`, `payload`) — including the starter's own seed publishes. Five rules bite integrators — see [§7](#7-integrating-your-own-system). (Consumers here also tolerate bare payloads from producers still on the old v0.2 shortcut, but publish full envelopes from yours.)
 
 On top of the core loop sits the **distribution layer** (v0.3.1): media arrivals (`som.delivery.media_available`), asset-to-destination links (`som.link.*`), on-air state (`som.telling.*`), and the governance trail (`som.system.audit`). This starter runs the delivery + audit halves live; link/telling are the August build.
 
@@ -66,7 +66,7 @@ Four lanes left-to-right mirror the loop: **Stories on Bus** (latest version of 
 - `story_type: ACTIVE` stories carry a `lifecycle.phase`: `DEVELOPING → READY_TO_AIR → BREAKING → PUBLISHED` (only ACTIVE stories have a lifecycle block — that's a schema rule, not a convention).
 - A story is **republished in full** every time it changes — `sequence_number` increments, `updated_at` moves. Consumers keep the latest version per `story_id`; there are no deltas.
 - Skills re-run on **every** new version. That's what makes mutation demos work: advance a phase or add a compliance flag in the Lifecycle panel and watch the skills fire again against the new snapshot.
-- `correlation_id` threads every message about one story lifecycle together — skill outputs echo the inbound *envelope's* correlation id when there is one. (Because the built-in seed publisher sends bare payloads, demo traffic mints fresh ids per output; publish full envelopes from your own producer and you'll see true end-to-end threading.)
+- `correlation_id` threads every message about one story lifecycle together — skill outputs echo the inbound envelope's correlation id, and republished story versions keep it (each republish gets a fresh `message_id`/`timestamp` but the same correlation). Follow one story's traffic in the bus event log and you'll see the whole chain share it.
 
 ## 5. Media and the TAMS junction
 
@@ -146,7 +146,7 @@ You don't have to run inside this process — anything that speaks Kafka + JSON 
 
 | You are… | Consume | Produce | Start here |
 |---|---|---|---|
-| **NRCS / story source** | — | `story.context` on `som.story.context` | Copy a seed envelope (the dashboard's SOM JSON button shows the full envelope files — publish that full shape, even though the starter's own producer currently sends the payload half only), keep `story_id` stable, bump `sequence_number` per change |
+| **NRCS / story source** | — | `story.context` on `som.story.context` | Copy a seed envelope (the dashboard's SOM JSON button shows the full envelope files — exactly the wire shape), keep `story_id` stable, bump `sequence_number` per change, fresh `message_id`/`timestamp` per publish, same `correlation_id` per story lifecycle |
 | **Skill vendor (external executor)** | `som.story.context` | `skill.warning.raised` etc. on `som.skills.staging` | [`message-contracts.md`](./message-contracts.md) — the 12-field warning payload |
 | **MAM / media store** | — | `delivery.media_available` on `som.delivery.media_available` | [`SOM-v0.3.1-distribution-contracts.md`](./SOM-v0.3.1-distribution-contracts.md) — Source URIs + TAMS timeranges |
 | **Media-hungry tool** (transcription, ML) | `som.story.context` + `som.delivery.media_available` | your outputs, via staging or your own topic | The delivery event tells you *when the essence is reachable and where* |
