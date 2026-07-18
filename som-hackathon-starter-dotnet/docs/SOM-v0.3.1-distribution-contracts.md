@@ -77,7 +77,7 @@ Announces that media has **arrived in (or is growing inside) a TAMS/MAM store**.
 
 - `source` resolves to the same Source referenced by the asset's `story.context` → `assets[].media_refs[].source`, so the arrival event joins back to the asset. No `story_id` copy — resolve the story through `asset_id`.
 - `time_range` is a TAMS timerange (or list): bracketed `seconds:nanoseconds` bounds, e.g. `[0:0_134:0)`. Open-ended start/end permitted.
-- **Proves:** D1·B5 — media-arrival without a MAM participant. Drive it locally with the `media-arrival` simulator scenario or `POST /api/mam/emit/{sourceId}`.
+- **Proves:** D1·B5 — media-arrival without a MAM participant. Drive it locally with the `media-arrival` simulator scenario, the Mock MAM panel in the dashboard's Simulator modal, or `POST /api/mam/emit/{sourceId}`.
 
 **Not the right carrier for a public livestream URL you want to transcribe** — that is a *live ingest source*, not arrived TAMS media. See [Vendor extensions](#vendor-extensions--adding-fields-without-breaking-the-spec) for how to carry an ingest URL today.
 

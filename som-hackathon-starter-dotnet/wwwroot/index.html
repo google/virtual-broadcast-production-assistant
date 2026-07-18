@@ -482,8 +482,9 @@ button { font: inherit; cursor: pointer; }
       </button>
     </div>
     <div class="header-spacer"></div>
-    <button class="theme-toggle" onclick="openSimulator()" title="Local-dev fallback for AP ENPS — run scripted scenarios or auto-stream"><svg class="icon"><use href="#i-wand"/></svg> Simulator</button>
-    <button class="theme-toggle danger" onclick="resetBus()" title="Delete and recreate all SOM topics; clear dashboard state"><svg class="icon"><use href="#i-trash"/></svg> Reset bus</button>
+    <button class="theme-toggle" id="auto-indicator" style="display:none;color:#6ee7b7;border-color:#2a5a4a;" onclick="openSimulator()" title="Auto-stream is publishing a random seed story on an interval — click to manage"></button>
+    <button class="theme-toggle" onclick="openSimulator()" title="Local-dev fallback for AP ENPS — run scripted scenarios, drive the mock MAM, or auto-stream"><svg class="icon"><use href="#i-wand"/></svg> Simulator</button>
+    <button class="theme-toggle danger" onclick="resetBus()" title="Clear the dashboard view — Kafka topics and messages are NOT deleted"><svg class="icon"><use href="#i-trash"/></svg> Reset bus</button>
     <button class="theme-toggle" onclick="openBusTopology()" title="Bus topology: producers, topics, consumers"><svg class="icon"><use href="#i-network"/></svg> Topology</button>
     <button class="theme-toggle" onclick="openSkillInfo()" title="Skill registry — rules, live stats, AI review"><svg class="icon"><use href="#i-robot"/></svg> Skills</button>
     <button class="theme-toggle" onclick="openSeedLibrary()" title="Browse raw SOM v0.2 envelopes"><svg class="icon"><use href="#i-braces"/></svg> SOM JSON</button>
@@ -1025,8 +1026,8 @@ function showToast(message, kind) {
 
 // ── Reset bus ──────────────────────────────────────────
 async function resetBus() {
-  if (!confirm('Delete and recreate all 5 SOM topics, and clear the dashboard?\n\nAll messages currently on the bus will be lost.')) return;
-  showToast('Resetting bus…', 'warn');
+  if (!confirm('Clear the dashboard view?\n\nLanes, pending queue and timeline reset — only NEW bus events will show afterwards.\n\nKafka topics and messages are NOT deleted (they stay replayable via Kafka UI). For a truly empty bus: docker compose down -v && docker compose up -d')) return;
+  showToast('Clearing dashboard…', 'warn');
   try {
     const res = await fetch('/api/reset', { method: 'POST' });
     if (!res.ok) {
@@ -1036,7 +1037,7 @@ async function resetBus() {
     // The server broadcasts {type:"reset"} via WebSocket; that handler clears UI state.
     // But we also clear locally in case the WS message is delayed.
     clearLocalState();
-    showToast('Bus cleared. Ready for a new test.', '');
+    showToast('Dashboard cleared. Only new bus events will show.', '');
   } catch (err) {
     showToast('Reset failed: ' + err.message, 'danger');
   }
@@ -1560,16 +1561,19 @@ async function openSimulator() {
 
 async function renderSimulator() {
   const body = document.getElementById('modal-body');
-  let status, scenarios;
+  let status, scenarios, mamCatalog;
   try {
-    [status, scenarios] = await Promise.all([
+    [status, scenarios, mamCatalog] = await Promise.all([
       fetch('/api/simulator/status').then(r => r.json()),
       fetch('/api/simulator/scenarios').then(r => r.json()),
+      // Catalog failure shouldn't take down the whole modal — render the section's own error state.
+      fetch('/api/mam/catalog').then(r => r.json()).catch(() => null),
     ]);
   } catch (err) {
     body.innerHTML = `<div class="empty">Failed to load: ${escapeHtml(err.message)}</div>`;
     return;
   }
+  refreshAutoIndicator(status);
 
   const running = status.runningScenarioId;
   const startedAt = status.runningStartedAt ? new Date(status.runningStartedAt) : null;
@@ -1617,11 +1621,33 @@ async function renderSimulator() {
       </div>
     </div>`).join('');
 
+  const mamCards = !Array.isArray(mamCatalog)
+    ? `<div class="empty">Failed to load MAM catalog — is the app healthy?</div>`
+    : mamCatalog.length === 0
+    ? `<div class="empty">MAM catalog is empty — check content/mam-catalog.json (see server log).</div>`
+    : mamCatalog.map(m => `
+    <div class="card" style="cursor:default;border-left:3px solid var(--ice);">
+      <div class="card-top">
+        <span class="card-id" style="color:var(--ice);">${escapeHtml(m.sourceId)}</span>
+        <span class="tag">${m.durationSeconds}s · asset ${escapeHtml(m.assetId)}</span>
+      </div>
+      <div class="card-title">${escapeHtml(m.label)}</div>
+      <div class="card-meta" style="white-space:normal;color:var(--text-secondary);line-height:1.5;margin-top:6px;">
+        ${escapeHtml(m.notes || '')}
+      </div>
+      <div class="actions" style="margin-top:10px;">
+        <button class="btn approve" onclick="emitMam('${escapeHtml(m.sourceId)}')">${ic('player-play','icon-sm')} Emit media_available</button>
+      </div>
+    </div>`).join('');
+
   body.innerHTML = `
     <div style="margin-bottom:12px;font-size:12px;color:var(--text-secondary);line-height:1.5;">
-      Local-dev fallback for AP ENPS. Scripted scenarios drive realistic SOM lifecycle traffic
-      onto the bus so vendors can test skills against a representative workload without depending
-      on the upstream AP feed.
+      Local-dev fallback for AP ENPS. The dashboard has three ways to generate traffic:
+      the <strong>header seed buttons</strong> (one-shot <code>story.context</code> publishes), <strong>this simulator</strong>
+      (timed scripted scenarios, the mock MAM, and auto-stream), and the <strong>per-story Lifecycle panel</strong>
+      (click any story card to mutate that story). Scripted scenarios run one at a time — starting another cancels the
+      current one. Auto-stream keeps publishing after this modal closes; the header shows an
+      <span style="color:#6ee7b7;">Auto-stream ON</span> chip while it's running.
     </div>
     <div style="display:grid;gap:14px;">
       ${runningBanner}
@@ -1630,7 +1656,31 @@ async function renderSimulator() {
         <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Scripted scenarios</div>
         <div style="display:grid;gap:8px;">${scenarioCards}</div>
       </div>
+      <div>
+        <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Mock MAM (TAMS stand-in)</div>
+        <div style="font-size:11px;color:var(--text-secondary);line-height:1.5;margin-bottom:6px;">
+          Each button emits one schema-valid <code>som.delivery.media_available</code> envelope for the source's full
+          time range. These land on the bus only — the dashboard doesn't consume this topic yet (WS1, Aug build) —
+          watch them in Kafka UI (:8080 with the bundled compose). The <code>media-arrival</code> scenario above drives
+          the same emitter with a growing time range.
+        </div>
+        <div style="display:grid;gap:8px;">${mamCards}</div>
+      </div>
     </div>`;
+}
+
+async function emitMam(sourceId) {
+  try {
+    const res = await fetch(`/api/mam/emit/${encodeURIComponent(sourceId)}`, { method: 'POST' });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok) {
+      showToast(`MAM emit failed: ${payload?.error || res.status}${payload?.detail ? ' — ' + payload.detail : ''}`, 'danger');
+      return;
+    }
+    showToast(`✓ media_available ${payload?.payload?.time_range || ''} → som.delivery.media_available`, '');
+  } catch (err) {
+    showToast('MAM emit failed: ' + err.message, 'danger');
+  }
 }
 
 async function runSimulatorScenario(id) {
@@ -1644,6 +1694,30 @@ async function stopSimulatorScenario() {
   await fetch('/api/simulator/stop', { method: 'POST' });
   showToast('Scenario stopped', 'warn');
   await renderSimulator();
+}
+
+// Header chip so auto-stream can't run unnoticed with the modal closed.
+let autoPollFails = 0;
+async function refreshAutoIndicator(knownStatus) {
+  const el = document.getElementById('auto-indicator');
+  if (!el) return;
+  let status = knownStatus;
+  if (!status) {
+    try {
+      status = await fetch('/api/simulator/status').then(r => r.json());
+    } catch {
+      // Transient poll failure: keep the last state. Sustained (server down for 3+ polls): hide rather than lie.
+      if (++autoPollFails >= 3) el.style.display = 'none';
+      return;
+    }
+  }
+  autoPollFails = 0;
+  if (status.autoEnabled) {
+    el.innerHTML = `${ic('wand')} Auto-stream ON · ${Number(status.autoIntervalSeconds) || '?'}s`;
+    el.style.display = '';
+  } else {
+    el.style.display = 'none';
+  }
 }
 
 async function startAutoStream() {
@@ -2289,6 +2363,8 @@ renderDecisions();
 renderTopicChips();
 renderTimeline();
 connect();
+refreshAutoIndicator();
+setInterval(refreshAutoIndicator, 10000);
 </script>
 </body>
 </html>
