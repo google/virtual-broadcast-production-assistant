@@ -180,15 +180,13 @@ Each seed story includes a `content_refs` array pointing to `GET /api/content/{s
 | `som.skills.events` | Dashboard (on approve) | downstream | Approved outputs on the production bus |
 | `som.skills.rejected` | Dashboard (on reject) | audit | Rejected outputs (with `rejected_by`) |
 | `som.skills.runs` | SkillWorker | Dashboard | Audit record per skill execution (latency, outcome) |
-| `som.delivery.media_available` | MockMamService (TAMS stand-in) | (WS1 consumer, Aug build) | Media-arrival announcements — see [`docs/SOM-v0.3.1-distribution-contracts.md`](docs/SOM-v0.3.1-distribution-contracts.md) |
+| `som.delivery.media_available` | MockMamService (TAMS stand-in) | Dashboard (event log only) · real consumer is WS1, Aug build | Media-arrival announcements — see [`docs/SOM-v0.3.1-distribution-contracts.md`](docs/SOM-v0.3.1-distribution-contracts.md) |
 
-Topics auto-create on first publish in local mode. The dashboard does **not** consume `som.delivery.media_available` yet — watch that topic in Kafka UI (:8080 with the bundled compose).
+Topics auto-create on first publish in local mode. The dashboard tails `som.delivery.media_available` for the bus event log (`MEDIA` lines + topic chip) but doesn't act on it — the consuming logic is the WS1 August build. Full envelopes: Kafka UI (:8080 with the bundled compose).
 
 ## NBCU Simulator (local-dev fallback for AP ENPS)
 
-In production, **AP ENPS is the canonical native SOM publisher** — it emits `story.context` directly onto the bus. The simulator stands in until AP is wired up, and remains useful afterwards as a self-contained test rig that vendors can run against. The 🎬 Simulator button in the dashboard header opens its control panel.
-
-Three tools live in the panel:
+In production, **AP ENPS is the canonical native SOM publisher** — it emits `story.context` directly onto the bus. The simulator stands in until AP is wired up, and remains useful afterwards as a self-contained test rig that vendors can run against. The 🎬 Simulator button in the dashboard header opens its control panel — one tab per tool:
 
 1. **Scripted scenarios** — multi-step storylines that play out in real time. One at a time; starting another cancels the current one, and **Stop** cancels all remaining steps (verified: cancelled steps never reach the bus).
 
@@ -200,7 +198,7 @@ Three tools live in the panel:
    | `compliance-review` | ~18s | Existing-compliance BREAKING story gets an extra LEGAL_HOLD flag mid-flight |
    | `media-arrival` | ~30s | D1·B5 TAMS junction: breaking story publishes, then the mock MAM emits `delivery.media_available` three times with a growing time range |
 
-2. **Mock MAM** — per-source **Emit media_available** buttons over the catalog in [`content/mam-catalog.json`](content/mam-catalog.json). Each click emits one schema-valid envelope for the source's full time range (the `media-arrival` scenario drives the same emitter with a growing range). One-off emits with a custom range: `POST /api/mam/emit/{sourceId}` with `{"timeRange": "[0:0_30:0)"}`.
+2. **Mock MAM** — per-source **Emit media_available** buttons over the catalog in [`content/mam-catalog.json`](content/mam-catalog.json). Each click emits one schema-valid envelope for the source's full time range, visible immediately as a `MEDIA` line in the dashboard's bus event log (the `media-arrival` scenario drives the same emitter with a growing range). One-off emits with a custom range: `POST /api/mam/emit/{sourceId}` with `{"timeRange": "[0:0_30:0)"}`.
 
 3. **Auto-stream** — every N seconds, publish a random seed story. Useful for keeping the dashboard alive during demos and giving vendor skills a steady test load. It keeps running after the panel closes — the dashboard header shows an **Auto-stream ON** chip while it's active (click the chip to manage it).
 
@@ -216,11 +214,13 @@ The dashboard has three separate ways to put traffic on the bus. Knowing which i
 
 | Surface | Where | What it does |
 |---------|-------|--------------|
-| **Seed buttons** | Header (Informal, Breaking, Clean, …) | One click = one `story.context` seed published. No timing, no lifecycle. |
-| **Simulator panel** | Header 🎬 button | Timed scripted scenarios, mock-MAM emits, and the auto-stream firehose (above). |
+| **Seed buttons** | Header ("Seed stories": Informal, Breaking, Clean, …) | One click = one `story.context` seed published. No timing, no lifecycle. |
+| **Simulator panel** | Header 🎬 button | Tabs for scripted scenarios, mock-MAM emits, and the auto-stream firehose (above). |
 | **Lifecycle panel** | Click any story card | Mutates *that* story — advance phase, add compliance flag, re-run — and republishes a new version, so skills re-fire. |
 
 **Reset bus** (header 🗑) clears the dashboard *view* only: lanes, pending queue and timeline reset, and only new bus events show afterwards. It deliberately does **not** delete Kafka topics or messages (topic deletion destabilises live consumers on the single-broker setup) — old messages stay replayable via Kafka UI. For a truly empty bus: `docker compose down -v && docker compose up -d`.
+
+The header **? Help** button shows a condensed in-app version of all of this. The full walkthrough — every control, every lane, and the three workflows (test a vendor skill, drive a demo, prove the D1·B5 media-arrival beat) — is [`docs/dashboard-guide.md`](docs/dashboard-guide.md).
 
 ## Skill validation (3 layers)
 

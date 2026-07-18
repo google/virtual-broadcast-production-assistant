@@ -77,9 +77,11 @@ public sealed class DashboardService : BackgroundService
             _options.SkillEventsTopic,
             _options.SkillRunsTopic,
             _options.SkillRejectedTopic,
+            // Observed for the bus event log only — the WS1 (Aug) build adds the real consumer.
+            _options.DeliveryTopic,
         });
 
-        _logger.LogInformation("Dashboard subscribed to 5 topics");
+        _logger.LogInformation("Dashboard subscribed to 6 topics");
 
         await Task.Yield();
 
@@ -403,6 +405,7 @@ public sealed class DashboardService : BackgroundService
             _options.SkillEventsTopic,
             _options.SkillRejectedTopic,
             _options.SkillRunsTopic,
+            _options.DeliveryTopic,
         };
 
         _resetMarker = DateTimeOffset.UtcNow;
