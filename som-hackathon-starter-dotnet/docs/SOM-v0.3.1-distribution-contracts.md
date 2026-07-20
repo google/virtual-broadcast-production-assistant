@@ -35,7 +35,7 @@ Envelope rules that bite integrators:
 - **`som_version` stays `"0.2.0"`** even though payloads are v0.3.1-shaped. The wire version does not bump until v0.3 ratifies on the wire (tracked as SOM-048). This is deliberate — don't gate on it.
 - **`correlation_id` is required** and MUST be threaded end-to-end so a downstream event can be traced to the story/action that caused it.
 - **`timestamp` lives on the envelope, never in the payload** (decision #18). There is no `signature` field (removed, #18).
-- `originating_system` replaces the old `source` envelope field (#4.1). `system_type` is from the v0.3 enum (`archive`, `newsroom`, `automation`, …).
+- `originating_system` replaces the old `source` envelope field (#4.1). `system_type` is from the v0.3 enum (`ncs`, `archive`, `automation`, `skill_worker`, …) — note the newsroom system value is **`ncs`**, there is no `newsroom` value.
 
 ---
 
@@ -190,6 +190,8 @@ Example on a `story.context` payload:
 
 ---
 
-## Where the schemas live in GitHub
+## Where the schemas live in GitHub — and how to pin them
 
 `som-hackathon-starter-dotnet/schema/v0.3.1-proposed/` on this repo — five schemas plus one valid example per message type under `examples/`. Validate any instance locally with `python3 schema/validate.py`.
+
+**Pinning note:** the content is ratified (locked 30 Jun + 15-Jul errata), but the folder name and `$id` still carry a historical `-proposed` segment. Both are promoted **once**, at the **`schema-lock-v0.3.1-errata1`** tag — **pin that tag, not the path**. Nothing about the shapes changes at promotion.

@@ -19,6 +19,8 @@ Wire baseline: SOM v0.2 plus Amendments A1–A5 (the "v0.2.1-hackathon" label). 
 | `som.skills.rejected` | Dashboard (reject) | Audit | rejected skill outputs |
 | `som.skills.runs` | SkillWorker | Dashboard (audit) | `skill.run.completed` |
 
+> This doc covers the **core skill loop** only. The v0.3.1 **distribution layer** — `som.delivery.media_available`, `som.link.*`, `som.telling.*`, `som.system.audit` — is documented in [`SOM-v0.3.1-distribution-contracts.md`](./SOM-v0.3.1-distribution-contracts.md).
+
 Use the **suffixed** message type names on the wire. The unsuffixed forms in the v0.2 spec body are tracked as **SOM-049** for cleanup; the dashboard parses suffixed only.
 
 ---

@@ -28,7 +28,9 @@ namespace SomSkillWorker;
 /// </summary>
 public sealed class MockMamService : IDisposable
 {
-    public const string StoreName = "mock-mam-store";
+    // Matches the spec's worked-example store name (see schema/v0.3.1-proposed/examples/)
+    // so the wire, the seeds, and the canonical examples a partner pins all agree.
+    public const string StoreName = "tams-gcp-store";
 
     private static readonly Regex TimerangePattern =
         new(@"^[\[(](\d+:\d+)?_(\d+:\d+)?[\])]$", RegexOptions.Compiled);

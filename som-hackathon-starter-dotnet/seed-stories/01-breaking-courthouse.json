@@ -123,7 +123,7 @@
         "acquisition_state": "CAPTURED",
         "media_refs": [
           {
-            "source": "tams://mock-mam-store/9f2e7c1a",
+            "source": "tams://tams-gcp-store/9f2e7c1a",
             "label": "courthouse pool feed",
             "time_range": "[0:0_134:0)"
           }

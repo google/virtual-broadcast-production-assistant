@@ -65,7 +65,7 @@
         "acquisition_state": "CAPTURING",
         "media_refs": [
           {
-            "source": "tams://mock-mam-store/landfall-feed-01",
+            "source": "tams://tams-gcp-store/landfall-feed-01",
             "label": "hurricane landfall live feed",
             "time_range": "[0:0_)"
           }
