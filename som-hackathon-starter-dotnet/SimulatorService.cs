@@ -33,6 +33,9 @@ public sealed class SimulatorService : BackgroundService
     private CancellationTokenSource? _scenarioCts;
     private string? _runningScenarioId;
     private DateTimeOffset? _runningStartedAt;
+    // Per-run token: restarting the SAME scenario id must not let the old (cancelled)
+    // run's cleanup null out the new run's status.
+    private Guid _runToken;
 
     private bool _autoEnabled;
     private int _autoIntervalSeconds = 20;
@@ -125,8 +128,9 @@ public sealed class SimulatorService : BackgroundService
         _scenarioCts = new CancellationTokenSource();
         _runningScenarioId = scenario.Id;
         _runningStartedAt = DateTimeOffset.UtcNow;
+        var token = _runToken = Guid.NewGuid();
 
-        _ = Task.Run(() => RunScenarioLoopAsync(scenario, _scenarioCts.Token));
+        _ = Task.Run(() => RunScenarioLoopAsync(scenario, token, _scenarioCts.Token));
         return true;
     }
 
@@ -138,7 +142,7 @@ public sealed class SimulatorService : BackgroundService
         return Task.CompletedTask;
     }
 
-    private async Task RunScenarioLoopAsync(SimulationScenario scenario, CancellationToken ct)
+    private async Task RunScenarioLoopAsync(SimulationScenario scenario, Guid runToken, CancellationToken ct)
     {
         _logger.LogInformation("▶ Running scenario {Id} ({StepCount} steps)", scenario.Id, scenario.Actions.Length);
         var startedAt = DateTimeOffset.UtcNow;
@@ -164,7 +168,7 @@ public sealed class SimulatorService : BackgroundService
         }
         finally
         {
-            if (_runningScenarioId == scenario.Id)
+            if (_runToken == runToken)
             {
                 _runningScenarioId = null;
                 _runningStartedAt = null;

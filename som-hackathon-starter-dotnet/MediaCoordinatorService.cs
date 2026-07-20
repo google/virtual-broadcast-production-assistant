@@ -157,8 +157,8 @@ public sealed class MediaCoordinatorService : BackgroundService
         // Thread the arrival's correlation onto anything we produce in reaction to it, and
         // record the arrival as the cause (causation_id) — correlation MUST survive end to end.
         var envelope = node as JsonObject;
-        var correlationId = envelope?["correlation_id"]?.GetValue<string>();
-        var causationId = envelope?["message_id"]?.GetValue<string>();
+        var correlationId = envelope?["correlation_id"] is JsonValue crv && crv.TryGetValue<string>(out var cr) ? cr : null;
+        var causationId = envelope?["message_id"] is JsonValue miv && miv.TryGetValue<string>(out var mi) ? mi : null;
 
         var storyId = _dashboard.FindStoryIdByAssetId(assetId);
 

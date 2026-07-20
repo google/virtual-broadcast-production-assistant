@@ -68,11 +68,19 @@ def check_message(path, *, released_story=False):
     return errs(sch, d) if sch else [type("E", (), {"message": "no schema matched"})()]
 
 def main():
+    # (glob_dir, min_expected) — a deleted fixture directory must FAIL, not read as "all valid".
+    groups = [
+        (glob.glob(os.path.join(ROOT, "seed-stories", "*.json")), {}, 5, "seed-stories"),
+        (glob.glob(os.path.join(SCH, "examples", "*.json")), {"released_story": True}, 1, "schema/examples"),
+        (glob.glob(os.path.join(P, "examples", "*.json")), {}, 5, "v0.3.1-proposed/examples"),
+        (glob.glob(os.path.join(ROOT, "mos-bridge", "samples", "*.expected.json")), {}, 1, "mos-bridge fixtures"),
+    ]
     targets = []
-    targets += [(f, {}) for f in glob.glob(os.path.join(ROOT, "seed-stories", "*.json"))]
-    targets += [(f, {"released_story": True}) for f in glob.glob(os.path.join(SCH, "examples", "*.json"))]
-    targets += [(f, {}) for f in glob.glob(os.path.join(P, "examples", "*.json"))]
-    targets += [(f, {}) for f in glob.glob(os.path.join(ROOT, "mos-bridge", "samples", "*.expected.json"))]
+    for files, opts, minimum, label in groups:
+        if len(files) < minimum:
+            print(f"FATAL: expected at least {minimum} fixture(s) in {label}, found {len(files)} — glob broken or files deleted")
+            sys.exit(1)
+        targets += [(f, opts) for f in files]
 
     bad = 0
     for path, opts in sorted(targets):

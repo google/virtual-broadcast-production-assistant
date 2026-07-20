@@ -45,6 +45,9 @@ public sealed class DashboardService : BackgroundService
             BootstrapServers = _options.BootstrapServers,
             Acks = Acks.All,
             EnableIdempotence = true,
+            // Bounded: with librdkafka's 5-min default, a broker outage hangs an
+            // approve/reject click for minutes before failing.
+            MessageTimeoutMs = 10000,
         };
         ApplyAuth(producerConfig);
         var pb = new ProducerBuilder<string, string>(producerConfig);
@@ -108,7 +111,8 @@ public sealed class DashboardService : BackgroundService
                 // can republish it without round-tripping through Kafka or the seed files.
                 if (result.Topic == _options.StoryContextTopic)
                 {
-                    var sid = (node["payload"]?["story_id"] ?? node["story_id"])?.GetValue<string>();
+                    var sidNode = node["payload"]?["story_id"] ?? node["story_id"];
+                    var sid = sidNode is JsonValue sv && sv.TryGetValue<string>(out var s) ? s : null;
                     if (sid is not null) _stories[sid] = node;
                 }
 
@@ -237,13 +241,22 @@ public sealed class DashboardService : BackgroundService
 
         if (decision.Equals("approve", StringComparison.OrdinalIgnoreCase))
         {
-            // Annotate and republish to the production bus.
+            // Annotate and republish to the production bus. If the produce fails, put the
+            // pending item BACK — a broker blip must not silently discard a staged warning.
             var enriched = pending.Output.DeepClone();
             enriched["approved_by"] = reviewer ?? "dashboard-user";
             enriched["approved_at"] = DateTimeOffset.UtcNow.ToString("o");
 
-            await _producer.ProduceAsync(_options.SkillEventsTopic,
-                new Message<string, string> { Key = key, Value = enriched.ToJsonString() }, ct);
+            try
+            {
+                await _producer.ProduceAsync(_options.SkillEventsTopic,
+                    new Message<string, string> { Key = key, Value = enriched.ToJsonString() }, ct);
+            }
+            catch
+            {
+                _pending[outputId] = pending;
+                throw;
+            }
 
             await BroadcastAsync(new
             {
@@ -263,8 +276,16 @@ public sealed class DashboardService : BackgroundService
             enriched["rejected_by"] = reviewer ?? "dashboard-user";
             enriched["rejected_at"] = DateTimeOffset.UtcNow.ToString("o");
 
-            await _producer.ProduceAsync(_options.SkillRejectedTopic,
-                new Message<string, string> { Key = key, Value = enriched.ToJsonString() }, ct);
+            try
+            {
+                await _producer.ProduceAsync(_options.SkillRejectedTopic,
+                    new Message<string, string> { Key = key, Value = enriched.ToJsonString() }, ct);
+            }
+            catch
+            {
+                _pending[outputId] = pending;
+                throw;
+            }
 
             await BroadcastAsync(new
             {
