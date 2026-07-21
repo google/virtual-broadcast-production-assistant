@@ -2,7 +2,7 @@
 
 Companion to **SOM v0.3.1 Proposal — Closing the Open Items at Release**. The objection window closed 24 June EOD UK and the content **locked on 30 June 2026** (all items accepted, incl. the 29-Jun Source re-key and `som.system.audit`; the 15-Jul TRANSCRIPT `asset_type` errata is folded in). These are **ratified contracts — integrate against them.**
 
-The `-proposed` folder name and `$id` segment predate the lock. They are promoted **once**, in a coordinated move with the SOM spec folder (the source of truth this copy is vendored from), at the **`schema-lock-v0.3.1-errata1`** tag. Until then: **pin the tag, not the path** — content is stable, the path moves exactly once.
+The `-proposed` folder name and `$id` segment predate the lock. They are promoted **once**, in a coordinated move across the SOM spec folder (source of truth) and the repo-vendored copy, at the **`schema-lock-v0.3.1-errata1`** tag. Until then: **pin the tag, not the path** — content is stable, the path moves exactly once.
 
 | File | Proposal item | Validates |
 |---|---|---|
