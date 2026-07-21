@@ -275,6 +275,7 @@ The skill registry header in the dashboard shows a status badge: `🤖 google/ge
 | `GET` | `/api/pending` | Staged outputs awaiting approve/reject |
 | `POST` | `/api/decision/{id}` | Body: `{decision:"approve"|"reject", reviewer:"..."}` |
 | `POST` | `/api/publish/{scenario}` | Publish one seed story to the bus |
+| `GET` | `/api/stories` | Story directory: live stories (ACTIVE/PLANNED) as a thin projection — a read-only cache of the bus, not a source of truth |
 | `POST` | `/api/stories/{id}/rerun` | Republish cached story → skill re-runs |
 | `POST` | `/api/stories/{id}/advance-phase` | Mutate `lifecycle.phase` to next canonical, republish |
 | `POST` | `/api/stories/{id}/add-compliance` | Body: `{type, severity, detail}`, append flag and republish |
