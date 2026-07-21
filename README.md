@@ -15,4 +15,4 @@ Learn more about the 2026 Incubator Project: [Smart Stories: Agentic Production 
 - [archive/2025](file:///usr/local/google/home/jgrayston/workspace/github/virtual-broadcast-production-assistant/archive/2025): Contains the content and projects related to the 2025 IBC Accelerator Project.
 - Example open-source implementations for the Story Object Model and agentic workflows will be landed in the root of this repository as they are developed.
 
-*Note: The SOM schema itself will live elsewhere (TBC). *
+*Note: The SOM schema itself will live elsewhere (TBC).*
