@@ -113,7 +113,19 @@ public sealed class DashboardService : BackgroundService
                 {
                     var sidNode = node["payload"]?["story_id"] ?? node["story_id"];
                     var sid = sidNode is JsonValue sv && sv.TryGetValue<string>(out var s) ? s : null;
-                    if (sid is not null) _stories[sid] = node;
+                    if (sid is not null)
+                    {
+                        _stories[sid] = node;
+                        // Warn ONCE, at ingest, when a story can never appear in the
+                        // /api/stories directory — the read path skips silently (it runs
+                        // per poll), so this line is the only log evidence explaining why.
+                        var st = (node["payload"] ?? node) is JsonObject po
+                            && po["story_type"] is JsonValue stv && stv.TryGetValue<string>(out var stVal) ? stVal : null;
+                        if (st is not ("ACTIVE" or "PLANNED" or "KILLED" or "SPIKED" or "ARCHIVED" or "ORPHAN"))
+                            _logger.LogWarning(
+                                "Story {StoryId} cached with missing/unknown story_type ({StoryType}) — it will not appear in the /api/stories directory",
+                                sid, st ?? "∅");
+                    }
                 }
 
                 // For staged outputs, hold them in the pending queue so the UI can approve/reject.
@@ -506,6 +518,57 @@ public sealed class DashboardService : BackgroundService
             payload = p.Output,
         })
         .ToArray();
+
+    /// <summary>
+    /// The story-directory projection: a thin, SOM-shaped listing of the live story set
+    /// materialised from the bus. This is a read-only CACHE of the bus, never a second
+    /// home for the truth — and serving it is a role any participant could fill, not a
+    /// privilege of this process. Live set = story_type ACTIVE/PLANNED only: closed
+    /// types (KILLED/SPIKED/ARCHIVED) are over, and ORPHAN is v0.3.2 preview scaffolding
+    /// that must not leak into a directory partners browse.
+    /// </summary>
+    public IReadOnlyCollection<JsonObject> SnapshotStories()
+    {
+        var rows = new List<(DateTimeOffset UpdatedAt, JsonObject Row)>();
+        foreach (var (storyId, node) in _stories)
+        {
+            // Tolerant reads: one malformed story must not poison the directory. The
+            // typed guards cover wrong-typed fields; the try covers what guards cannot —
+            // JsonObject materializes nested objects lazily and THROWS on duplicate JSON
+            // keys, and nothing touches a cached story's lifecycle internals before here,
+            // so without it one hand-crafted envelope 500s the endpoint for everyone.
+            try
+            {
+                if ((node["payload"] ?? node) is not JsonObject p) continue;
+                if (p["story_type"] is not JsonValue tv || !tv.TryGetValue<string>(out var storyType)) continue;
+                if (storyType is not ("ACTIVE" or "PLANNED")) continue;
+
+                var updated = p["updated_at"] is JsonValue uv && uv.TryGetValue<string>(out var u) ? u : null;
+                var row = new JsonObject
+                {
+                    ["story_id"] = storyId,
+                    ["slug"] = p["slug"] is JsonValue sv && sv.TryGetValue<string>(out var slug) ? slug : null,
+                    ["headline"] = p["headline"] is JsonValue hv && hv.TryGetValue<string>(out var headline) ? headline : null,
+                    ["story_type"] = storyType,
+                    ["updated_at"] = updated,
+                };
+                // lifecycle iff the story carries one (ACTIVE-only, decision #19) — the
+                // projection mirrors the schema rule rather than flattening it away.
+                if (p["lifecycle"] is JsonObject lc && lc["phase"] is JsonValue pv && pv.TryGetValue<string>(out var phase))
+                    row["lifecycle"] = new JsonObject { ["phase"] = phase };
+
+                // The bus carries mixed timestamp shapes ("…Z" seeds vs "o"-format
+                // republishes), so ordinal string order can invert near-ties — parse.
+                rows.Add((DateTimeOffset.TryParse(updated, out var ts) ? ts : DateTimeOffset.MinValue, row));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Story directory: cached story {StoryId} is unreadable — omitted from /api/stories", storyId);
+            }
+        }
+        return rows.OrderByDescending(r => r.UpdatedAt).Select(r => r.Row).ToArray();
+    }
 
     // ─── Helpers ────────────────────────────────────────────────────────────
 

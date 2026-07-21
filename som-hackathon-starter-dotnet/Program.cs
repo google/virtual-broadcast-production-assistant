@@ -212,6 +212,12 @@ app.MapPost("/api/decision/{id}", async (
         : Results.BadRequest(new { error = result.Status });
 });
 
+// ── Story directory (read-only) ────────────────────────
+// The ingest-journey entry point: list the live story set so a joining participant can
+// find a story_id to reference. A cache of the bus, never the truth — the bus stays the
+// source of record, and any participant could serve this same directory role.
+app.MapGet("/api/stories", (DashboardService dash) => Results.Ok(dash.SnapshotStories()));
+
 app.MapPost("/api/stories/{storyId}/rerun", async (
     string storyId, DashboardService dash, CancellationToken ct) =>
 {
