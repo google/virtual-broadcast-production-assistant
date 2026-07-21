@@ -1,0 +1,9 @@
+{
+  "message_type": "link.committed",
+  "link_id": "0190a000-0000-7000-8000-00000000aaa1",
+  "asset_id": "a1",
+  "destination_id": "d1",
+  "committed_by": "producer-7",
+  "committed_at": "2026-06-12T10:00:00Z",
+  "compliance_gate_status": "PENDING"
+}

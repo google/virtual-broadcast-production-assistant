@@ -1,0 +1,9 @@
+{
+  "message_type": "delivery.media_available",
+  "delivery_id": "0190a000-0000-7000-8000-00000000aaa1",
+  "asset_id": "a2",
+  "source": "tams://tams-gcp-store/9f2e7c1a",
+  "time_range": "[0:0_134:0)",
+  "arrived_in": "tams-gcp-store",
+  "arrived_at": "2026-06-12T09:30:00Z"
+}

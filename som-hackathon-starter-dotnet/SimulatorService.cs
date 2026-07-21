@@ -26,6 +26,7 @@ public sealed class SimulatorService : BackgroundService
 {
     private readonly ILogger<SimulatorService> _logger;
     private readonly DashboardService _dashboard;
+    private readonly MockMamService _mockMam;
     private readonly KafkaOptions _kafkaOptions;
     private readonly Random _rng = new();
 
@@ -36,10 +37,11 @@ public sealed class SimulatorService : BackgroundService
     private bool _autoEnabled;
     private int _autoIntervalSeconds = 20;
 
-    public SimulatorService(ILogger<SimulatorService> logger, DashboardService dashboard, IOptions<KafkaOptions> kafkaOptions)
+    public SimulatorService(ILogger<SimulatorService> logger, DashboardService dashboard, MockMamService mockMam, IOptions<KafkaOptions> kafkaOptions)
     {
         _logger = logger;
         _dashboard = dashboard;
+        _mockMam = mockMam;
         _kafkaOptions = kafkaOptions.Value;
     }
 
@@ -194,6 +196,19 @@ public sealed class SimulatorService : BackgroundService
             case "rerun":
                 if (action.StoryId is not null) await _dashboard.RerunSkillAsync(action.StoryId, ct);
                 break;
+            case "media-available":
+                // Mock MAM emits som.delivery.media_available (TAMS stand-in — see MockMamService).
+                if (action.SourceId is null)
+                {
+                    _logger.LogWarning("Simulator 'media-available' action missing SourceId — skipped");
+                    break;
+                }
+                var emit = await _mockMam.EmitAsync(action.SourceId, action.TimeRange, captureComplete: action.CaptureComplete, ct: ct);
+                if (!emit.Ok)
+                    _logger.LogError(
+                        "Simulator 'media-available' did NOT emit for source {SourceId}: {Status} — {Error}",
+                        action.SourceId, emit.Status, emit.Error);
+                break;
             default:
                 _logger.LogWarning("Unknown simulator action type: {Type}", action.Type);
                 break;
@@ -210,7 +225,10 @@ public sealed record SimAction(
     string? StoryId = null,
     string? FlagType = null,
     string? Severity = null,
-    string? Detail = null);
+    string? Detail = null,
+    string? SourceId = null,
+    string? TimeRange = null,
+    bool CaptureComplete = false);
 
 public sealed record SimulationScenario(
     string Id,
@@ -258,7 +276,7 @@ internal static class SimScenarios
         ["multi-vendor-stream"] = new(
             Id: "multi-vendor-stream",
             Name: "Multi-vendor stream",
-            Description: "Publishes all 5 seed stories in quick succession over ~12 seconds. Useful for testing vendor skills against a realistic newsroom load — concurrent stories at different lifecycle stages.",
+            Description: "Publishes the five original seed stories in quick succession over ~12 seconds. Useful for testing vendor skills against a realistic newsroom load — concurrent stories at different lifecycle stages.",
             DurationSeconds: 12,
             Actions: new[]
             {
@@ -283,6 +301,29 @@ internal static class SimScenarios
                               Detail: "Election Decision Desk projection conditions"),
                 new SimAction(35, "advance-phase",  StoryId: ElectionVa),
                 new SimAction(45, "advance-phase",  StoryId: ElectionVa),
+            }),
+
+        ["media-arrival"] = new(
+            Id: "media-arrival",
+            Name: "Media arrival (mock MAM / TAMS junction)",
+            Description: "The full D1·B5 loop: the hurricane story publishes with its live-feed asset CAPTURING, then the mock MAM emits delivery.media_available three times with a GROWING TAMS timerange. The final emit carries the capture-complete extension — the media coordinator flips the asset to CAPTURED and republishes the story, and the capture-complete skill rule fires an inform into Pending Approval. End to end, one scenario.",
+            DurationSeconds: 30,
+            Actions: new[]
+            {
+                new SimAction(0,  "publish",         Scenario: "hurricane"),
+                new SimAction(6,  "media-available", SourceId: "landfall-feed-01", TimeRange: "[0:0_30:0)"),
+                new SimAction(16, "media-available", SourceId: "landfall-feed-01", TimeRange: "[0:0_75:0)"),
+                new SimAction(26, "media-available", SourceId: "landfall-feed-01", TimeRange: "[0:0_1260:0)", CaptureComplete: true),
+            }),
+
+        ["media-unmatched"] = new(
+            Id: "media-unmatched",
+            Name: "Unmatched media (safe-state / orphan preview)",
+            Description: "The mock MAM announces a UGC clip (ugc-flood-77aa41b0) that NO story references. The media coordinator resolves nothing, declines to act, and records a WITHHELD audit on som.system.audit — the skills-model safe-state stop made observable. With Coordinator:OrphanPreview=true it instead authors a clearly-labeled v0.3.2-preview ORPHAN story wrapping the clip, which then flows through skills like any other story.",
+            DurationSeconds: 5,
+            Actions: new[]
+            {
+                new SimAction(0, "media-available", SourceId: "ugc-flood-77aa41b0"),
             }),
 
         ["compliance-review"] = new(

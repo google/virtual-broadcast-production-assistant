@@ -1,0 +1,306 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://som.spec/schema/v0.3/story-context",
+  "title": "SOM v0.3 story.context payload (DRAFT 2, 2026-06-10)",
+  "description": "Payload schema per v0.3 Technical §4.2–§4.8. TARGET shape — current 0.2.0 wire payloads will NOT validate (by design; see SOM-048 migration). instances[] and broadcaster_id are hard-rejected. verification_status/provider_type intentionally absent pending the 10 Jun WG fork decision (§4.3).",
+  "type": "object",
+  "required": ["story_id", "slug", "headline", "story_type", "sequence_number", "updated_at"],
+  "properties": {
+    "story_id": { "type": "string" },
+    "slug": { "type": "string" },
+    "headline": { "type": "string" },
+    "story_type": { "type": "string", "enum": ["PLANNED", "ACTIVE", "KILLED", "SPIKED", "ARCHIVED"] },
+    "lifecycle": { "$ref": "#/$defs/lifecycle" },
+    "sequence_number": { "type": "integer", "minimum": 0 },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "newsroom_id": { "type": "string", "description": "Phased: optional in 0.3.0 (derive from skills_config.newsroom if absent), required from 0.4 (decision #12)" },
+    "story_owner": { "description": "System/entity with authoritative control over the story", "anyOf": [{ "type": "string" }, { "type": "object" }] },
+    "priority": {
+      "type": "object",
+      "required": ["level"],
+      "properties": {
+        "level": { "type": "string", "enum": ["ROUTINE", "STANDARD", "HIGH", "URGENT", "FLASH"] },
+        "reason": { "type": "string" },
+        "escalated_by": { "type": "string" },
+        "escalated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "premise": {
+      "type": "object",
+      "properties": {
+        "expected_outcome": { "type": "string" },
+        "confidence": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "premise_changed": { "type": "boolean" },
+        "previous_outcome": { "type": "string" },
+        "actual_outcome": { "type": "string" },
+        "affected_assets": { "type": "array", "items": { "type": "string" } },
+        "change_detected_at": { "type": "string", "format": "date-time" },
+        "change_detected_by": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "compliance": { "type": "array", "items": { "$ref": "#/$defs/compliance_flag" } },
+    "editorial_gates": { "type": "array", "items": { "$ref": "#/$defs/editorial_gate" } },
+    "story_meaning": {
+      "type": "object",
+      "description": "Structured 5W1H kernel (decision #14); fields token-capped ≤280 chars, summary ≤600",
+      "properties": {
+        "who": { "type": "string", "maxLength": 280 },
+        "what": { "type": "string", "maxLength": 280 },
+        "when": { "type": "string", "maxLength": 280 },
+        "where": { "type": "string", "maxLength": 280 },
+        "why": { "type": "string", "maxLength": 280 },
+        "how": { "type": "string", "maxLength": 280 },
+        "summary": { "type": "string", "maxLength": 600 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "provenance_refs": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "government_approval": {
+      "type": "object",
+      "description": "Publication gate (decision #15) — executor MUST NOT publish while status blocks",
+      "required": ["status"],
+      "properties": {
+        "status": { "type": "string", "enum": ["NOT_REQUIRED", "REQUESTED", "UNDER_REVIEW", "APPROVED", "RETURNED_FOR_REVISION", "REJECTED"] },
+        "jurisdiction": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "editorial_source": { "type": "array", "description": "Renamed from sources[] (second leg of the source disambiguation)", "items": { "$ref": "#/$defs/editorial_source_entry" } },
+    "assets": { "type": "array", "items": { "$ref": "#/$defs/asset" } },
+    "ai_enrichments": { "type": "array", "items": { "$ref": "#/$defs/ai_enrichment" } },
+    "skills_config": { "$ref": "#/$defs/skills_config" },
+    "content_refs": { "type": "array", "items": { "$ref": "#/$defs/content_ref" } },
+    "relations": { "type": "array", "items": { "$ref": "#/$defs/relation" } },
+    "collaboration": {
+      "type": "object",
+      "properties": {
+        "editing_version": { "type": "integer", "description": "Renamed from collaboration.version" },
+        "active_editors": { "type": "array" },
+        "lock_status": { "type": "string" }
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "patternProperties": { "^com\\.[a-z0-9-]+\\.": {} },
+      "additionalProperties": false
+    },
+    "instances": false,
+    "broadcaster_id": false,
+    "sources": false,
+    "content_ref": false
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "story_type": { "const": "ACTIVE" } }, "required": ["story_type"] },
+      "then": { "required": ["lifecycle"] },
+      "else": { "not": { "required": ["lifecycle"] } }
+    }
+  ],
+  "$defs": {
+    "lifecycle": {
+      "type": "object",
+      "description": "Present ONLY when story_type: ACTIVE (decision #19)",
+      "required": ["phase", "phase_entered_at"],
+      "properties": {
+        "phase": { "type": "string", "enum": ["DEVELOPING", "READY_TO_AIR", "BREAKING", "PUBLISHED"] },
+        "phase_entered_at": { "type": "string", "format": "date-time" },
+        "previous_phase": { "type": "string", "enum": ["DEVELOPING", "READY_TO_AIR", "BREAKING", "PUBLISHED"] },
+        "phase_owner": {
+          "type": "object",
+          "properties": {
+            "user_id": { "type": "string" },
+            "display_name": { "type": "string" },
+            "role": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "compliance_flag": {
+      "type": "object",
+      "required": ["flag_id", "type", "severity", "detail", "raised_by", "raised_at", "status"],
+      "properties": {
+        "flag_id": { "type": "string" },
+        "type": { "type": "string", "examples": ["PREMISE_CONTRADICTION", "MINOR_INVOLVED", "LEGAL_REVIEW", "EDITORIAL_REVIEW", "LEGAL_HOLD", "VOTING_RIGHTS", "DEFAMATION_RISK"] },
+        "severity": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+        "detail": { "type": "string" },
+        "jurisdiction": { "type": "string" },
+        "regulation_ref": { "type": "string" },
+        "raised_by": { "type": "string" },
+        "raised_at": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["ACTIVE", "RESOLVED", "WAIVED"] }
+      },
+      "additionalProperties": false
+    },
+    "editorial_gate": {
+      "type": "object",
+      "required": ["gate_id", "gate_type", "status"],
+      "properties": {
+        "gate_id": { "type": "string" },
+        "gate_type": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "required_by_skill": { "type": "string" },
+        "gate_rule_id": { "type": "string" },
+        "resolution_event_type": { "type": "string" },
+        "assigned_to": { "type": "string" },
+        "blocks": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "editorial_source_entry": {
+      "type": "object",
+      "required": ["source_id", "source_type", "provider", "credibility", "received_at"],
+      "properties": {
+        "source_id": { "type": "string" },
+        "source_type": {
+          "anyOf": [
+            { "type": "string", "enum": ["WIRE", "OFFICIAL", "FIELD_CREW", "POOL_FEED", "GOVERNMENT", "INTERNAL", "PRESS_RELEASE", "SCANNER", "USER_GENERATED", "SOCIAL", "ARCHIVE"] },
+            { "type": "string", "pattern": "^x-[a-z0-9_]+$" }
+          ]
+        },
+        "provider": { "type": "string" },
+        "credibility": { "type": "string", "enum": ["TRUSTED", "VERIFIED", "ENDORSED", "UNVERIFIED"] },
+        "received_at": { "type": "string", "format": "date-time" },
+        "content_hash": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "asset": {
+      "type": "object",
+      "required": ["asset_id", "asset_type", "status"],
+      "properties": {
+        "asset_id": { "type": "string" },
+        "asset_type": {
+          "anyOf": [
+            { "type": "string", "enum": ["VIDEO", "AUDIO", "GRAPHIC", "STILL", "CG", "SCRIPT", "PROMPTER", "LOWER_THIRD", "FULL_FRAME", "MAP", "SOCIAL_CARD", "CUSTOM"] },
+            { "type": "string", "pattern": "^x-[a-z0-9_]+$" }
+          ]
+        },
+        "status": { "type": "string", "enum": ["READY", "IN_PRODUCTION", "PREPARED", "INVALIDATED"], "description": "Editorial-state only (decision #16). LIVE/AIRED are DERIVED from the Telling, never stored here" },
+        "evidential_position": { "type": "string", "enum": ["PRIMARY", "SECONDARY", "TERTIARY"], "description": "Voice-count criterion (decision #22); single-reporter package defaults TERTIARY" },
+        "acquisition_state": { "type": "string", "enum": ["CAPTURING", "CAPTURED"], "description": "Primary assets only; REOPENED is an event, not a stored value (decision #16)" },
+        "derived_from": { "type": "array", "items": { "type": "string" }, "description": "EDITORIAL lineage only; computational/format relationships belong in delivery_spec" },
+        "produced_by": { "type": "string" },
+        "usage": {
+          "type": "array",
+          "description": "Asset-side back-edge index (decision #3); committed-only, fail-closed modify-gate; maintenance semantics per §5",
+          "items": {
+            "type": "object",
+            "required": ["link_id", "destination_id", "state"],
+            "properties": {
+              "link_id": { "type": "string" },
+              "destination_id": { "type": "string" },
+              "state": { "type": "string", "const": "committed" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "invalidated_by": { "type": "string" },
+        "standards_clearance": {
+          "type": "object",
+          "properties": {
+            "status": { "type": "string", "enum": ["CLEARED", "BLOCKED", "PENDING"] },
+            "blocked_by": { "type": "array", "items": { "type": "string" } },
+            "last_reviewed": { "type": "string", "format": "date-time" }
+          },
+          "additionalProperties": false
+        },
+        "delivery_spec": {
+          "type": "object",
+          "properties": {
+            "format": { "type": "string" },
+            "resolution": { "type": "string" },
+            "frame_rate": { "type": "number" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "ai_enrichment": {
+      "type": "object",
+      "required": ["enrichment_id", "model", "enrichment_type", "content", "generated_at"],
+      "properties": {
+        "enrichment_id": { "type": "string" },
+        "model": { "type": "string" },
+        "enrichment_type": { "type": "string", "enum": ["SUMMARY", "SOCIAL_POST", "ANALYSIS", "ARTICLE", "PROMPTER"] },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "content": { "type": "string" },
+        "provenance": {
+          "type": "object",
+          "properties": {
+            "input_sources": { "type": "array", "items": { "type": "string" } },
+            "prompt_hash": { "type": "string" },
+            "guardrails_applied": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "human_reviewed": { "type": "boolean" },
+        "generated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "skills_config": {
+      "type": "object",
+      "properties": {
+        "newsroom": { "type": "string", "description": "Renamed from skills_config.broadcaster (decision #12)" },
+        "skills_spec_version": { "type": "string" },
+        "skill_executor_id": { "type": "string" },
+        "scope_context": { "type": "string" },
+        "active_skills": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["skill_id", "skill_version", "skill_type"],
+            "properties": {
+              "skill_id": { "type": "string" },
+              "skill_version": { "type": "string" },
+              "skill_type": { "type": "string", "enum": ["NEWSROOM", "VENDOR", "REFERENCE"] },
+              "disclosure_level": { "type": "string", "enum": ["L1", "L2", "L3"] },
+              "migration_policy": { "type": "string", "enum": ["HOT", "COLD", "GATED"] },
+              "skill_priority": { "type": "string", "enum": ["CRITICAL", "NORMAL", "LOW"] }
+            },
+            "additionalProperties": false
+          }
+        },
+        "broadcaster": false
+      },
+      "additionalProperties": false
+    },
+    "content_ref": {
+      "type": "object",
+      "required": ["uri"],
+      "properties": {
+        "uri": { "type": "string", "format": "uri" },
+        "mime_type": { "type": "string" },
+        "content_format": { "type": "string", "examples": ["ap-som-body-json-v1"] },
+        "placement": { "type": "string" },
+        "provider": { "type": "string" },
+        "role": { "type": "string" },
+        "source_id": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "relation": {
+      "type": "object",
+      "description": "Versioned in v0.3 (§4.7); seed data structure for the Ontology Layer",
+      "required": ["relation_type"],
+      "properties": {
+        "relation_type": { "type": "string" },
+        "target_story_id": { "type": "string" },
+        "_version": { "type": "integer" },
+        "_created_at": { "type": "string", "format": "date-time" },
+        "_created_by": { "type": "string" },
+        "_modified_at": { "type": "string", "format": "date-time" },
+        "_modified_by": { "type": "string" },
+        "_history": { "type": "array" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

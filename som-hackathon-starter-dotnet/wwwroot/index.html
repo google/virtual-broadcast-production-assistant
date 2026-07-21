@@ -121,8 +121,8 @@ button { font: inherit; cursor: pointer; }
   padding: 10px 12px; cursor: pointer; transition: border-color .1s, transform .1s;
 }
 .card:hover { border-color: var(--border-hover); transform: translateY(-1px); }
-.card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-.card-id { font-family: "Consolas", monospace; font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.card-id { font-family: "Consolas", monospace; font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .card-title { font-weight: 700; font-size: 12px; line-height: 1.3; margin: 2px 0 6px; }
 .card-meta { font-size: 10px; color: var(--text-muted); display: flex; gap: 8px; flex-wrap: wrap; }
 .card-meta b { color: var(--text-secondary); font-weight: 600; }
@@ -379,12 +379,31 @@ button { font: inherit; cursor: pointer; }
 .modal-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
 .modal-head h3 { font-size: 14px; }
 .modal-close { background: none; border: none; color: var(--text-muted); font-size: 20px; }
-.modal-body { padding: 16px 18px; overflow-y: auto; }
+.modal-body { padding: 16px 18px; overflow-y: auto; overflow-x: hidden; }
+.modal-body .card { min-width: 0; }
+.modal-body .card-meta, .modal-body .card-title { overflow-wrap: anywhere; }
 .code-block {
   background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
   padding: 14px; font-family: "Consolas", "Fira Code", monospace; font-size: 12px;
   line-height: 1.6; color: var(--ice); white-space: pre; overflow-x: auto;
 }
+
+/* Rendered markdown (Help → User guide) */
+.md-doc { font-size: 12.5px; line-height: 1.65; color: var(--text-secondary); }
+.md-doc h1 { font-size: 17px; color: var(--text); margin: 4px 0 10px; }
+.md-doc h2 { font-size: 14px; color: var(--text); margin: 18px 0 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.md-doc h3, .md-doc h4 { font-size: 12.5px; color: var(--text); margin: 14px 0 6px; }
+.md-doc p { margin: 8px 0; overflow-wrap: anywhere; }
+.md-doc code { background: var(--code-bg); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; font-family: "Consolas", monospace; font-size: 11.5px; color: var(--ice); overflow-wrap: anywhere; }
+.md-doc pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-family: "Consolas", monospace; font-size: 11.5px; line-height: 1.5; color: var(--ice); white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; }
+.md-doc ul, .md-doc ol { margin: 8px 0 8px 20px; }
+.md-doc li { margin: 3px 0; overflow-wrap: anywhere; }
+.md-doc .md-table-wrap { overflow-x: auto; margin: 8px 0; }
+.md-doc table { border-collapse: collapse; font-size: 11.5px; width: 100%; }
+.md-doc th, .md-doc td { border: 1px solid var(--border); padding: 5px 8px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.md-doc th { color: var(--text); background: var(--bg-surface2); }
+.md-doc hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+.md-doc a { color: var(--ice); }
 
 .empty { text-align: center; padding: 24px; color: var(--text-muted); font-size: 12px; }
 .empty .icon { font-size: 28px; opacity: 0.4; margin-bottom: 4px; }
@@ -465,6 +484,7 @@ button { font: inherit; cursor: pointer; }
       <span>SOM Skill Bus<small>Live Dashboard</small></span>
     </div>
     <div class="scenario-bar">
+      <span style="align-self:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-right:2px;" title="One click = one story.context seed published to the bus. For timed multi-step storylines, use the Simulator.">Seed stories</span>
       <button onclick="publish('informal')" title="Headline contains informal terms 'cops' and 'kids'. Fires 2 nbcu-style-001 warnings.">
         <strong>Informal</strong><small>headline → 2 style warnings</small>
       </button>
@@ -480,13 +500,18 @@ button { font: inherit; cursor: pointer; }
       <button onclick="publish('election')" title="DEVELOPING phase, clean copy, compliance OK. Skill runs but emits no warnings.">
         <strong>Election</strong><small>DEVELOPING, clean → 0</small>
       </button>
+      <button onclick="publish('hurricane')" title="BREAKING with a live feed asset still CAPTURING (open-ended TAMS range). The media-arrival scenario and the mock MAM act on this story.">
+        <strong>Hurricane</strong><small>BREAKING, feed CAPTURING</small>
+      </button>
     </div>
     <div class="header-spacer"></div>
-    <button class="theme-toggle" onclick="openSimulator()" title="Local-dev fallback for AP ENPS — run scripted scenarios or auto-stream"><svg class="icon"><use href="#i-wand"/></svg> Simulator</button>
-    <button class="theme-toggle danger" onclick="resetBus()" title="Delete and recreate all SOM topics; clear dashboard state"><svg class="icon"><use href="#i-trash"/></svg> Reset bus</button>
+    <button class="theme-toggle" id="auto-indicator" style="display:none;color:#6ee7b7;border-color:#2a5a4a;" onclick="openSimulator('auto')" title="Auto-stream is publishing a random seed story on an interval — click to manage"></button>
+    <button class="theme-toggle" onclick="openSimulator()" title="Local-dev fallback for AP ENPS — run scripted scenarios, drive the mock MAM, or auto-stream"><svg class="icon"><use href="#i-wand"/></svg> Simulator</button>
+    <button class="theme-toggle danger" onclick="resetBus()" title="Clear the dashboard view — Kafka topics and messages are NOT deleted"><svg class="icon"><use href="#i-trash"/></svg> Reset bus</button>
     <button class="theme-toggle" onclick="openBusTopology()" title="Bus topology: producers, topics, consumers"><svg class="icon"><use href="#i-network"/></svg> Topology</button>
     <button class="theme-toggle" onclick="openSkillInfo()" title="Skill registry — rules, live stats, AI review"><svg class="icon"><use href="#i-robot"/></svg> Skills</button>
     <button class="theme-toggle" onclick="openSeedLibrary()" title="Browse raw SOM v0.2 envelopes"><svg class="icon"><use href="#i-braces"/></svg> SOM JSON</button>
+    <button class="theme-toggle" onclick="openHelp()" title="How the dashboard fits together — surfaces, lanes, and what each button does">? Help</button>
     <div id="ws-status" class="ws-status"><span class="dot"></span><span id="ws-label">connecting…</span></div>
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme"><svg class="icon" id="theme-icon"><use href="#i-sun"/></svg></button>
   </div>
@@ -573,9 +598,7 @@ button { font: inherit; cursor: pointer; }
       <h3 id="modal-title">Payload</h3>
       <button class="modal-close" onclick="closeModal()">×</button>
     </div>
-    <div class="modal-body">
-      <pre class="code-block" id="modal-body"></pre>
-    </div>
+    <div class="modal-body" id="modal-body"></div>
   </div>
 </div>
 
@@ -611,6 +634,7 @@ const SCENARIO_LABELS = {
   'breaking-no-compliance': 'Breaking (no compliance)',
   clean: 'Clean',
   election: 'Election',
+  hurricane: 'Hurricane',
 };
 
 // Tabler icon shortcut for use inside template literals.
@@ -813,13 +837,14 @@ function renderRuns() {
     return;
   }
   lane.innerHTML = '';
-  for (const r of [...runs].reverse()) {
+  for (const raw of [...runs].reverse()) {
+    const r = unwrapSom(raw);
     const warnings = (r?.outputs?.warning_ids?.length) || 0;
     const sugg = (r?.outputs?.suggestion_ids?.length) || 0;
     const enrich = (r?.outputs?.enrichment_ids?.length) || 0;
     const div = document.createElement('div');
     div.className = 'card run-card';
-    div.onclick = () => openModal(`skill.run.completed — ${r.run_id}`, r);
+    div.onclick = () => openModal(`skill.run.completed — ${r.run_id}`, raw);
     div.innerHTML = `
       <div class="card-top">
         <span class="card-id">${escapeHtml(shortId(r.run_id))}</span>
@@ -833,6 +858,21 @@ function renderRuns() {
       </div>`;
     lane.appendChild(div);
   }
+}
+
+// SOM messages arrive envelope-wrapped ({message_type, timestamp, ..., payload:{...}});
+// older/flat producers aren't. Renderers work on the inner payload; fold in the envelope
+// fields the UI surfaces (message_type for outputKind, decision stamps, envelope timestamp).
+// Idempotent: flat input passes through unchanged. State maps keep the ORIGINAL node so
+// the inspector modals still show the full envelope.
+function unwrapSom(node) {
+  const inner = node?.payload;
+  if (!inner || typeof inner !== 'object') return node || {};
+  const out = { ...inner };
+  for (const k of ['message_type', 'approved_by', 'approved_at', 'rejected_by', 'rejected_at', 'timestamp']) {
+    if (out[k] === undefined && node[k] !== undefined) out[k] = node[k];
+  }
+  return out;
 }
 
 function outputKind(o) {
@@ -854,7 +894,8 @@ function renderPending() {
     return;
   }
   lane.innerHTML = '';
-  for (const [id, o] of pending.entries()) {
+  for (const [id, raw] of pending.entries()) {
+    const o = unwrapSom(raw);
     const kind = outputKind(o);
     const severity = (o.severity || '').toLowerCase();
     const div = document.createElement('div');
@@ -875,7 +916,7 @@ function renderPending() {
         <button class="btn approve" onclick="event.stopPropagation();decide('${id}','approve')">${ic('check')} Approve</button>
         <button class="btn reject" onclick="event.stopPropagation();decide('${id}','reject')">${ic('x')} Reject</button>
       </div>`;
-    div.addEventListener('click', () => openModal(`Pending — ${id}`, o));
+    div.addEventListener('click', () => openModal(`Pending — ${id}`, raw));
     lane.appendChild(div);
   }
 }
@@ -889,7 +930,8 @@ function renderDecisions() {
   }
   lane.innerHTML = '';
   for (const d of [...decisions].reverse()) {
-    const kind = outputKind(d.payload);
+    const p = unwrapSom(d.payload);
+    const kind = outputKind(p);
     const cls = d.decision === 'approved' ? 'approved-card' : 'rejected-card';
     const div = document.createElement('div');
     div.className = `card ${cls}`;
@@ -899,7 +941,7 @@ function renderDecisions() {
         <span class="card-id">${escapeHtml(shortId(d.id))}</span>
         <span class="tag ${d.decision}">${escapeHtml(d.decision.toUpperCase())}</span>
       </div>
-      <div class="card-title">${escapeHtml(d.payload.rule_id || d.payload.content_type || d.payload.representation_type || kind)}</div>
+      <div class="card-title">${escapeHtml(p.rule_id || p.content_type || p.representation_type || kind)}</div>
       <div class="card-meta">
         <span class="tag ${kind}">${escapeHtml(kind.toUpperCase())}</span>
         <span><b>by</b> ${escapeHtml(d.reviewer || 'dashboard-user')}</span>
@@ -912,6 +954,8 @@ function renderDecisions() {
 // ── Topic counters + bus log filter ────────────────────
 const KNOWN_TOPICS = [
   'som.story.context',
+  'som.delivery.media_available',
+  'som.system.audit',
   'som.skills.staging',
   'som.skills.events',
   'som.skills.rejected',
@@ -972,7 +1016,9 @@ function openModal(title, payload) {
 // com.nbcu.* keys we surface them in a structured panel above the raw JSON
 // dump (D-002b). All other payloads fall through to plain JSON.
 function renderModalBody(payload) {
-  const json = escapeHtml(JSON.stringify(payload, null, 2));
+  // #modal-body is a normal div (rich views need wrapping text), so the raw JSON
+  // dump carries its own <pre> for monospace/pre formatting.
+  const json = `<pre class="code-block">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`;
   const ext = payload?.extensions;
   if (!ext || typeof ext !== 'object') return json;
 
@@ -1025,8 +1071,8 @@ function showToast(message, kind) {
 
 // ── Reset bus ──────────────────────────────────────────
 async function resetBus() {
-  if (!confirm('Delete and recreate all 5 SOM topics, and clear the dashboard?\n\nAll messages currently on the bus will be lost.')) return;
-  showToast('Resetting bus…', 'warn');
+  if (!confirm('Clear the dashboard view?\n\nLanes, pending queue and timeline reset — only NEW bus events will show afterwards.\n\nKafka topics and messages are NOT deleted (they stay replayable via Kafka UI). For a truly empty bus: docker compose down -v && docker compose up -d')) return;
+  showToast('Clearing dashboard…', 'warn');
   try {
     const res = await fetch('/api/reset', { method: 'POST' });
     if (!res.ok) {
@@ -1036,7 +1082,7 @@ async function resetBus() {
     // The server broadcasts {type:"reset"} via WebSocket; that handler clears UI state.
     // But we also clear locally in case the WS message is delayed.
     clearLocalState();
-    showToast('Bus cleared. Ready for a new test.', '');
+    showToast('Dashboard cleared. Only new bus events will show.', '');
   } catch (err) {
     showToast('Reset failed: ' + err.message, 'danger');
   }
@@ -1083,7 +1129,7 @@ const PHASE_NEXT_MAP = {
 function eventStoryId(e) {
   const p = e?.payload;
   if (!p) return null;
-  return p.story_id ?? p?.payload?.story_id ?? null;
+  return p?.payload?.story_id ?? p.story_id ?? null;
 }
 
 function eventTopicSuffix(topic) {
@@ -1092,15 +1138,15 @@ function eventTopicSuffix(topic) {
 }
 
 function eventTimestamp(e) {
-  const p = e?.payload;
-  // Prefer the producer-side timestamp embedded in the SOM payload, fall back to received_at.
+  const p = unwrapSom(e?.payload);
+  // Prefer the producer-side timestamp (envelope or payload), fall back to received_at.
   const t = p?.timestamp || p?.lifecycle?.phase_entered_at || p?.updated_at || e?.received_at;
   return t ? new Date(t).getTime() : 0;
 }
 
 function eventSummary(e) {
   const topic = e.topic;
-  const p = e.payload;
+  const p = unwrapSom(e.payload);
   const suffix = eventTopicSuffix(topic);
   if (suffix === 'context') {
     const story = p?.payload || p;
@@ -1174,8 +1220,9 @@ function renderStoryPanel() {
   }
   timeline.innerHTML = items.map(({e}) => {
     const suffix = eventTopicSuffix(e.topic);
+    const u = unwrapSom(e.payload);
     return `
-      <div class="sp-event ${escapeHtml(suffix)}" onclick='openModal(${JSON.stringify(e.topic + " — " + (e.payload?.warning_id || e.payload?.run_id || e.payload?.story_id || ""))}, ${JSON.stringify(e.payload)})'>
+      <div class="sp-event ${escapeHtml(suffix)}" onclick='openModal(${JSON.stringify(e.topic + " — " + (u.warning_id || u.run_id || u.story_id || ""))}, ${JSON.stringify(e.payload)})'>
         <div class="sp-event-dot"></div>
         <div>
           <div class="sp-event-time">${escapeHtml(fmtTime(e.received_at))} · <code>${escapeHtml(e.topic)}</code></div>
@@ -1216,7 +1263,7 @@ async function rerunSkill(storyId) {
   // Optimistically clear local pending for this story so the UI feels responsive.
   // The backend does the same; the WS rerun notice will reconcile if anything differs.
   for (const [id, output] of [...pending.entries()]) {
-    if (output?.story_id === storyId) pending.delete(id);
+    if (unwrapSom(output)?.story_id === storyId) pending.delete(id);
   }
   renderPending();
   try {
@@ -1258,21 +1305,27 @@ function clearTimeline() {
 
 // ── Bus event handling ─────────────────────────────────
 function summarize(topic, payload) {
+  const p = unwrapSom(payload);
   if (topic.endsWith('story.context')) {
-    const s = payload.headline || payload?.payload?.headline || payload.story_id;
-    return `story ${payload.story_id || payload?.payload?.story_id} — ${s}`;
+    return `story ${p.story_id || ''} — ${p.headline || p.story_id || ''}`;
   }
   if (topic.endsWith('skills.staging')) {
-    return `STAGED ${outputKind(payload)} ${payload.rule_id || ''} (${payload.severity || ''})`;
+    return `STAGED ${outputKind(p)} ${p.rule_id || ''} (${p.severity || ''})`;
   }
   if (topic.endsWith('skills.events')) {
-    return `APPROVED ${outputKind(payload)} ${payload.rule_id || ''} → ${payload.story_id || ''}`;
+    return `APPROVED ${outputKind(p)} ${p.rule_id || ''} → ${p.story_id || ''}`;
   }
   if (topic.endsWith('skills.rejected')) {
-    return `REJECTED ${outputKind(payload)} ${payload.rule_id || ''} → ${payload.story_id || ''}`;
+    return `REJECTED ${outputKind(p)} ${p.rule_id || ''} → ${p.story_id || ''}`;
   }
   if (topic.endsWith('skills.runs')) {
-    return `RUN ${payload.outcome} latency=${payload.latency_ms}ms story=${payload.story_id}`;
+    return `RUN ${p.outcome || '?'} latency=${p.latency_ms ?? '?'}ms story=${p.story_id || '?'}`;
+  }
+  if (topic.endsWith('delivery.media_available')) {
+    return `MEDIA ${p.source || '?'} range=${p.time_range || '?'}`;
+  }
+  if (topic.endsWith('system.audit')) {
+    return `AUDIT ${p.action || '?'} ${p.target?.kind || ''}:${p.target?.id || ''} — ${(p.reason || '').slice(0, 90)}`;
   }
   return JSON.stringify(payload).slice(0, 120);
 }
@@ -1297,19 +1350,21 @@ function handleBusEvent(msg) {
     if (story?.story_id) stories.set(story.story_id, story);
     renderStories();
   } else if (topic.endsWith('skills.staging')) {
-    const id = outputId(payload);
+    const id = outputId(unwrapSom(payload));
     if (id) pending.set(id, payload);
     renderPending();
   } else if (topic.endsWith('skills.events')) {
-    const id = outputId(payload);
+    const u = unwrapSom(payload);
+    const id = outputId(u);
     if (id && pending.has(id)) pending.delete(id);
-    decisions.push({ id, decision: 'approved', reviewer: payload.approved_by, at: payload.approved_at, payload });
+    decisions.push({ id, decision: 'approved', reviewer: u.approved_by, at: u.approved_at, payload });
     renderPending();
     renderDecisions();
   } else if (topic.endsWith('skills.rejected')) {
-    const id = outputId(payload);
+    const u = unwrapSom(payload);
+    const id = outputId(u);
     if (id && pending.has(id)) pending.delete(id);
-    decisions.push({ id, decision: 'rejected', reviewer: payload.rejected_by, at: payload.rejected_at, payload });
+    decisions.push({ id, decision: 'rejected', reviewer: u.rejected_by, at: u.rejected_at, payload });
     renderPending();
     renderDecisions();
   } else if (topic.endsWith('skills.runs')) {
@@ -1352,7 +1407,7 @@ function connect() {
       else if (msg.type === 'rerun') {
         // Drop any stale pending warnings for this story that we might still have.
         for (const [id, output] of [...pending.entries()]) {
-          if (output?.story_id === msg.story_id) pending.delete(id);
+          if (unwrapSom(output)?.story_id === msg.story_id) pending.delete(id);
         }
         renderPending();
       }
@@ -1551,25 +1606,166 @@ closeModal = function () {
 };
 
 // ── Simulator UI ───────────────────────────────────────
-async function openSimulator() {
+let simTab = 'scenarios';
+
+async function openSimulator(tab) {
+  if (typeof tab === 'string') simTab = tab;
   document.getElementById('modal-title').textContent = 'NBCU Simulator';
   document.getElementById('modal-body').innerHTML = '<div class="empty">loading…</div>';
   document.getElementById('modal-bg').classList.add('show');
   await renderSimulator();
 }
 
+function setSimTab(tab) {
+  simTab = tab;
+  renderSimulator();
+}
+
+// ── Help (tabs: quick reference · rendered USER-GUIDE.md) ──
+let helpTab = 'quick';
+let _guideHtml = null;
+
+function openHelp(tab) {
+  if (typeof tab === 'string') helpTab = tab;
+  document.getElementById('modal-title').textContent = 'Help';
+  document.getElementById('modal-bg').classList.add('show');
+  renderHelp();
+}
+
+async function renderHelp() {
+  const body = document.getElementById('modal-body');
+  const tabBtn = (id, label) => `
+    <button onclick="openHelp('${id}')" style="padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;border:1px solid ${helpTab === id ? 'var(--border)' : 'transparent'};border-bottom:none;background:${helpTab === id ? 'var(--bg-surface2)' : 'transparent'};color:${helpTab === id ? 'var(--text)' : 'var(--text-muted)'};">${label}</button>`;
+  const bar = `<div style="display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:12px;">${tabBtn('quick', 'Quick reference')}${tabBtn('guide', 'User guide')}</div>`;
+
+  if (helpTab === 'guide') {
+    body.innerHTML = bar + '<div class="empty">loading…</div>';
+    if (_guideHtml === null) {
+      try {
+        const res = await fetch('/api/docs/user-guide');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        _guideHtml = mdToHtml(await res.text());
+      } catch (err) {
+        body.innerHTML = bar + `<div class="empty">Couldn't load the user guide (${escapeHtml(err.message)}) — read <code>docs/USER-GUIDE.md</code> in the repo.</div>`;
+        return;
+      }
+    }
+    body.innerHTML = bar + `<div class="md-doc">${_guideHtml}</div>`;
+    return;
+  }
+
+  body.innerHTML = bar + quickReferenceHtml();
+}
+
+// Minimal renderer for the subset of markdown USER-GUIDE.md uses: headings, fenced
+// code, tables, lists, bold/italic/inline code, links, hr. Everything is HTML-escaped
+// first; http(s) links become anchors, repo-relative links render as plain code paths.
+function mdToHtml(md) {
+  const inline = (s) => escapeHtml(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '$1 (<code>$2</code>)')
+    .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,;:]|$)/g, '$1<i>$2</i>');
+
+  const lines = md.split('\n');
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+
+    if (/^```/.test(line)) {                       // fenced code
+      const buf = [];
+      i++;
+      while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]);
+      i++;
+      out.push(`<pre>${escapeHtml(buf.join('\n'))}</pre>`);
+      continue;
+    }
+    if (/^\|/.test(line)) {                        // table
+      const rows = [];
+      while (i < lines.length && /^\|/.test(lines[i])) rows.push(lines[i++]);
+      const cells = (r) => r.replace(/^\||\|$/g, '').split('|').map(c => inline(c.trim()));
+      const header = cells(rows[0]);
+      const bodyRows = rows.slice(2);              // rows[1] is the |---| separator
+      out.push(`<div class="md-table-wrap"><table><thead><tr>${header.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${
+        bodyRows.map(r => `<tr>${cells(r).map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+      continue;
+    }
+    const h = line.match(/^(#{1,4})\s+(.*)$/);     // headings
+    if (h) { out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); i++; continue; }
+    if (/^---+\s*$/.test(line)) { out.push('<hr>'); i++; continue; }
+    if (/^[-*]\s+/.test(line)) {                   // unordered list
+      const items = [];
+      while (i < lines.length && /^[-*]\s+/.test(lines[i])) items.push(lines[i++].replace(/^[-*]\s+/, ''));
+      out.push(`<ul>${items.map(t => `<li>${inline(t)}</li>`).join('')}</ul>`);
+      continue;
+    }
+    if (/^\d+\.\s+/.test(line)) {                  // ordered list
+      const items = [];
+      while (i < lines.length && /^\d+\.\s+/.test(lines[i])) items.push(lines[i++].replace(/^\d+\.\s+/, ''));
+      out.push(`<ol>${items.map(t => `<li>${inline(t)}</li>`).join('')}</ol>`);
+      continue;
+    }
+    if (/^\s*$/.test(line)) { i++; continue; }
+    const em = line.match(/^_(.+)_\s*$/);          // full-line italic (doc preambles)
+    out.push(`<p>${em ? `<i>${inline(em[1])}</i>` : inline(line)}</p>`);
+    i++;
+  }
+  return out.join('\n');
+}
+
+function quickReferenceHtml() {
+  const sect = (title) => `<div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin:14px 0 6px;">${title}</div>`;
+  const row = (name, desc) => `
+    <div style="display:grid;grid-template-columns:180px 1fr;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:1.5;">
+      <div style="font-weight:600;color:var(--text);overflow-wrap:break-word;">${name}</div>
+      <div style="color:var(--text-secondary);">${desc}</div>
+    </div>`;
+  return `
+    <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">
+      This dashboard is a window onto a Kafka bus carrying <b>SOM</b> (Story Object Model) messages. Stories arrive,
+      skills run against them, their outputs wait for a human decision, and every decision goes back onto the bus.
+    </div>
+
+    ${sect('Three ways to put traffic on the bus')}
+    ${row('Seed stories (header)', 'One click = one <code>story.context</code> seed published. No timing, no lifecycle — the quickest way to make something happen.')}
+    ${row('Simulator (header)', 'Three tools in tabs: <b>Scripted scenarios</b> (timed multi-step storylines, one at a time), <b>Mock MAM</b> (emit <code>delivery.media_available</code> per source), <b>Auto-stream</b> (a random seed story every N seconds until stopped — watch for the green header chip).')}
+    ${row('Lifecycle panel (story card)', 'Click any story card to mutate <i>that</i> story — advance its phase, add a compliance flag, re-run skills. Each action republishes a new version, so skills re-fire.')}
+
+    ${sect('The four lanes (left → right)')}
+    ${row('Stories on Bus', 'Latest version of every story seen on <code>som.story.context</code>.')}
+    ${row('Skill Runs', 'One card per skill execution (<code>som.skills.runs</code>): outcome, latency, output counts.')}
+    ${row('Pending Approval', 'Skill outputs staged on <code>som.skills.staging</code> awaiting your decision.')}
+    ${row('Decisions', 'Your approvals (→ <code>som.skills.events</code>) and rejections (→ <code>som.skills.rejected</code>).')}
+
+    ${sect('Other controls')}
+    ${row('Bus event log (bottom)', 'Every message on every subscribed topic, newest first — including MAM <code>delivery.media_available</code> emits. Filter with the topic chips.')}
+    ${row('Reset bus', 'Clears only the dashboard <i>view</i> — lanes, pending queue, timeline. Kafka topics and messages are <b>not</b> deleted; for a truly empty bus: <code>docker compose down -v &amp;&amp; docker compose up -d</code>.')}
+    ${row('Topology / Skills / SOM JSON', 'Bus topology map · skill registry with validation, dry-run and AI review · raw seed envelopes.')}
+
+    <div style="margin-top:14px;font-size:11px;color:var(--text-muted);line-height:1.5;">
+      The <b>User guide</b> tab above has the full journey — concepts, demos, building a skill,
+      integrating your system. Also in the repo: <code>docs/dashboard-guide.md</code> (this UI in depth) ·
+      <code>docs/SOM-v0.3.1-distribution-contracts.md</code> (message contracts).
+    </div>`;
+}
+
 async function renderSimulator() {
   const body = document.getElementById('modal-body');
-  let status, scenarios;
+  let status, scenarios, mamCatalog;
   try {
-    [status, scenarios] = await Promise.all([
+    [status, scenarios, mamCatalog] = await Promise.all([
       fetch('/api/simulator/status').then(r => r.json()),
       fetch('/api/simulator/scenarios').then(r => r.json()),
+      // Catalog failure shouldn't take down the whole modal — render the section's own error state.
+      fetch('/api/mam/catalog').then(r => r.json()).catch(() => null),
     ]);
   } catch (err) {
     body.innerHTML = `<div class="empty">Failed to load: ${escapeHtml(err.message)}</div>`;
     return;
   }
+  refreshAutoIndicator(status);
 
   const running = status.runningScenarioId;
   const startedAt = status.runningStartedAt ? new Date(status.runningStartedAt) : null;
@@ -1617,20 +1813,88 @@ async function renderSimulator() {
       </div>
     </div>`).join('');
 
-  body.innerHTML = `
-    <div style="margin-bottom:12px;font-size:12px;color:var(--text-secondary);line-height:1.5;">
-      Local-dev fallback for AP ENPS. Scripted scenarios drive realistic SOM lifecycle traffic
-      onto the bus so vendors can test skills against a representative workload without depending
-      on the upstream AP feed.
-    </div>
-    <div style="display:grid;gap:14px;">
-      ${runningBanner}
-      ${autoBanner}
-      <div>
-        <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Scripted scenarios</div>
-        <div style="display:grid;gap:8px;">${scenarioCards}</div>
+  const mamCards = !Array.isArray(mamCatalog)
+    ? `<div class="empty">Failed to load MAM catalog — is the app healthy?</div>`
+    : mamCatalog.length === 0
+    ? `<div class="empty">MAM catalog is empty — check content/mam-catalog.json (see server log).</div>`
+    : mamCatalog.map(m => `
+    <div class="card" style="cursor:default;border-left:3px solid var(--ice);">
+      <div class="card-top">
+        <span class="card-id" style="color:var(--ice);">${escapeHtml(m.sourceId)}</span>
+        <span class="tag">${m.durationSeconds}s · asset ${escapeHtml(m.assetId)}</span>
       </div>
-    </div>`;
+      <div class="card-title">${escapeHtml(m.label)}</div>
+      <div class="card-meta" style="white-space:normal;color:var(--text-secondary);line-height:1.5;margin-top:6px;">
+        ${escapeHtml(m.notes || '')}
+      </div>
+      <div class="actions" style="margin-top:10px;">
+        <button class="btn approve" onclick="emitMam('${escapeHtml(m.sourceId)}')">${ic('player-play','icon-sm')} Emit media_available</button>
+        <button class="btn" onclick="emitMam('${escapeHtml(m.sourceId)}', true)" title="Adds extensions['com.ibc-poc.capture_complete'] — the media coordinator flips the asset to CAPTURED and skills re-run">${ic('check','icon-sm')} Emit final (capture complete)</button>
+      </div>
+    </div>`).join('');
+
+  const tabBtn = (id, label, live) => `
+    <button onclick="setSimTab('${id}')" style="padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;border:1px solid ${simTab === id ? 'var(--border)' : 'transparent'};border-bottom:none;background:${simTab === id ? 'var(--bg-surface2)' : 'transparent'};color:${simTab === id ? 'var(--text)' : 'var(--text-muted)'};">
+      ${label}${live ? ' <span style="color:#6ee7b7;">●</span>' : ''}
+    </button>`;
+
+  const tabContent = {
+    scenarios: `
+      <div style="font-size:11px;color:var(--text-secondary);line-height:1.5;margin-bottom:8px;">
+        Timed multi-step storylines that play out in real time. One at a time — starting another cancels the
+        current one, and <strong>Stop</strong> cancels all remaining steps.
+      </div>
+      ${runningBanner}
+      <div style="display:grid;gap:8px;">${scenarioCards}</div>`,
+    mam: `
+      <div style="font-size:11px;color:var(--text-secondary);line-height:1.5;margin-bottom:8px;">
+        A stand-in for a TAMS/MAM store. <strong>Emit media_available</strong> announces one arrival
+        (a <code>MEDIA</code> line in the Bus event log); the <strong>media coordinator</strong> consumes every
+        arrival and reacts: a known asset gets its story republished with <code>acquisition_state: CAPTURED</code>
+        on <strong>Emit final</strong> (skills then re-run — watch Pending Approval), and an <em>unmatched</em>
+        source (the UGC clip, until a story references it) produces a <code>WITHHELD</code> audit on
+        <code>som.system.audit</code>. Publish the <strong>Hurricane</strong> seed first to see the matched path.
+        The <code>media-arrival</code> scenario runs the whole loop scripted.
+      </div>
+      <div style="display:grid;gap:8px;">${mamCards}</div>`,
+    auto: `
+      <div style="font-size:11px;color:var(--text-secondary);line-height:1.5;margin-bottom:8px;">
+        A firehose for demos: publishes one <em>random</em> seed story every N seconds until stopped — this is
+        <strong>not</strong> a scripted scenario. It keeps running after this modal closes; the header shows a green
+        <span style="color:#6ee7b7;">Auto-stream ON</span> chip while it's active (click the chip to come back here).
+      </div>
+      ${autoBanner}`,
+  };
+
+  body.innerHTML = `
+    <div style="margin-bottom:10px;font-size:12px;color:var(--text-secondary);line-height:1.5;">
+      Local-dev fallback for AP ENPS — three separate tools, one per tab. For how the whole dashboard fits
+      together, click <strong>? Help</strong> in the header.
+    </div>
+    <div style="display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:12px;">
+      ${tabBtn('scenarios', 'Scripted scenarios', !!running)}
+      ${tabBtn('mam', 'Mock MAM', false)}
+      ${tabBtn('auto', 'Auto-stream', status.autoEnabled)}
+    </div>
+    ${tabContent[simTab] || tabContent.scenarios}`;
+}
+
+async function emitMam(sourceId, captureComplete) {
+  try {
+    const res = await fetch(`/api/mam/emit/${encodeURIComponent(sourceId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(captureComplete ? { captureComplete: true } : {}),
+    });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok) {
+      showToast(`MAM emit failed: ${payload?.error || res.status}${payload?.detail ? ' — ' + payload.detail : ''}`, 'danger');
+      return;
+    }
+    showToast(`✓ media_available ${payload?.payload?.time_range || ''} → som.delivery.media_available`, '');
+  } catch (err) {
+    showToast('MAM emit failed: ' + err.message, 'danger');
+  }
 }
 
 async function runSimulatorScenario(id) {
@@ -1644,6 +1908,30 @@ async function stopSimulatorScenario() {
   await fetch('/api/simulator/stop', { method: 'POST' });
   showToast('Scenario stopped', 'warn');
   await renderSimulator();
+}
+
+// Header chip so auto-stream can't run unnoticed with the modal closed.
+let autoPollFails = 0;
+async function refreshAutoIndicator(knownStatus) {
+  const el = document.getElementById('auto-indicator');
+  if (!el) return;
+  let status = knownStatus;
+  if (!status) {
+    try {
+      status = await fetch('/api/simulator/status').then(r => r.json());
+    } catch {
+      // Transient poll failure: keep the last state. Sustained (server down for 3+ polls): hide rather than lie.
+      if (++autoPollFails >= 3) el.style.display = 'none';
+      return;
+    }
+  }
+  autoPollFails = 0;
+  if (status.autoEnabled) {
+    el.innerHTML = `${ic('wand')} Auto-stream ON · ${Number(status.autoIntervalSeconds) || '?'}s`;
+    el.style.display = '';
+  } else {
+    el.style.display = 'none';
+  }
 }
 
 async function startAutoStream() {
@@ -1681,7 +1969,8 @@ const RULE_TYPE_HINTS = {
 };
 
 function computeStatsForSkill(skillId) {
-  const filteredRuns = skillId ? runs.filter(r => r.skill_id === skillId) : runs;
+  const allRuns = runs.map(unwrapSom);
+  const filteredRuns = skillId ? allRuns.filter(r => r.skill_id === skillId) : allRuns;
   const total = filteredRuns.length;
   const completed = filteredRuns.filter(r => r.outcome === 'COMPLETED').length;
   const skipped = filteredRuns.filter(r => r.outcome === 'SKIPPED').length;
@@ -1689,12 +1978,12 @@ function computeStatsForSkill(skillId) {
     : Math.round(filteredRuns.reduce((s, r) => s + (r.latency_ms || 0), 0) / total);
   const totalWarnings = filteredRuns.reduce((s, r) => s + (r.outputs?.warning_ids?.length || 0), 0);
   const decisionsForSkill = skillId
-    ? decisions.filter(d => d.payload?.skill_id === skillId)
+    ? decisions.filter(d => unwrapSom(d.payload)?.skill_id === skillId)
     : decisions;
   const approved = decisionsForSkill.filter(d => d.decision === 'approved').length;
   const rejected = decisionsForSkill.filter(d => d.decision === 'rejected').length;
   const pendingNow = skillId
-    ? [...pending.values()].filter(p => p.skill_id === skillId).length
+    ? [...pending.values()].filter(p => unwrapSom(p).skill_id === skillId).length
     : pending.size;
   const decided = approved + rejected;
   const approvalRate = decided === 0 ? null : Math.round((approved / decided) * 100);
@@ -2289,6 +2578,8 @@ renderDecisions();
 renderTopicChips();
 renderTimeline();
 connect();
+refreshAutoIndicator();
+setInterval(refreshAutoIndicator, 10000);
 </script>
 </body>
 </html>

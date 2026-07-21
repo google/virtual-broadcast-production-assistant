@@ -27,6 +27,14 @@ public class SkillWorker : BackgroundService
     private readonly IProducer<string, string> _producer;
     private readonly IConsumer<string, string> _consumer;
 
+    // Last-seen snapshot per story, for field_changed rules. Only touched from the
+    // single consume loop, so no locking. Demo-scale: stories are few; no eviction.
+    private readonly Dictionary<string, JsonNode> _previousStories = new();
+
+    // One recall-skip log per skill id — a vendor whose skill never runs deserves an
+    // Information-level line saying why, not a Debug-level whisper.
+    private readonly HashSet<string> _recallSkipLogged = new();
+
     public SkillWorker(
         ILogger<SkillWorker> logger,
         IOptions<KafkaOptions> options,
@@ -70,14 +78,43 @@ public class SkillWorker : BackgroundService
 
                 // SOM v0.2 envelope wraps the story under "payload"; tolerate flat payloads too.
                 var storyContext = envelope["payload"] ?? envelope;
-                var storyId = storyContext["story_id"]?.GetValue<string>() ?? "unknown";
+                var sid = storyContext["story_id"] is JsonValue idv && idv.TryGetValue<string>(out string? s) && !string.IsNullOrEmpty(s) ? s : null;
+                var hasStoryId = sid is not null;
+                var storyId = sid ?? "unknown";
+                // Echo the inbound correlation_id onto our outputs so all messages about one
+                // story lifecycle stay correlated (envelope lock, decision #18).
+                var correlationId = envelope["correlation_id"]?.GetValue<string>();
                 _logger.LogInformation("Received story {StoryId}", storyId);
 
-                // Run every registered skill against this story.
+                // Previous version of this story, for field_changed rules (skills-model
+                // field-change condition). Null on first sighting — change rules stay quiet.
+                // Id-less messages share no baseline: never diff two unrelated payloads.
+                JsonNode? previous = null;
+                if (hasStoryId) _previousStories.TryGetValue(storyId, out previous);
+                if (previous is null && _registry.All().Any(s => s.Rules.Any(r => r.Type == "field_changed")))
+                {
+                    _logger.LogInformation(
+                        "First sighting of {StoryId} this session — field_changed rules stay quiet until the next version", storyId);
+                }
+
+                // Recall = deterministic advert matching (skills model): a skill whose
+                // advert declares operates_on runs only when it covers this message type.
+                // No advert → legacy behaviour, assume story.context.
                 foreach (var skill in _registry.All())
                 {
-                    await EvaluateSkillAsync(skill, storyContext, storyId, result.Message.Key, stoppingToken);
+                    var operatesOn = skill.Advert?.OperatesOn;
+                    if (operatesOn is { Length: > 0 } && !operatesOn.Contains("story.context"))
+                    {
+                        if (_recallSkipLogged.Add(skill.Id))
+                            _logger.LogInformation(
+                                "Recall: skill {SkillId} advert operates_on=[{OperatesOn}] does not cover story.context — it will never run on this topic",
+                                skill.Id, string.Join(",", operatesOn));
+                        continue;
+                    }
+                    await EvaluateSkillAsync(skill, storyContext, storyId, result.Message.Key, correlationId, previous, stoppingToken);
                 }
+
+                if (hasStoryId) _previousStories[storyId] = storyContext.DeepClone();
             }
             catch (ConsumeException ex)
             {
@@ -97,6 +134,8 @@ public class SkillWorker : BackgroundService
         JsonNode storyContext,
         string storyId,
         string? messageKey,
+        string? correlationId,
+        JsonNode? previous,
         CancellationToken ct)
     {
         var sw = Stopwatch.StartNew();
@@ -104,17 +143,18 @@ public class SkillWorker : BackgroundService
 
         foreach (var rule in skill.Rules)
         {
-            foreach (var match in _engine.Evaluate(rule, storyContext))
+            foreach (var match in _engine.Evaluate(rule, storyContext, previous))
             {
-                var warning = BuildWarning(skill, match, storyId);
-                warningIds.Add(warning["warning_id"]!.GetValue<string>());
-                await PublishAsync(_options.SkillStagingTopic, storyId, warning.ToJsonString(), ct);
+                var warningPayload = BuildWarning(skill, match, storyId);
+                warningIds.Add(warningPayload["warning_id"]!.GetValue<string>());
+                var warningMsg = BuildEnvelope("skill.warning.raised", _options.SkillStagingTopic, correlationId, warningPayload);
+                await PublishAsync(_options.SkillStagingTopic, storyId, warningMsg.ToJsonString(), ct);
             }
         }
 
         sw.Stop();
 
-        var runRecord = BuildRunRecord(
+        var runPayload = BuildRunRecord(
             skill,
             Guid.NewGuid().ToString(),
             storyId,
@@ -122,7 +162,8 @@ public class SkillWorker : BackgroundService
             warningIds,
             sw.ElapsedMilliseconds);
 
-        await PublishAsync(_options.SkillRunsTopic, storyId, runRecord.ToJsonString(), ct);
+        var runMsg = BuildEnvelope("skill.run.completed", _options.SkillRunsTopic, correlationId, runPayload);
+        await PublishAsync(_options.SkillRunsTopic, storyId, runMsg.ToJsonString(), ct);
 
         _logger.LogInformation("Skill {SkillId}@{Version} on {StoryId}: {Count} warnings in {Ms}ms",
             skill.Id, skill.Version, storyId, warningIds.Count, sw.ElapsedMilliseconds);
@@ -136,13 +177,22 @@ public class SkillWorker : BackgroundService
     private static JsonNode BuildWarning(SkillDefinition skill, RuleMatch match, string storyId)
     {
         var rule = match.Rule;
+        // Twelve-field SkillWarning payload (decision #21). No payload-level timestamp or
+        // message_type — those live on the envelope (decision #18, see BuildEnvelope).
+        // scope is the firing level, as {level}:{id} (see docs/SOM-v0.3.1-scope-reconciliation.md):
+        //   story:{id}  — system-level skill on story-wide context (what we emit here; RuleEngine
+        //                 matches whole-story paths and RuleMatch carries no asset_id yet)
+        //   asset:{id}  — system-level skill on one asset; awaits the firing-rule upgrade that
+        //                 threads the matched asset_id into RuleMatch
+        //   link:{id}   — destination-specific skill, fired at a link's Compliance Gate
+        // Never an instance_ref (#3/#21).
         var warning = new JsonObject
         {
-            ["message_type"] = rule.OutputMessageType,
             ["warning_id"] = Guid.NewGuid().ToString(),
             ["skill_id"] = skill.Id,
             ["skill_version"] = skill.Version,
             ["story_id"] = storyId,
+            ["scope"] = $"story:{storyId}",
             ["severity"] = rule.DefaultSeverity,
             ["rule_id"] = rule.RuleId,
             ["non_overridable"] = false,
@@ -150,7 +200,7 @@ public class SkillWorker : BackgroundService
                 rule.AffectedFields.Select(f => (JsonNode?)JsonValue.Create(f)).ToArray()),
             ["detail"] = match.Detail,
             ["blocks"] = new JsonArray(),
-            ["timestamp"] = DateTimeOffset.UtcNow.ToString("o"),
+            ["skill_warning_ref"] = $"swr-{storyId}-{Guid.NewGuid().ToString("N")[..8]}",
         };
 
         var extensions = BuildExtensions(rule);
@@ -191,9 +241,9 @@ public class SkillWorker : BackgroundService
         List<string> warningIds,
         long latencyMs)
     {
+        // Payload only — message_type and timestamp live on the envelope (BuildEnvelope).
         return new JsonObject
         {
-            ["message_type"] = "skill.run.completed",
             ["run_id"] = runId,
             ["skill_id"] = skill.Id,
             ["skill_version"] = skill.Version,
@@ -218,7 +268,31 @@ public class SkillWorker : BackgroundService
             ["latency_ms"] = latencyMs,
             ["outcome"] = warningIds.Count > 0 ? "COMPLETED" : "SKIPPED",
             ["human_review_required"] = warningIds.Count > 0,
+        };
+    }
+
+    /// <summary>
+    /// Wrap a typed payload in a SOM v0.3.1 envelope. Timestamp lives here, not in the
+    /// payload (decision #18); correlation_id is echoed from the inbound story.context so
+    /// every message about one story lifecycle stays correlated.
+    /// </summary>
+    private static JsonNode BuildEnvelope(string messageType, string topic, string? correlationId, JsonNode payload)
+    {
+        return new JsonObject
+        {
+            ["som_version"] = "0.2.0",
+            ["message_id"] = Guid.NewGuid().ToString(),
+            ["correlation_id"] = correlationId ?? Guid.NewGuid().ToString(),
+            ["message_type"] = messageType,
             ["timestamp"] = DateTimeOffset.UtcNow.ToString("o"),
+            ["originating_system"] = new JsonObject
+            {
+                ["system_id"] = "nbcu-skill-executor",
+                ["system_type"] = "skill_worker",
+                ["system_name"] = "NBCU Skill Executor",
+            },
+            ["topic"] = topic,
+            ["payload"] = payload,
         };
     }
 

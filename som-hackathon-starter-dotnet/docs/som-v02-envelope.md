@@ -2,7 +2,7 @@
 
 This document describes the canonical field paths in a `story.context` message on the SOM bus. Skills read these fields via dot-notation paths (e.g. `lifecycle.phase`, `compliance`). The rule engine's `GetByPath` walks these paths against the `payload` object.
 
-All fields below are relative to `payload`. The outer envelope (`som_version`, `message_id`, `correlation_id`, `source`, `topic`) is stripped before the payload reaches the skill worker.
+All fields below are relative to `payload`. Messages travel as full SOM envelopes on the wire; the skill worker unwraps `payload` on consume (and tolerates bare payloads from producers still on the old v0.2 shortcut).
 
 ## Envelope wrapper (outer)
 

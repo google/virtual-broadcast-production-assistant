@@ -4,23 +4,15 @@
   "correlation_id": "019536a0-2222-7000-8000-000000000002",
   "message_type": "story.context",
   "timestamp": "2026-06-15T21:30:00.000000Z",
-  "source": {
-    "system_id": "ncs-nbcu-dc-01",
-    "system_type": "ncs",
-    "system_name": "iNEWS Washington",
-    "vendor": "Avid",
-    "version": "7.0.1"
-  },
   "topic": "som.story.context",
   "payload": {
     "story_id": "election-special-2026-0615",
     "slug": "MIDTERM-RESULTS-VA-GOV",
     "headline": "Virginia Governor Race Too Close to Call as Polls Close",
-    "story_type": "DEVELOPING",
+    "story_type": "ACTIVE",
     "lifecycle": {
       "phase": "DEVELOPING",
       "phase_entered_at": "2026-06-15T20:00:00Z",
-      "previous_phase": "PLANNED",
       "phase_owner": {
         "user_id": "editor-tchen",
         "display_name": "Tom Chen",
@@ -43,9 +35,13 @@
       "where": "Commonwealth of Virginia, with focus on outstanding counties Fairfax and Virginia Beach; coverage from NBC and MSNBC election-night control rooms.",
       "why": "A close race coupled with embargoed exit-poll data and an active no-projection editorial hold places the desk under HIGH compliance scrutiny.",
       "how": "Real-time results aggregated from AP Elections, the NBCU Decision Desk, and the Virginia Secretary of State, governed by the gate-projection-001 editorial hold.",
-      "summary": "The Virginia gubernatorial race is too close to call as polls close, with 62% of precincts in and the margin under one percentage point. NBC News is running the story under HIGH compliance — AP has not called the race, exit-poll data was embargoed until 19:01 ET, and an editorial hold blocks projection graphics until the Decision Desk authorises a call.",
-      "confidence": 0.80,
-      "provenance_refs": ["src-ap-election-feed", "src-nbcu-decision-desk", "src-va-sos"]
+      "summary": "The Virginia gubernatorial race is too close to call as polls close, with 62% of precincts in and the margin under one percentage point. NBC News is running the story under HIGH compliance \u2014 AP has not called the race, exit-poll data was embargoed until 19:01 ET, and an editorial hold blocks projection graphics until the Decision Desk authorises a call.",
+      "confidence": 0.8,
+      "provenance_refs": [
+        "src-ap-election-feed",
+        "src-nbcu-decision-desk",
+        "src-va-sos"
+      ]
     },
     "compliance": [
       {
@@ -67,8 +63,7 @@
         "jurisdiction": "US",
         "raised_by": "compliance-engine-01",
         "raised_at": "2026-06-15T18:00:00Z",
-        "status": "RESOLVED",
-        "resolved_at": "2026-06-15T19:01:00Z"
+        "status": "RESOLVED"
       }
     ],
     "editorial_gates": [
@@ -80,31 +75,10 @@
         "gate_rule_id": "nbcu-election-no-project",
         "resolution_event_type": "manual_override",
         "assigned_to": "election-desk",
-        "blocks": ["gfx-winner-banner", "lt-winner-projection"]
-      }
-    ],
-    "sources": [
-      {
-        "source_id": "src-ap-election-feed",
-        "source_type": "wire",
-        "provider": "AP Elections",
-        "credibility": "VERIFIED",
-        "received_at": "2026-06-15T21:28:00Z"
-      },
-      {
-        "source_id": "src-nbcu-decision-desk",
-        "source_type": "internal",
-        "provider": "NBCU Decision Desk",
-        "credibility": "PRIMARY",
-        "received_at": "2026-06-15T21:29:00Z"
-      },
-      {
-        "source_id": "src-va-sos",
-        "source_type": "government",
-        "provider": "Virginia Secretary of State",
-        "credibility": "OFFICIAL",
-        "received_at": "2026-06-15T21:25:00Z",
-        "content_hash": "sha256:b2c3d4e5f6a7..."
+        "blocks": [
+          "gfx-winner-banner",
+          "lt-winner-projection"
+        ]
       }
     ],
     "assets": [
@@ -120,7 +94,8 @@
           "format": "ndi",
           "resolution": "1920x1080",
           "frame_rate": 59.94
-        }
+        },
+        "evidential_position": "TERTIARY"
       },
       {
         "asset_id": "gfx-winner-banner",
@@ -128,8 +103,11 @@
         "status": "PREPARED",
         "standards_clearance": {
           "status": "BLOCKED",
-          "blocked_by": ["gate-projection-001"]
-        }
+          "blocked_by": [
+            "gate-projection-001"
+          ]
+        },
+        "evidential_position": "TERTIARY"
       },
       {
         "asset_id": "lt-winner-projection",
@@ -137,64 +115,47 @@
         "status": "PREPARED",
         "standards_clearance": {
           "status": "BLOCKED",
-          "blocked_by": ["gate-projection-001"]
-        }
+          "blocked_by": [
+            "gate-projection-001"
+          ]
+        },
+        "evidential_position": "TERTIARY"
       },
       {
         "asset_id": "map-va-county-results",
         "asset_type": "MAP",
-        "status": "LIVE",
+        "status": "READY",
         "delivery_spec": {
           "format": "html5",
           "resolution": "1920x1080"
-        }
+        },
+        "evidential_position": "TERTIARY"
       }
     ],
     "ai_enrichments": [
       {
         "enrichment_id": "ai-county-analysis-001",
         "model": "claude-sonnet-4-20250514",
-        "enrichment_type": "analysis",
+        "enrichment_type": "ANALYSIS",
         "confidence": 0.88,
         "content": "With 62% of precincts reporting, the race remains within 0.8 percentage points. Key outstanding counties include Fairfax (23% reported) and Virginia Beach (41% reported), both historically decisive.",
         "provenance": {
-          "input_sources": ["src-ap-election-feed", "src-va-sos"],
+          "input_sources": [
+            "src-ap-election-feed",
+            "src-va-sos"
+          ],
           "prompt_hash": "sha256:c3d4e5f6...",
-          "guardrails_applied": ["no_projection", "factual_grounding", "election_neutrality"]
+          "guardrails_applied": [
+            "no_projection",
+            "factual_grounding",
+            "election_neutrality"
+          ]
         },
         "human_reviewed": false,
         "generated_at": "2026-06-15T21:29:30Z"
       }
     ],
-    "instances": [
-      {
-        "instance_id": "inst-nbc-election-special",
-        "platform": "linear",
-        "program": "NBC Election Night Special",
-        "status": "ACTIVE",
-        "instance_assets": ["gfx-va-results-board", "map-va-county-results"]
-      },
-      {
-        "instance_id": "inst-msnbc-coverage",
-        "platform": "linear",
-        "program": "MSNBC Election Coverage",
-        "status": "ACTIVE"
-      },
-      {
-        "instance_id": "inst-nbcnews-live-blog",
-        "platform": "web",
-        "program": "NBCNews.com Live Blog",
-        "status": "ACTIVE"
-      },
-      {
-        "instance_id": "inst-social-results",
-        "platform": "social",
-        "program": "NBC News Social",
-        "status": "PENDING"
-      }
-    ],
     "skills_config": {
-      "broadcaster": "NBCU",
       "skills_spec_version": "2.0.0",
       "skill_executor_id": "executor-nbcu-dc-01",
       "scope_context": "NBC Election Night Special",
@@ -202,33 +163,64 @@
         {
           "skill_id": "nbcu/editorial-standards",
           "skill_version": "0.1.0",
-          "skill_type": "broadcaster",
+          "skill_type": "NEWSROOM",
           "disclosure_level": "L2",
-          "migration_policy": "gated",
-          "skill_priority": "critical"
+          "migration_policy": "GATED",
+          "skill_priority": "CRITICAL"
         },
         {
           "skill_id": "nbcu/social-poster",
           "skill_version": "0.1.0",
-          "skill_type": "broadcaster",
+          "skill_type": "NEWSROOM",
           "disclosure_level": "L2",
-          "migration_policy": "gated",
-          "skill_priority": "normal"
+          "migration_policy": "GATED",
+          "skill_priority": "NORMAL"
         }
-      ]
+      ],
+      "newsroom": "NBCU"
     },
     "updated_at": "2026-06-15T21:30:00Z",
     "sequence_number": 134,
     "content_refs": [
       {
-        "content_format": null,
         "mime_type": "text/plain",
         "placement": "sources",
         "provider": "NBCU",
-        "role": null,
         "source_id": "src-ap-election-feed",
         "uri": "http://localhost:5050/api/content/election-special-2026-0615"
       }
-    ]
+    ],
+    "editorial_source": [
+      {
+        "source_id": "src-ap-election-feed",
+        "source_type": "WIRE",
+        "provider": "AP Elections",
+        "credibility": "VERIFIED",
+        "received_at": "2026-06-15T21:28:00Z"
+      },
+      {
+        "source_id": "src-nbcu-decision-desk",
+        "source_type": "INTERNAL",
+        "provider": "NBCU Decision Desk",
+        "credibility": "TRUSTED",
+        "received_at": "2026-06-15T21:29:00Z"
+      },
+      {
+        "source_id": "src-va-sos",
+        "source_type": "GOVERNMENT",
+        "provider": "Virginia Secretary of State",
+        "credibility": "ENDORSED",
+        "received_at": "2026-06-15T21:25:00Z",
+        "content_hash": "sha256:b2c3d4e5f6a7..."
+      }
+    ],
+    "newsroom_id": "nbcu-news"
+  },
+  "originating_system": {
+    "system_id": "ncs-nbcu-dc-01",
+    "system_type": "ncs",
+    "system_name": "iNEWS Washington",
+    "vendor": "Avid",
+    "version": "7.0.1"
   }
 }

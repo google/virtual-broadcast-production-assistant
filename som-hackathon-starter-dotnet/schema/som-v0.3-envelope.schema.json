@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://som.spec/schema/v0.3/envelope",
+  "title": "SOM v0.3 Message Envelope (DRAFT 2, 2026-06-10)",
+  "description": "Envelope per v0.3 Technical §4.1, decision #18 lock. Wire som_version remains 0.2.0 until v0.3 ratifies; this schema describes the TARGET shape. payload is polymorphic on message_type — see som-v0.3-story-context.schema.json and som-v0.3-skill-warning.schema.json.",
+  "type": "object",
+  "required": ["som_version", "message_id", "correlation_id", "message_type", "timestamp", "originating_system", "topic", "payload"],
+  "properties": {
+    "som_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "message_id": { "type": "string", "format": "uuid", "description": "UUIDv7, time-ordered" },
+    "correlation_id": { "type": "string", "format": "uuid", "description": "Required as of v0.3 (decision #18); links all messages about the same story lifecycle" },
+    "causation_id": { "type": "string", "format": "uuid", "description": "Optional; ID of the message that directly caused this one" },
+    "message_type": { "type": "string", "pattern": "^[a-z][a-z0-9_.]*$", "examples": ["story.context", "skill.warning.raised", "skill.suggestion.created", "skill.run.completed"] },
+    "timestamp": { "type": "string", "format": "date-time", "description": "Microsecond precision recommended. Skill-output timestamp lives HERE, not in the payload (decision #18)" },
+    "originating_system": { "$ref": "#/$defs/originating_system" },
+    "topic": { "type": "string", "pattern": "^som\\.", "description": "Required per the #18 envelope lock" },
+    "modification_header": {
+      "type": "object",
+      "description": "On snapshot-style messages such as story.context",
+      "properties": {
+        "story_version": { "type": "integer" },
+        "modified_at": { "type": "string", "format": "date-time" },
+        "modified_by": { "type": "string" },
+        "change_summary": { "type": "string" },
+        "history": { "type": "array" }
+      }
+    },
+    "_actors": { "type": "object", "description": "Key-value map of short-key actor lookups" },
+    "payload": { "type": "object" },
+    "extensions": {
+      "type": "object",
+      "description": "Vendor fields, reverse-domain namespaced (com.{vendor}.*); consumers ignore-if-unknown",
+      "patternProperties": { "^com\\.[a-z0-9-]+\\.": {} },
+      "additionalProperties": false
+    },
+    "@context": { "description": "JSON-LD context — DEFERRED in v0.3 (decision #18); permitted for forward compatibility", "anyOf": [{ "type": "string" }, { "type": "object" }] },
+    "source": false,
+    "signature": false
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "originating_system": {
+      "type": "object",
+      "description": "Renamed from `source` (first leg of the four-way source disambiguation)",
+      "required": ["system_id", "system_type"],
+      "properties": {
+        "system_id": { "type": "string" },
+        "system_type": { "type": "string", "enum": ["ncs", "mos_device", "graphics", "automation", "wire_service", "ai_agent", "compliance_engine", "editorial_dashboard", "archive", "prompter", "camera", "audio", "skill_worker", "custom"] },
+        "system_name": { "type": "string" },
+        "vendor": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

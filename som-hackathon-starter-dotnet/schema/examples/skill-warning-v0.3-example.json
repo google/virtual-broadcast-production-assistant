@@ -1,0 +1,20 @@
+{
+  "warning_id": "0190a000-0000-7000-8000-00000000000a",
+  "skill_id": "nbcu/editorial-standards",
+  "skill_version": "0.2.0",
+  "story_id": "sentencing-2026-0401",
+  "scope": "link:l1",
+  "severity": "flag",
+  "rule_id": "nbcu-style-001",
+  "non_overridable": false,
+  "affected_fields": [
+    "headline"
+  ],
+  "detail": "Informal term 'cops' in headline.",
+  "blocks": [],
+  "skill_warning_ref": "swr-0001",
+  "message_type": "skill.warning.raised",
+  "extensions": {
+    "com.nbcu.rationale": "Style guide proscribes informal register in headlines."
+  }
+}

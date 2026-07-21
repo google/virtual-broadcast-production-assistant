@@ -27,6 +27,7 @@ public static class TestProducer
         ["informal"]                = "seed-stories/03-informal-headline.json",
         ["clean"]                   = "seed-stories/04-clean-transit.json",
         ["breaking-no-compliance"]  = "seed-stories/05-breaking-no-compliance.json",
+        ["hurricane"]               = "seed-stories/06-breaking-hurricane.json",
     };
 
     /// <summary>Available scenarios in the order they should appear in the UI.</summary>
@@ -126,8 +127,6 @@ public static class TestProducer
             // Extract story_id from payload for the Kafka key
             var storyId = envelope["payload"]?["story_id"]?.GetValue<string>() ?? "unknown";
 
-            // The skill worker consumes the payload (story context), not the full envelope.
-            // Publish just the payload to match what the worker expects.
             var payload = envelope["payload"];
             if (payload is null)
             {
@@ -135,7 +134,12 @@ public static class TestProducer
                 continue;
             }
 
-            var payloadJson = payload.ToJsonString();
+            // Publish the FULL SOM envelope — the wire shape every other producer here uses
+            // and what partners are told to send. message_id and timestamp are refreshed per
+            // publish (each publish is a new message); correlation_id stays the seed's value
+            // so every message about one story lifecycle threads together (decision #18).
+            envelope["message_id"] = Guid.NewGuid().ToString();
+            envelope["timestamp"] = DateTimeOffset.UtcNow.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'");
 
             Console.WriteLine($"─── {name.ToUpperInvariant()} ───");
             Console.WriteLine($"  Story:    {storyId}");
@@ -146,7 +150,7 @@ public static class TestProducer
             var result = await producer.ProduceAsync(topic, new Message<string, string>
             {
                 Key = storyId,
-                Value = payloadJson,
+                Value = envelope.ToJsonString(),
             });
 
             Console.WriteLine($"  → Partition {result.Partition.Value}, Offset {result.Offset.Value}");

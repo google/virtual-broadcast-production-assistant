@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://som.spec/schema/v0.3.1-proposed/delivery-media-available",
+  "title": "SOM v0.3.1 — delivery.media_available payload",
+  "description": "Operational media-arrival event on som.delivery.* (v0.3.1 Proposal §3.3). The TAMS junction: TAMS posts media-available events to the SOM bus. Source re-key (29 Jun, lazy-consensus to 1 Jul): media referenced the same Source-centric way as the asset leg (media_refs[]) so the two legs do not drift — Source URI (tams://store/id) + optional time range, not flow_id. Normalised: no story_id copy; resolve the story through asset_id.",
+  "type": "object",
+  "required": [
+    "message_type",
+    "delivery_id",
+    "asset_id",
+    "source",
+    "arrived_in",
+    "arrived_at"
+  ],
+  "properties": {
+    "message_type": {
+      "type": "string",
+      "const": "delivery.media_available"
+    },
+    "delivery_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "asset_id": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string",
+      "pattern": "^tams://[^/]+/.+",
+      "description": "Fully-qualified TAMS Source URI — tams://store/id; resolves across remote/second-hand stores. Replaces flow_id (Source re-key 29 Jun)."
+    },
+    "time_range": {
+      "description": "Optional TAMS time range, or list of ranges, onto the Source.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/timerange"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/timerange"
+          }
+        }
+      ]
+    },
+    "arrived_in": {
+      "type": "string",
+      "description": "Receiving system (system_id)"
+    },
+    "arrived_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "extensions": {
+      "type": "object",
+      "patternProperties": {
+        "^com\\.[a-z0-9-]+\\.": {}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "timerange": {
+      "type": "string",
+      "pattern": "^[\\[(](\\d+:\\d+)?_(\\d+:\\d+)?[\\])]$",
+      "description": "TAMS timerange — bracketed inclusive/exclusive over seconds:nanoseconds timestamps (e.g. [0:500000000_1:0) ). Open-ended start or end permitted."
+    }
+  }
+}

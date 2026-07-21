@@ -1,0 +1,23 @@
+{
+  "som_version": "0.2.0",
+  "message_id": "0190e100-0001-7000-8000-000000000001",
+  "correlation_id": "0190e100-aaaa-7aaa-8aaa-000000000001",
+  "message_type": "link.committed",
+  "timestamp": "2026-06-23T17:30:00.000000Z",
+  "originating_system": {
+    "system_id": "mos-bridge-london-01",
+    "system_type": "ncs",
+    "system_name": "MOS-SOM Bridge",
+    "vendor": "NBCU"
+  },
+  "topic": "som.link.committed",
+  "payload": {
+    "message_type": "link.committed",
+    "link_id": "0190e100-0002-7000-8000-000000000002",
+    "asset_id": "GFX-FLOOD-MAP-01",
+    "destination_id": "d-ro-1800-bulletin",
+    "committed_by": "mos-bridge-london-01",
+    "committed_at": "2026-06-23T17:30:00.000000Z",
+    "compliance_gate_status": "PENDING"
+  }
+}

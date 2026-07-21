@@ -77,9 +77,13 @@ public sealed class DashboardService : BackgroundService
             _options.SkillEventsTopic,
             _options.SkillRunsTopic,
             _options.SkillRejectedTopic,
+            // Observed for the bus event log only — MediaCoordinatorService is the delivery
+            // consumer that acts; the dashboard just shows the traffic.
+            _options.DeliveryTopic,
+            _options.AuditTopic,
         });
 
-        _logger.LogInformation("Dashboard subscribed to 5 topics");
+        _logger.LogInformation("Dashboard subscribed to 7 topics");
 
         await Task.Yield();
 
@@ -294,11 +298,17 @@ public sealed class DashboardService : BackgroundService
     // mutation triggers a fresh story.context publish, so the skill re-runs
     // and any pending warnings get cleared as stale.
 
-    private static readonly string[] PhaseOrder = { "PLANNED", "GATHERING", "DEVELOPING", "READY_TO_AIR", "ON_AIR", "PUBLISHED" };
+    // SOM v0.3 lifecycle phases (decision #19): nested under story_type ACTIVE,
+    // traversed in this order. LIVE/AIRED are NOT phases — they are derived from
+    // the Telling (decision #16). PLANNED is a story_type, not a phase.
+    private static readonly string[] PhaseOrder = { "DEVELOPING", "READY_TO_AIR", "BREAKING", "PUBLISHED" };
+    // Tolerate legacy/v0.2 phase values on inbound seeds by mapping them onto the v0.3 set.
     private static readonly Dictionary<string, string> PhaseAlias = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["BREAKING"] = "DEVELOPING",
-        ["COMPLETE"] = "PUBLISHED",
+        ["PLANNED"]   = "DEVELOPING",   // PLANNED is a story_type in v0.3; treat as the first active phase here
+        ["GATHERING"] = "DEVELOPING",
+        ["ON_AIR"]    = "BREAKING",     // on-air is derived from the Telling; nearest editorial phase is BREAKING
+        ["COMPLETE"]  = "PUBLISHED",
     };
 
     public Task<RerunResult> AdvancePhaseAsync(string storyId, CancellationToken ct) =>
@@ -347,7 +357,8 @@ public sealed class DashboardService : BackgroundService
             return new RerunResult(false, "story_not_seen", 0);
 
         var clone = cached.DeepClone();
-        // TestProducer publishes the payload directly; a real producer would publish a SOM v0.2 envelope wrapping it.
+        // Messages are SOM envelopes (payload-wrapped); tolerate bare payloads from
+        // external producers still on the v0.2 shortcut.
         var payload = clone["payload"] ?? clone;
 
         mutate(payload);
@@ -356,14 +367,25 @@ public sealed class DashboardService : BackgroundService
         payload["sequence_number"] = seq + 1;
         payload["updated_at"] = DateTimeOffset.UtcNow.ToString("o");
 
+        // A republish is a NEW message: fresh message_id + timestamp on the envelope,
+        // same correlation_id so the story lifecycle stays threaded.
+        if (clone["payload"] is not null)
+        {
+            clone["message_id"] = Guid.NewGuid().ToString();
+            clone["timestamp"] = DateTimeOffset.UtcNow.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'");
+        }
+
         var clearedIds = _pending.Where(kv =>
-                kv.Value.Output["story_id"]?.GetValue<string>() == storyId)
+                ((kv.Value.Output["payload"] ?? kv.Value.Output)?["story_id"]?.GetValue<string>()) == storyId)
             .Select(kv => kv.Key)
             .ToList();
-        foreach (var id in clearedIds) _pending.TryRemove(id, out _);
 
+        // Produce FIRST, clear after: if the publish fails, the pending warnings must
+        // survive — otherwise a failed republish silently loses them with no new version.
         await _producer.ProduceAsync(_options.StoryContextTopic,
             new Message<string, string> { Key = storyId, Value = clone.ToJsonString() }, ct);
+
+        foreach (var id in clearedIds) _pending.TryRemove(id, out _);
 
         await BroadcastAsync(new
         {
@@ -378,6 +400,36 @@ public sealed class DashboardService : BackgroundService
     }
 
     public sealed record RerunResult(bool Ok, string Status, int ClearedPending);
+
+    /// <summary>
+    /// Resolve the story that references {assetId} in its assets[] — the upward half of the
+    /// SOM↔TAMS join (delivery event → asset_id → Asset → Story). Returns null if no cached
+    /// story references the asset.
+    /// </summary>
+    public string? FindStoryIdByAssetId(string assetId)
+    {
+        foreach (var (storyId, node) in _stories)
+        {
+            // Tolerant reads throughout: one malformed story (e.g. a vendor publishing a
+            // non-string asset_id) must not poison the lookup for every other arrival.
+            var assets = (node["payload"] ?? node) is JsonObject p ? p["assets"] as JsonArray : null;
+            if (assets is null) continue;
+            foreach (var asset in assets)
+            {
+                if (asset?["asset_id"] is JsonValue v && v.TryGetValue<string>(out var id) && id == assetId)
+                    return storyId;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Public republish-with-mutation for other in-process participants (the media
+    /// coordinator). Same semantics as the lifecycle-simulator endpoints: bump
+    /// sequence_number, stamp updated_at, clear stale pending, republish.
+    /// </summary>
+    public Task<RerunResult> MutateStoryAsync(string storyId, Action<JsonNode> mutate, CancellationToken ct) =>
+        RepublishAsync(storyId, mutate, ct);
 
     /// <summary>
     /// Reset the dashboard view: clear the pending queue and tell every connected dashboard
@@ -397,6 +449,8 @@ public sealed class DashboardService : BackgroundService
             _options.SkillEventsTopic,
             _options.SkillRejectedTopic,
             _options.SkillRunsTopic,
+            _options.DeliveryTopic,
+            _options.AuditTopic,
         };
 
         _resetMarker = DateTimeOffset.UtcNow;
@@ -434,10 +488,15 @@ public sealed class DashboardService : BackgroundService
 
     // ─── Helpers ────────────────────────────────────────────────────────────
 
-    private static string? ExtractOutputId(JsonNode node) =>
-        node["warning_id"]?.GetValue<string>()
-        ?? node["suggestion_id"]?.GetValue<string>()
-        ?? node["enrichment_id"]?.GetValue<string>();
+    private static string? ExtractOutputId(JsonNode node)
+    {
+        // Skill outputs are now wrapped in a SOM envelope (the typed fields live under
+        // "payload"); tolerate both enveloped and legacy bare-payload messages.
+        var p = node["payload"] ?? node;
+        return p["warning_id"]?.GetValue<string>()
+            ?? p["suggestion_id"]?.GetValue<string>()
+            ?? p["enrichment_id"]?.GetValue<string>();
+    }
 
     private void ApplyAuth(ClientConfig config)
     {

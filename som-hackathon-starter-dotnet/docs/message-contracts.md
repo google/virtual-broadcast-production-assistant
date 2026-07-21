@@ -19,6 +19,8 @@ Wire baseline: SOM v0.2 plus Amendments A1–A5 (the "v0.2.1-hackathon" label). 
 | `som.skills.rejected` | Dashboard (reject) | Audit | rejected skill outputs |
 | `som.skills.runs` | SkillWorker | Dashboard (audit) | `skill.run.completed` |
 
+> This doc covers the **core skill loop** only. The v0.3.1 **distribution layer** — `som.delivery.media_available`, `som.link.*`, `som.telling.*`, `som.system.audit` — is documented in [`SOM-v0.3.1-distribution-contracts.md`](./SOM-v0.3.1-distribution-contracts.md).
+
 Use the **suffixed** message type names on the wire. The unsuffixed forms in the v0.2 spec body are tracked as **SOM-049** for cleanup; the dashboard parses suffixed only.
 
 ---
@@ -162,7 +164,7 @@ Two reference points apply:
 | `blocks` | string[] | MUST | ✓ | ✓ |
 | `skill_warning_ref` | string | MUST | — | **gap** |
 
-`scope` and `skill_warning_ref` are not yet emitted by the .NET starter — tracked as follow-ups against SOM-048 / SOM-049, **out of scope for the hackathon day**.
+`scope` and `skill_warning_ref` **are now emitted** by the .NET starter (landed with the v0.3.1 skill-warning contract fix on `som-v031-ibc-readiness`; see `SkillWorker.BuildWarning`).
 
 ### Severity semantics (normative per §4.4.2)
 
