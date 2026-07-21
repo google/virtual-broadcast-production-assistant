@@ -85,6 +85,12 @@ Announces that media has **arrived in (or is growing inside) a TAMS/MAM store**.
 "extensions": { "com.ibc-poc.capture_complete": true }
 ```
 
+**After the announcement — fetching the bytes.** The delivery event says the essence is reachable; it carries no credentials and no bytes. Retrieval is a store concern below the SOM boundary: authenticate to the TAMS store and read via its API — for this PoC's GCP deployment see [`tams/DEVELOPER_AUTH_GUIDE.md`](../../tams/DEVELOPER_AUTH_GUIDE.md) at the repo root. SOM never proxies media.
+
+**Cold consumers — resolving `asset_id` with no cached story.** The event deliberately carries no `story_id`; you resolve `asset_id → Asset → Story` from `story.context`. A consumer that joins late has three options, in preference order: (1) replay `som.story.context` from the earliest retained offset and keep the latest version per `story_id` (what this starter's dashboard does); (2) hold the arrival briefly — stories republish in full on every change, so the next version is rarely far away (the reference coordinator re-checks for ~1s); (3) after a bounded wait, treat it as unmatched (the coordinator then records the `WITHHELD` audit). There is no story query API in v0.3.1 — resolution is stream-first by design.
+
+**Who emits on the shared dev broker.** The shared dev server runs the **broker only** — no vendor code, no mock MAM. `MockMamService` runs inside whichever participant runs the starter (locally, pointed at the shared broker). A consumer-only partner who sees no delivery traffic isn't broken — nobody is emitting; run the starter yourself or agree on who drives the scenario.
+
 **Not the right carrier for a public livestream URL you want to transcribe** — that is a *live ingest source*, not arrived TAMS media. See [Vendor extensions](#vendor-extensions--adding-fields-without-breaking-the-spec) for how to carry an ingest URL today.
 
 ---

@@ -228,7 +228,7 @@ The rule engine accesses fields via dot-notation paths relative to the payload r
 | `priority.level` | `payload.priority.level` (string) |
 | `premise.premise_changed` | `payload.premise.premise_changed` (boolean) |
 
-Array fields (`compliance`, `sources`, `assets`, etc.) are checked for presence/absence as a whole. The built-in rule engine does not currently iterate into array elements — if you need per-element logic (e.g. "any compliance flag with type X"), implement a custom rule type in `RuleEngine.cs`.
+Array fields (`compliance`, `assets`, etc.) are checked for presence/absence as a whole by most rule types. The `field_changed` rule type additionally supports one `[]` array wildcard (e.g. `assets[].acquisition_state`) — elements are matched across story versions by `asset_id`/`source_id`/`flag_id`/`id`. For other per-element logic (e.g. "any compliance flag with type X"), implement a custom rule type in `RuleEngine.cs`.
 
 ## Seed stories
 
