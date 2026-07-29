@@ -270,6 +270,11 @@ public sealed class DashboardService : BackgroundService
                 throw;
             }
 
+            // Post-commit work: the decision is already on the bus, so the audit must not
+            // ride the request token — a client disconnect mid-produce would leave the act
+            // unaudited AND unlogged. The producer's 10s MessageTimeoutMs still bounds it.
+            await EmitDecisionAuditAsync(pending, "CLEARED", reviewer ?? "dashboard-user", CancellationToken.None);
+
             await BroadcastAsync(new
             {
                 type = "decision",
@@ -298,6 +303,9 @@ public sealed class DashboardService : BackgroundService
                 _pending[outputId] = pending;
                 throw;
             }
+
+            // Post-commit: detached from the request token (see the approve branch).
+            await EmitDecisionAuditAsync(pending, "WITHHELD", reviewer ?? "dashboard-user", CancellationToken.None);
 
             await BroadcastAsync(new
             {
@@ -591,6 +599,98 @@ public sealed class DashboardService : BackgroundService
     {
         _producer.Dispose();
         base.Dispose();
+    }
+
+    /// <summary>
+    /// Record a human gate decision on som.system.audit — the governance-grade act.
+    /// approve → CLEARED; reject → WITHHELD (terminal for this output instance; a
+    /// re-run creates a new output). Mirrors MediaCoordinatorService's audit envelope:
+    /// same correlation_id as the staged output, causation_id = the staged message_id.
+    /// Audit failure is logged loudly but never undoes the decision — the republish
+    /// has already happened; the record must not be able to veto the act.
+    /// </summary>
+    private async Task EmitDecisionAuditAsync(
+        PendingOutput pending, string action, string reviewer, CancellationToken ct)
+    {
+        try
+        {
+            var envelope = pending.Output;
+            var payload = envelope["payload"] ?? envelope;
+            var (targetKind, targetId) = ResolveAuditTarget(payload);
+            var skillId = payload?["skill_id"] is JsonValue skv && skv.TryGetValue<string>(out var sk) ? sk : "unknown-skill";
+            var storyId = payload?["story_id"] is JsonValue sidv && sidv.TryGetValue<string>(out var sid) ? sid : null;
+            var now = DateTimeOffset.UtcNow;
+
+            var auditPayload = new JsonObject
+            {
+                ["message_type"] = "system.audit",
+                ["audit_id"] = Guid.NewGuid().ToString(),
+                ["action"] = action,
+                ["target"] = new JsonObject { ["kind"] = targetKind, ["id"] = targetId },
+                ["actor"] = new JsonObject { ["actor_id"] = reviewer, ["actor_type"] = "user" },
+                ["reason"] = $"Dashboard gate decision '{action}' on staged output '{pending.OutputId}' from skill '{skillId}'"
+                    + (storyId is null ? "" : $" (story '{storyId}')"),
+                ["recorded_at"] = now.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'"),
+            };
+
+            var auditEnvelope = new JsonObject
+            {
+                ["som_version"] = "0.2.0",
+                ["message_id"] = Guid.NewGuid().ToString(),
+                // Thread the staged output's lifecycle: same correlation, caused by the staged message.
+                ["correlation_id"] = envelope["correlation_id"] is JsonValue cv && cv.TryGetValue<string>(out var corr) ? corr : Guid.NewGuid().ToString(),
+                ["message_type"] = "system.audit",
+                ["timestamp"] = now.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'"),
+                ["originating_system"] = new JsonObject
+                {
+                    ["system_id"] = "ibc-poc-dashboard",
+                    ["system_type"] = "editorial_dashboard",
+                    ["system_name"] = "Staging Dashboard (human approval gate)",
+                    ["vendor"] = "ibc-poc",
+                    ["version"] = "0.1",
+                },
+                ["topic"] = _options.AuditTopic,
+                ["payload"] = auditPayload,
+            };
+            if (envelope["message_id"] is JsonValue mv && mv.TryGetValue<string>(out var causation))
+                auditEnvelope["causation_id"] = causation;
+
+            await _producer.ProduceAsync(_options.AuditTopic,
+                new Message<string, string> { Key = pending.StoryKey ?? pending.OutputId, Value = auditEnvelope.ToJsonString() }, ct);
+            _logger.LogInformation(
+                "Dashboard: decision audit {Action} for output {OutputId} recorded on {Topic} (reviewer {Reviewer})",
+                action, pending.OutputId, _options.AuditTopic, reviewer);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Same posture as MediaCoordinator's WITHHELD path: if the audit can't be
+            // recorded, say exactly that — the decision stands but is unrecorded.
+            _logger.LogError(ex,
+                "Dashboard: decision audit {Action} for output {OutputId} could NOT be confirmed on {Topic} — the clearance may exist only in topic annotations",
+                action, pending.OutputId, _options.AuditTopic);
+        }
+    }
+
+    /// <summary>
+    /// Best-effort mapping of a staged output onto the locked audit target set
+    /// (LINK | ASSET | TELLING). Warnings/suggestions scope to their firing level:
+    /// "link:{id}" → LINK; else the first affected_fields path "assets.{id}.…" → ASSET;
+    /// else ASSET keyed by story (demo-grade fallback, still schema-valid).
+    /// </summary>
+    private static (string Kind, string Id) ResolveAuditTarget(JsonNode? payload)
+    {
+        var scope = payload?["scope"] is JsonValue scv && scv.TryGetValue<string>(out var sc) ? sc : null;
+        if (scope is not null && scope.StartsWith("link:", StringComparison.Ordinal))
+            return ("LINK", scope["link:".Length..]);
+
+        if (payload?["affected_fields"] is JsonArray fields && fields.Count > 0)
+        {
+            var parts = fields[0] is JsonValue fv && fv.TryGetValue<string>(out var f) ? f.Split('.') : null;
+            if (parts is { Length: >= 2 } && parts[0] == "assets")
+                return ("ASSET", parts[1]);
+        }
+
+        return ("ASSET", payload?["story_id"] is JsonValue sv2 && sv2.TryGetValue<string>(out var s2) ? s2 : "unknown");
     }
 
     private sealed record PendingOutput(
