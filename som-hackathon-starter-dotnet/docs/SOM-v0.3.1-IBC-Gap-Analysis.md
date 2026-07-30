@@ -88,7 +88,7 @@ v0.3.1 **locked 30 June** (by email; Source re-key folded in, objection window c
 
 ### Still open (= the August hackathon scope; see `SOM-Hackathon-Aug-2026-Scope.md`)
 
-- ⏳ §1 distribution-layer families — `som.link.*`, `som.telling.*`, `som.delivery.media_available`, `som.system.audit`: topics, producers/consumers, `usage[]` maintenance (§5 idempotent upsert). Biggest build; demo-critical (D1·B4 Reach, D2·B3 Audit).
+- ⏳ §1 distribution-layer families — `som.link.*`, `som.telling.*`: topics, producers/consumers, `usage[]` maintenance (§5 idempotent upsert). Biggest remaining build; demo-critical (D1·B4 Reach). ✅ `som.delivery.media_available` and `som.system.audit` landed (items 4–5 above).
 - ⏳ §2 media leg on seeds — `media_refs[]` (Source URI + TAMS timerange, NOT `flow_id` — re-keyed 29 Jun), `authenticity_credential`, `voice_count`, `compliance[].media_range`.
 - ⏳ §4 firing-rule upgrade — (evidential_position × outlet/path) anchor in `RuleEngine.cs`.
 - ⏳ §5 scripted hurricane/verdict scenarios + schema validation wired into producer tests/CI.
