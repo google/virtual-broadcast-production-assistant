@@ -43,7 +43,7 @@ These are separate surfaces — knowing which is which is most of the learning c
 
 Every message on every subscribed topic, newest first — one line per message with a per-topic summary (stories show headline; runs show outcome + latency; MAM emits show `MEDIA <source> range=<timerange>`). The **topic chips** filter the view and double as live counters. **Clear** empties only this log display.
 
-`som.delivery.media_available` and `som.system.audit` appear here for **observability** — the dashboard tails them for the log. The participant that *acts* on media arrivals is `MediaCoordinatorService` (see workflow 3); the remaining audit producers and the `som.link.*`/`som.telling.*` families are the WS1 August build.
+`som.delivery.media_available` appears here for **observability** — the dashboard tails it for the log; the participant that *acts* on media arrivals is `MediaCoordinatorService` (see workflow 3). `som.system.audit` carries the dashboard's **own** gate decisions too: every approve records `CLEARED` and every reject records `WITHHELD` there, alongside the coordinator's `WITHHELD` non-actions. The remaining audit producers and the `som.link.*`/`som.telling.*` families are the WS1 August build.
 
 ## Other header controls
 

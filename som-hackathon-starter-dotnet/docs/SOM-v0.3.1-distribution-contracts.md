@@ -4,7 +4,7 @@ _Service: `som-hackathon-starter-dotnet` · schema pack: [`schema/v0.3.1-propose
 
 This is the partner-facing reference for the **v0.3.1 distribution layer** — the message families that sit under `som.link.*`, `som.telling.*`, `som.delivery.*`, and `som.system.*`. For each family: the topic, the JSON Schema, one canonical example, and which IBC demo beat it proves. Every payload here validates against the vendored schemas via [`schema/validate.py`](../schema/validate.py).
 
-> **Schema vs producer status.** All the schemas below are **ratified v0.3.1** and safe to build against. The reference implementation covers them unevenly — `som.delivery.media_available` has a mock producer (`MockMamService`) **and a reference consumer** (`MediaCoordinatorService`, which flips `acquisition_state` on capture-complete and records `WITHHELD` audits for unmatched arrivals); `som.system.audit` has that one live producer; `som.link.*` and `som.telling.*` are the 6 Aug hackathon build (WS1). "Producer" columns say which is which. The contract is stable regardless of implementation status — integrate against the schema.
+> **Schema vs producer status.** All the schemas below are **ratified v0.3.1** and safe to build against. The reference implementation covers them unevenly — `som.delivery.media_available` has a mock producer (`MockMamService`) **and a reference consumer** (`MediaCoordinatorService`, which flips `acquisition_state` on capture-complete and records `WITHHELD` audits for unmatched arrivals); `som.system.audit` has **two** live producers (the coordinator's `WITHHELD` non-actions and the dashboard's human gate decisions — approve → `CLEARED`, reject → `WITHHELD`); `som.link.*` and `som.telling.*` are the 6 Aug hackathon build (WS1). "Producer" columns say which is which. The contract is stable regardless of implementation status — integrate against the schema.
 
 ---
 
@@ -51,7 +51,7 @@ Envelope rules that bite integrators:
 | `som.delivery.media_available` | `delivery.media_available` | MockMamService (TAMS stand-in) | MediaCoordinatorService (reference consumer) | 🟡 mock producer + reference consumer |
 | `som.link.committed` · `.gate_changed` · `.withdrawn` | `link.committed`, `link.gate_changed`, `link.withdrawn` | (WS1) | (WS1) → maintains `usage[]` | ⏳ schema ready, Aug build |
 | `som.telling.started` · `.ended` · `.exposed` | `telling.started`, `telling.ended`, `telling.exposed` | (WS1) | (WS1) → derives on-air state | ⏳ schema ready, Aug build |
-| `som.system.audit` | `system.audit` | MediaCoordinatorService (`WITHHELD` non-actions) · (WS1 for the rest) | audit / dashboard | 🟡 one producer live |
+| `som.system.audit` | `system.audit` | MediaCoordinatorService (`WITHHELD` non-actions) · Dashboard (gate decisions `CLEARED`/`WITHHELD`) · (WS1 for the rest) | audit / dashboard | 🟡 two producers live |
 
 Message-type names are the **suffixed** forms on the wire (e.g. `skill.warning.raised`, not `skill.warning`).
 
@@ -157,7 +157,13 @@ The clearance/suppression audit trail. Distinct from `som.skills.runs` (which re
 ```
 
 - `action` ∈ `CLEARED` · `SUPPRESSED` · `WITHHELD` · `OVERRIDDEN`. `target.kind` ∈ `LINK` · `ASSET` · `TELLING`.
-- **Proves:** D2·B3 clearance/suppression trail. `WITHHELD` also carries the "safe-state stop / non-action report" from the skills-model work (a system actor records that it declined to act).
+- **Proves:** D2·B3 clearance/suppression trail. `WITHHELD` also carries the "safe-state stop / non-action report" from the skills-model work — any actor, system **or human**, records that it declined to act.
+
+**Live producers today.** The media coordinator (`WITHHELD` on unmatched arrivals — the system safe-state stop) and the dashboard's human gate (**approve → `CLEARED`**, **reject → `WITHHELD`**, `actor_type: "user"`, `causation_id` = the staged output's `message_id`). A human reject is `WITHHELD`, not `SUPPRESSED`, by decision: rejection is **terminal for that output instance** (a re-run mints a new output) — "no outstanding decision changes this" — whereas `SUPPRESSED` is about held *content* never linked to air. WS1 (Aug) adds the remaining producers.
+
+**Target mapping for gate decisions.** A staged output maps onto the locked `LINK | ASSET | TELLING` set most-specific-first: an explicit `link:{id}`/`asset:{id}` scope wins; else an `assets.{id}.…` affected-field names the asset; else a bare `assets` affected-field resolves through the story cache when the story has exactly **one** asset. A **story-scoped** decision has no honest home in the locked set — the record ships `kind: ASSET` carrying the **story** key and says so explicitly in `reason`. Consumers MUST NOT join such an id against assets; a `STORY` target kind is a v0.3.2 candidate.
+
+Partition keys are mixed on this topic by design — the coordinator keys audits by **asset id**, the dashboard by **story key**. Do not rely on per-key ordering across producers.
 
 ---
 

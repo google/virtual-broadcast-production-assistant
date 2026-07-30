@@ -66,8 +66,8 @@ Premise propagation with `change_detected_at` (seed 01:43–44) ≈ Beat 3 (Accu
 1. Payload migration (§2) + phases (§3) — unblocks everything, low risk. **[RATIFIED]**
 2. Skill-warning contract (§4 output) — small, high value. **[RATIFIED]**
 3. `som.link.*` + gates (§1) — Reach + Sync + Demo 2 partial fire. **[PENDING]**
-4. `delivery.media_available` + `media_refs`/`authenticity_credential` — Media + Provenance. **[PENDING]**
-5. `som.system.audit` (§1) — Demo 2 close. **[PENDING]**
+4. `delivery.media_available` + `media_refs`/`authenticity_credential` — Media + Provenance. **[LANDED — mock MAM producer + media coordinator consumer]**
+5. `som.system.audit` (§1) — Demo 2 close. **[PARTIAL — two producers live: coordinator `WITHHELD` non-actions, dashboard gate decisions; WS1 adds the rest]**
 6. Firing-rule upgrade (§4) — richest; do last / scope down. **[PENDING]**
 
 See `SOM-v0.3.1-Migration-Log.md` for the running record of changes on this branch.

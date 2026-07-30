@@ -186,7 +186,7 @@ Each seed story includes a `content_refs` array pointing to `GET /api/content/{s
 | `som.skills.rejected` | Dashboard (on reject) | audit | Rejected outputs (with `rejected_by`) |
 | `som.skills.runs` | SkillWorker | Dashboard | Audit record per skill execution (latency, outcome) |
 | `som.delivery.media_available` | MockMamService (TAMS stand-in) | **MediaCoordinatorService** (acts) · Dashboard (event log) | Media-arrival announcements — see [`docs/SOM-v0.3.1-distribution-contracts.md`](docs/SOM-v0.3.1-distribution-contracts.md) |
-| `som.system.audit` | MediaCoordinatorService (`WITHHELD` non-action reports) | Dashboard (event log) | Governance trail; WS1 (Aug) adds the remaining producers |
+| `som.system.audit` | MediaCoordinatorService (`WITHHELD` non-actions) · Dashboard (gate decisions `CLEARED`/`WITHHELD`) | Dashboard (event log) | Governance trail; WS1 (Aug) adds the remaining producers |
 
 Topics auto-create on first publish in local mode. The coordinator is the participant that *acts* on media arrivals (see below); the dashboard tails both distribution topics for the bus event log (`MEDIA` / `AUDIT` lines + topic chips). Full envelopes: Kafka UI (:8080 with the bundled compose).
 

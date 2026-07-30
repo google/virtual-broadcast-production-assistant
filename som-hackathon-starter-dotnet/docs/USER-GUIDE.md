@@ -226,6 +226,6 @@ Full endpoint list: [README → API endpoints](../README.md#api-endpoints).
 | **Advert** | A skill's machine-readable declaration of what it operates on / fires on / produces |
 | **Recall** | The executor's deterministic advert-matching step — deciding which skills run |
 | **Staging** | The pre-approval topic; nothing reaches the production bus without a human decision |
-| **Safe-state stop** | When the correct action is unclear, do nothing and *record* the non-action (`WITHHELD` on `som.system.audit`) |
+| **Safe-state stop** | When the correct action is unclear, do nothing and *record* the non-action (`WITHHELD` on `som.system.audit`). `WITHHELD` is also how the dashboard records a human **reject** — a terminal non-action on that output instance |
 | **Envelope** | The outer wrapper every SOM message shares; the payload inside is what schemas validate |
 | **Extension** | `payload.extensions["com.{vendor}.{field}"]` — the sanctioned place for not-yet-ratified fields |
