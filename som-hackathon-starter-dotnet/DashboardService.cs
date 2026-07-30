@@ -270,11 +270,6 @@ public sealed class DashboardService : BackgroundService
                 throw;
             }
 
-            // Post-commit work: the decision is already on the bus, so the audit must not
-            // ride the request token — a client disconnect mid-produce would leave the act
-            // unaudited AND unlogged. The producer's 10s MessageTimeoutMs still bounds it.
-            await EmitDecisionAuditAsync(pending, "CLEARED", reviewer ?? "dashboard-user", CancellationToken.None);
-
             await BroadcastAsync(new
             {
                 type = "decision",
@@ -283,6 +278,12 @@ public sealed class DashboardService : BackgroundService
                 reviewer = reviewer ?? "dashboard-user",
                 at = DateTimeOffset.UtcNow,
             }, ct);
+
+            // Post-commit, post-broadcast: the audit rides neither the request token nor
+            // the UI's critical path — on a degraded broker the operator's confirmation
+            // must not wait up to 10s behind the audit produce. Failure inside is logged,
+            // never thrown.
+            await EmitDecisionAuditAsync(pending, "CLEARED", reviewer ?? "dashboard-user");
 
             return new DecisionResult(true, "approved", _options.SkillEventsTopic);
         }
@@ -304,9 +305,6 @@ public sealed class DashboardService : BackgroundService
                 throw;
             }
 
-            // Post-commit: detached from the request token (see the approve branch).
-            await EmitDecisionAuditAsync(pending, "WITHHELD", reviewer ?? "dashboard-user", CancellationToken.None);
-
             await BroadcastAsync(new
             {
                 type = "decision",
@@ -315,6 +313,9 @@ public sealed class DashboardService : BackgroundService
                 reviewer = reviewer ?? "dashboard-user",
                 at = DateTimeOffset.UtcNow,
             }, ct);
+
+            // Post-commit, post-broadcast (see the approve branch).
+            await EmitDecisionAuditAsync(pending, "WITHHELD", reviewer ?? "dashboard-user");
 
             return new DecisionResult(true, "rejected", _options.SkillRejectedTopic);
         }
@@ -609,14 +610,13 @@ public sealed class DashboardService : BackgroundService
     /// Audit failure is logged loudly but never undoes the decision — the republish
     /// has already happened; the record must not be able to veto the act.
     /// </summary>
-    private async Task EmitDecisionAuditAsync(
-        PendingOutput pending, string action, string reviewer, CancellationToken ct)
+    private async Task EmitDecisionAuditAsync(PendingOutput pending, string action, string reviewer)
     {
         try
         {
-            var envelope = pending.Output;
-            var payload = envelope["payload"] ?? envelope;
-            var (targetKind, targetId) = ResolveAuditTarget(payload);
+            var envelope = pending.Output as JsonObject;
+            var payload = envelope?["payload"] as JsonObject ?? envelope;
+            var (targetKind, targetId, storyFallback) = ResolveAuditTarget(payload);
             var skillId = payload?["skill_id"] is JsonValue skv && skv.TryGetValue<string>(out var sk) ? sk : "unknown-skill";
             var storyId = payload?["story_id"] is JsonValue sidv && sidv.TryGetValue<string>(out var sid) ? sid : null;
             var now = DateTimeOffset.UtcNow;
@@ -629,7 +629,10 @@ public sealed class DashboardService : BackgroundService
                 ["target"] = new JsonObject { ["kind"] = targetKind, ["id"] = targetId },
                 ["actor"] = new JsonObject { ["actor_id"] = reviewer, ["actor_type"] = "user" },
                 ["reason"] = $"Dashboard gate decision '{action}' on staged output '{pending.OutputId}' from skill '{skillId}'"
-                    + (storyId is null ? "" : $" (story '{storyId}')"),
+                    + (storyId is null ? "" : $" (story '{storyId}')")
+                    + (storyFallback
+                        ? " — story-scoped: target.id is the STORY key, not an asset id (no STORY target kind in v0.3.1; v0.3.2 candidate)"
+                        : ""),
                 ["recorded_at"] = now.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'"),
             };
 
@@ -638,7 +641,7 @@ public sealed class DashboardService : BackgroundService
                 ["som_version"] = "0.2.0",
                 ["message_id"] = Guid.NewGuid().ToString(),
                 // Thread the staged output's lifecycle: same correlation, caused by the staged message.
-                ["correlation_id"] = envelope["correlation_id"] is JsonValue cv && cv.TryGetValue<string>(out var corr) ? corr : Guid.NewGuid().ToString(),
+                ["correlation_id"] = envelope?["correlation_id"] is JsonValue cv && cv.TryGetValue<string>(out var corr) ? corr : Guid.NewGuid().ToString(),
                 ["message_type"] = "system.audit",
                 ["timestamp"] = now.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'"),
                 ["originating_system"] = new JsonObject
@@ -652,19 +655,23 @@ public sealed class DashboardService : BackgroundService
                 ["topic"] = _options.AuditTopic,
                 ["payload"] = auditPayload,
             };
-            if (envelope["message_id"] is JsonValue mv && mv.TryGetValue<string>(out var causation))
+            if (envelope?["message_id"] is JsonValue mv && mv.TryGetValue<string>(out var causation))
                 auditEnvelope["causation_id"] = causation;
 
+            // Deliberately no cancellation token: this is post-commit work and must not be
+            // abandonable; the producer's 10s MessageTimeoutMs bounds it.
             await _producer.ProduceAsync(_options.AuditTopic,
-                new Message<string, string> { Key = pending.StoryKey ?? pending.OutputId, Value = auditEnvelope.ToJsonString() }, ct);
+                new Message<string, string> { Key = pending.StoryKey ?? pending.OutputId, Value = auditEnvelope.ToJsonString() });
             _logger.LogInformation(
                 "Dashboard: decision audit {Action} for output {OutputId} recorded on {Topic} (reviewer {Reviewer})",
                 action, pending.OutputId, _options.AuditTopic, reviewer);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             // Same posture as MediaCoordinator's WITHHELD path: if the audit can't be
-            // recorded, say exactly that — the decision stands but is unrecorded.
+            // recorded, say exactly that — the decision stands but is unrecorded. No OCE
+            // carve-out: with no token in play, cancellation isn't a legitimate signal
+            // here, and letting one escape would skip this log and the caller's broadcast.
             _logger.LogError(ex,
                 "Dashboard: decision audit {Action} for output {OutputId} could NOT be confirmed on {Topic} — the clearance may exist only in topic annotations",
                 action, pending.OutputId, _options.AuditTopic);
@@ -672,25 +679,50 @@ public sealed class DashboardService : BackgroundService
     }
 
     /// <summary>
-    /// Best-effort mapping of a staged output onto the locked audit target set
-    /// (LINK | ASSET | TELLING). Warnings/suggestions scope to their firing level:
-    /// "link:{id}" → LINK; else the first affected_fields path "assets.{id}.…" → ASSET;
-    /// else ASSET keyed by story (demo-grade fallback, still schema-valid).
+    /// Map a staged output onto the locked audit target set (LINK | ASSET | TELLING), most
+    /// specific tier first: an explicit link:/asset: scope wins; else any affected_fields
+    /// path "assets.{id}.…" names the asset; else a bare "assets"/"assets[]…" field
+    /// resolves through the story cache when the story has exactly ONE asset (multi-asset
+    /// stories stay story-scoped — precise per-asset anchors arrive with the firing-anchor
+    /// upgrade). Story-scoped remainder returns StoryFallback=true: v0.3.1 has no STORY
+    /// target kind (v0.3.2 candidate), so the caller must label the id as a story key.
     /// </summary>
-    private static (string Kind, string Id) ResolveAuditTarget(JsonNode? payload)
+    private (string Kind, string Id, bool StoryFallback) ResolveAuditTarget(JsonObject? payload)
     {
         var scope = payload?["scope"] is JsonValue scv && scv.TryGetValue<string>(out var sc) ? sc : null;
         if (scope is not null && scope.StartsWith("link:", StringComparison.Ordinal))
-            return ("LINK", scope["link:".Length..]);
+            return ("LINK", scope["link:".Length..], false);
+        if (scope is not null && scope.StartsWith("asset:", StringComparison.Ordinal))
+            return ("ASSET", scope["asset:".Length..], false);
 
-        if (payload?["affected_fields"] is JsonArray fields && fields.Count > 0)
+        var storyId = payload?["story_id"] is JsonValue sv2 && sv2.TryGetValue<string>(out var s2) ? s2 : null;
+
+        if (payload?["affected_fields"] is JsonArray fields)
         {
-            var parts = fields[0] is JsonValue fv && fv.TryGetValue<string>(out var f) ? f.Split('.') : null;
-            if (parts is { Length: >= 2 } && parts[0] == "assets")
-                return ("ASSET", parts[1]);
+            var sawBareAssets = false;
+            foreach (var field in fields)
+            {
+                if (field is not JsonValue fv || !fv.TryGetValue<string>(out var f)) continue;
+                var parts = f.Split('.');
+                if (parts[0] == "assets" && parts.Length >= 2 && parts[1].Length > 0)
+                    return ("ASSET", parts[1], false);
+                if (parts[0] is "assets" or "assets[]") sawBareAssets = true;
+            }
+            if (sawBareAssets && SingleAssetIdFor(storyId) is { } onlyAsset)
+                return ("ASSET", onlyAsset, false);
         }
 
-        return ("ASSET", payload?["story_id"] is JsonValue sv2 && sv2.TryGetValue<string>(out var s2) ? s2 : "unknown");
+        return ("ASSET", storyId ?? "unknown", true);
+    }
+
+    /// <summary>The story's asset_id iff the cached story has exactly one asset — the only
+    /// case where a bare "assets" affected-field pins to an asset without guessing.</summary>
+    private string? SingleAssetIdFor(string? storyId)
+    {
+        if (storyId is null || !_stories.TryGetValue(storyId, out var node)) return null;
+        var story = (node as JsonObject)?["payload"] as JsonObject ?? node as JsonObject;
+        if (story?["assets"] is not JsonArray { Count: 1 } assets) return null;
+        return assets[0] is JsonObject a && a["asset_id"] is JsonValue v && v.TryGetValue<string>(out var id) ? id : null;
     }
 
     private sealed record PendingOutput(
