@@ -102,7 +102,7 @@ If the broker's port is exposed on the Docker host but not on a network the cont
             (production bus)
 ```
 
-The skill worker never publishes directly to `som.skills.events`. Every output flows through `som.skills.staging`; the dashboard's approve/reject API republishes the message to the production or rejection topic, annotating with `approved_by` / `rejected_by` for audit.
+The skill worker never publishes directly to `som.skills.events`. Every output flows through `som.skills.staging`; the dashboard's approve/reject API republishes the payload to the production or rejection topic in a fresh dashboard-attributed envelope (new `message_id`/`timestamp`, `causation_id` = the staged message). `approved_by` / `rejected_by` ride `payload.extensions` (`com.ibc-poc.*`) — the envelope schema is closed — and the governance-grade record of the decision lands on `som.system.audit`.
 
 ## Project structure
 
@@ -183,7 +183,7 @@ Each seed story includes a `content_refs` array pointing to `GET /api/content/{s
 | `som.story.context` | TestProducer | SkillWorker, Dashboard | Inbound stories from the newsroom |
 | `som.skills.staging` | SkillWorker | Dashboard | Skill outputs awaiting human decision |
 | `som.skills.events` | Dashboard (on approve) | downstream | Approved outputs on the production bus |
-| `som.skills.rejected` | Dashboard (on reject) | audit | Rejected outputs (with `rejected_by`) |
+| `som.skills.rejected` | Dashboard (on reject) | audit | Rejected outputs (`rejected_by` in `payload.extensions`) |
 | `som.skills.runs` | SkillWorker | Dashboard | Audit record per skill execution (latency, outcome) |
 | `som.delivery.media_available` | MockMamService (TAMS stand-in) | **MediaCoordinatorService** (acts) · Dashboard (event log) | Media-arrival announcements — see [`docs/SOM-v0.3.1-distribution-contracts.md`](docs/SOM-v0.3.1-distribution-contracts.md) |
 | `som.system.audit` | MediaCoordinatorService (`WITHHELD` non-actions) · Dashboard (gate decisions `CLEARED`/`WITHHELD`) | Dashboard (event log) | Governance trail; WS1 (Aug) adds the remaining producers |

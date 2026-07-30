@@ -194,6 +194,8 @@ public sealed class MediaCoordinatorService : BackgroundService
         }
 
         var matchedAsset = false;
+        // causationId: the arrival's message_id, so the republished story version records
+        // what caused the flip (the dashboard stamps its own identity as the producer).
         var flip = await _dashboard.MutateStoryAsync(storyId, story =>
         {
             var assets = story["assets"] as JsonArray;
@@ -213,7 +215,7 @@ public sealed class MediaCoordinatorService : BackgroundService
                     }
                 }
             }
-        }, ct);
+        }, ct, causationId);
 
         if (flip.Ok && !matchedAsset)
         {

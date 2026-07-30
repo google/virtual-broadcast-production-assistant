@@ -138,7 +138,7 @@ Each rule has `rule_id`, `type`, `config`, `default_severity` (`hold` / `flag` /
 3. Optional **AI review** (`🤖`): ships your skill + seeds + dry-run result to an LLM for structured feedback ([setup](../README.md#skill-validation-3-layers)).
 4. **Go live**: publish seeds / run scenarios and watch your skill's run cards and staged outputs. For a `field_changed` rule, mutate a story (Lifecycle panel, or the media-arrival scenario for `acquisition_state`) so there's a transition to detect.
 
-Your outputs ride the same approval gate as everything else: staged → human decision → `som.skills.events` or `som.skills.rejected`, stamped with the reviewer.
+Your outputs ride the same approval gate as everything else: staged → human decision → `som.skills.events` or `som.skills.rejected`, republished in a fresh dashboard-attributed envelope with the reviewer stamped in `payload.extensions` and the decision recorded on `som.system.audit`.
 
 ## 7. Integrating your own system
 

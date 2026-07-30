@@ -94,8 +94,8 @@ The worker never publishes directly to the production bus (`som.skills.events`).
 
 The **DashboardService** consumes `som.skills.staging` and holds outputs in memory. Editors see them in the dashboard's "Pending" lane and decide:
 
-- **Approve** → message is republished to `som.skills.events` with `approved_by` annotation
-- **Reject** → message is republished to `som.skills.rejected` with `rejected_by` annotation
+- **Approve** → payload republished to `som.skills.events` in a **fresh dashboard-attributed envelope** (new `message_id`/`timestamp`, `causation_id` = the staged message); `approved_by`/`approved_at` ride `payload.extensions` (`com.ibc-poc.*`), and a `CLEARED` record lands on `som.system.audit`
+- **Reject** → same shape to `som.skills.rejected` (`rejected_by`/`rejected_at` in extensions) plus a `WITHHELD` audit record
 
 This is the core safety pattern: no skill output reaches production without a human decision.
 

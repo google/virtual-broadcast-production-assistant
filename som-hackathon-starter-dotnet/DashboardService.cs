@@ -253,20 +253,25 @@ public sealed class DashboardService : BackgroundService
 
         if (decision.Equals("approve", StringComparison.OrdinalIgnoreCase))
         {
-            // Annotate and republish to the production bus. If the produce fails, put the
-            // pending item BACK — a broker blip must not silently discard a staged warning.
-            var enriched = pending.Output.DeepClone();
-            enriched["approved_by"] = reviewer ?? "dashboard-user";
-            enriched["approved_at"] = DateTimeOffset.UtcNow.ToString("o");
-
+            // Republish to the production bus in a FRESH dashboard-attributed envelope —
+            // envelope-level approved_by/at writes were schema-invalid (envelope is
+            // additionalProperties:false). The build happens INSIDE the try: constructing
+            // the envelope materializes vendor JSON (payload.extensions) for the first
+            // time and can throw (e.g. duplicate keys) — any failure here must put the
+            // pending item BACK, never silently discard a staged warning.
             try
             {
+                var enriched = BuildDecisionEnvelope(pending, _options.SkillEventsTopic,
+                    ("approved_by", reviewer ?? "dashboard-user"),
+                    ("approved_at", DateTimeOffset.UtcNow.ToString("o")));
                 await _producer.ProduceAsync(_options.SkillEventsTopic,
                     new Message<string, string> { Key = key, Value = enriched.ToJsonString() }, ct);
             }
-            catch
+            catch (Exception ex)
             {
                 _pending[outputId] = pending;
+                _logger.LogError(ex,
+                    "Approve of {OutputId} failed before/at produce — pending item restored for retry", outputId);
                 throw;
             }
 
@@ -290,18 +295,20 @@ public sealed class DashboardService : BackgroundService
 
         if (decision.Equals("reject", StringComparison.OrdinalIgnoreCase))
         {
-            var enriched = pending.Output.DeepClone();
-            enriched["rejected_by"] = reviewer ?? "dashboard-user";
-            enriched["rejected_at"] = DateTimeOffset.UtcNow.ToString("o");
-
+            // Build inside the try — same restore guarantee as the approve branch.
             try
             {
+                var enriched = BuildDecisionEnvelope(pending, _options.SkillRejectedTopic,
+                    ("rejected_by", reviewer ?? "dashboard-user"),
+                    ("rejected_at", DateTimeOffset.UtcNow.ToString("o")));
                 await _producer.ProduceAsync(_options.SkillRejectedTopic,
                     new Message<string, string> { Key = key, Value = enriched.ToJsonString() }, ct);
             }
-            catch
+            catch (Exception ex)
             {
                 _pending[outputId] = pending;
+                _logger.LogError(ex,
+                    "Reject of {OutputId} failed before/at produce — pending item restored for retry", outputId);
                 throw;
             }
 
@@ -393,7 +400,7 @@ public sealed class DashboardService : BackgroundService
     /// and broadcasts a dashboard refresh.
     /// </summary>
     private async Task<RerunResult> RepublishAsync(
-        string storyId, Action<JsonNode> mutate, CancellationToken ct)
+        string storyId, Action<JsonNode> mutate, CancellationToken ct, string? causationId = null)
     {
         if (!_stories.TryGetValue(storyId, out var cached))
             return new RerunResult(false, "story_not_seen", 0);
@@ -410,11 +417,25 @@ public sealed class DashboardService : BackgroundService
         payload["updated_at"] = DateTimeOffset.UtcNow.ToString("o");
 
         // A republish is a NEW message: fresh message_id + timestamp on the envelope,
-        // same correlation_id so the story lifecycle stays threaded.
+        // same correlation_id so the story lifecycle stays threaded, and the DASHBOARD
+        // as originating_system — the envelope records the act (this mutation), not the
+        // original publisher's statement. Any stale causation_id from the cached copy's
+        // own history is removed first: a fresh message must not claim an old cause.
         if (clone["payload"] is not null)
         {
             clone["message_id"] = Guid.NewGuid().ToString();
             clone["timestamp"] = DateTimeOffset.UtcNow.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'");
+            clone["originating_system"] = DashboardIdentity();
+            ((JsonObject)clone).Remove("causation_id");
+            if (causationId is not null) clone["causation_id"] = causationId;
+        }
+        else
+        {
+            // Bare-payload cached story (v0.2 shortcut): there is no envelope to stamp,
+            // so identity/causation degrade — loudly, not silently.
+            _logger.LogWarning(
+                "Republish of {StoryId} is a bare payload: no envelope to stamp dashboard identity on{CausationNote}",
+                storyId, causationId is null ? "" : $" (causation {causationId} dropped)");
         }
 
         var clearedIds = _pending.Where(kv =>
@@ -470,8 +491,8 @@ public sealed class DashboardService : BackgroundService
     /// coordinator). Same semantics as the lifecycle-simulator endpoints: bump
     /// sequence_number, stamp updated_at, clear stale pending, republish.
     /// </summary>
-    public Task<RerunResult> MutateStoryAsync(string storyId, Action<JsonNode> mutate, CancellationToken ct) =>
-        RepublishAsync(storyId, mutate, ct);
+    public Task<RerunResult> MutateStoryAsync(string storyId, Action<JsonNode> mutate, CancellationToken ct, string? causationId = null) =>
+        RepublishAsync(storyId, mutate, ct, causationId);
 
     /// <summary>
     /// Reset the dashboard view: clear the pending queue and tell every connected dashboard
@@ -602,6 +623,64 @@ public sealed class DashboardService : BackgroundService
         base.Dispose();
     }
 
+    /// <summary>The dashboard's originating_system block — one definition so the decision
+    /// envelopes and the audit records agree about who acted.</summary>
+    private static JsonObject DashboardIdentity() => new()
+    {
+        ["system_id"] = "ibc-poc-dashboard",
+        ["system_type"] = "editorial_dashboard",
+        ["system_name"] = "Staging Dashboard (human approval gate)",
+        ["vendor"] = "ibc-poc",
+        ["version"] = "0.1",
+    };
+
+    /// <summary>
+    /// A decision republish is a NEW message: fresh message_id/timestamp, topic = the
+    /// actual destination, the dashboard as originating_system (the envelope records the
+    /// act), correlation threaded from the staged envelope, causation_id = the staged
+    /// message_id. The payload rides unchanged except the decision facts, which live
+    /// under payload.extensions (com.ibc-poc.*) — both the envelope and the warning
+    /// payload are additionalProperties:false, so extensions are the only open surface;
+    /// the governance-grade record is the som.system.audit entry.
+    /// </summary>
+    private JsonObject BuildDecisionEnvelope(
+        PendingOutput pending, string topic, params (string Key, string Value)[] annotations)
+    {
+        var staged = pending.Output as JsonObject;
+        var payload = (staged?["payload"] as JsonObject ?? staged)?.DeepClone() as JsonObject ?? new JsonObject();
+        if (payload["extensions"] is not JsonObject ext)
+        {
+            // Present-but-non-object is a vendor malformation worth a trace — replacing it
+            // silently would be indistinguishable from the ordinary missing case.
+            if (payload["extensions"] is not null)
+                _logger.LogWarning(
+                    "Staged output {OutputId}: payload.extensions was not an object — replaced to carry decision stamps (original value survives on the staging topic)",
+                    pending.OutputId);
+            payload["extensions"] = ext = new JsonObject();
+        }
+        foreach (var (k, v) in annotations) ext[$"com.ibc-poc.{k}"] = v;
+
+        var now = DateTimeOffset.UtcNow;
+        var messageType =
+            staged?["message_type"] is JsonValue mtv && mtv.TryGetValue<string>(out var mt) ? mt
+            : payload["message_type"] is JsonValue pmv && pmv.TryGetValue<string>(out var pmt) ? pmt
+            : "skill.warning.raised";
+        var envelope = new JsonObject
+        {
+            ["som_version"] = "0.2.0",
+            ["message_id"] = Guid.NewGuid().ToString(),
+            ["correlation_id"] = staged?["correlation_id"] is JsonValue cv && cv.TryGetValue<string>(out var corr) ? corr : Guid.NewGuid().ToString(),
+            ["message_type"] = messageType,
+            ["timestamp"] = now.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'"),
+            ["originating_system"] = DashboardIdentity(),
+            ["topic"] = topic,
+            ["payload"] = payload,
+        };
+        if (staged?["message_id"] is JsonValue mv && mv.TryGetValue<string>(out var causation))
+            envelope["causation_id"] = causation;
+        return envelope;
+    }
+
     /// <summary>
     /// Record a human gate decision on som.system.audit — the governance-grade act.
     /// approve → CLEARED; reject → WITHHELD (terminal for this output instance; a
@@ -644,14 +723,7 @@ public sealed class DashboardService : BackgroundService
                 ["correlation_id"] = envelope?["correlation_id"] is JsonValue cv && cv.TryGetValue<string>(out var corr) ? corr : Guid.NewGuid().ToString(),
                 ["message_type"] = "system.audit",
                 ["timestamp"] = now.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'"),
-                ["originating_system"] = new JsonObject
-                {
-                    ["system_id"] = "ibc-poc-dashboard",
-                    ["system_type"] = "editorial_dashboard",
-                    ["system_name"] = "Staging Dashboard (human approval gate)",
-                    ["vendor"] = "ibc-poc",
-                    ["version"] = "0.1",
-                },
+                ["originating_system"] = DashboardIdentity(),
                 ["topic"] = _options.AuditTopic,
                 ["payload"] = auditPayload,
             };

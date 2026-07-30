@@ -872,6 +872,14 @@ function unwrapSom(node) {
   for (const k of ['message_type', 'approved_by', 'approved_at', 'rejected_by', 'rejected_at', 'timestamp']) {
     if (out[k] === undefined && node[k] !== undefined) out[k] = node[k];
   }
+  // Decision stamps now ride payload.extensions (com.ibc-poc.*) — the envelope is
+  // additionalProperties:false, so the old envelope-level stamps were schema-invalid.
+  // Lift them to the flat keys the renderers read; the envelope-level loop above still
+  // covers pre-fix history on the bus.
+  for (const k of ['approved_by', 'approved_at', 'rejected_by', 'rejected_at']) {
+    const v = out.extensions ? out.extensions['com.ibc-poc.' + k] : undefined;
+    if (out[k] === undefined && v !== undefined) out[k] = v;
+  }
   return out;
 }
 
