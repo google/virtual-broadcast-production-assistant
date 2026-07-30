@@ -27,6 +27,17 @@ namespace SomSkillWorker;
 public sealed class MediaCoordinatorService : BackgroundService
 {
     private const string SystemId = "media-coordinator";
+
+    /// <summary>Fresh instance per call — JsonNodes are single-parent, so a shared block
+    /// would throw on second attachment.</summary>
+    private static System.Text.Json.Nodes.JsonObject CoordinatorIdentity() => new()
+    {
+        ["system_id"] = SystemId,
+        ["system_type"] = "automation",
+        ["system_name"] = "Media Coordinator (WS1 reference consumer)",
+        ["vendor"] = "ibc-poc",
+        ["version"] = "0.1",
+    };
     private const string CaptureCompleteExt = "com.ibc-poc.capture_complete";
 
     private readonly ILogger<MediaCoordinatorService> _logger;
@@ -215,7 +226,7 @@ public sealed class MediaCoordinatorService : BackgroundService
                     }
                 }
             }
-        }, ct, causationId);
+        }, ct, causationId, CoordinatorIdentity());
 
         if (flip.Ok && !matchedAsset)
         {
@@ -337,14 +348,7 @@ public sealed class MediaCoordinatorService : BackgroundService
             ["correlation_id"] = correlationId ?? Guid.NewGuid().ToString(),
             ["message_type"] = messageType,
             ["timestamp"] = now.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'"),
-            ["originating_system"] = new JsonObject
-            {
-                ["system_id"] = SystemId,
-                ["system_type"] = "automation",
-                ["system_name"] = "Media Coordinator (WS1 reference consumer)",
-                ["vendor"] = "ibc-poc",
-                ["version"] = "0.1",
-            },
+            ["originating_system"] = CoordinatorIdentity(),
             ["topic"] = topic,
             ["payload"] = payload,
         };
