@@ -134,11 +134,20 @@ public sealed class DashboardService : BackgroundService
                     var id = ExtractOutputId(node);
                     if (id is not null)
                     {
+                        // Capture the story as it was WHEN THE WARNING WAS STAGED, for audit
+                        // target resolution. The cache replaces nodes (never mutates them in
+                        // place), so holding the reference IS a point-in-time snapshot — no
+                        // clone. Resolving against the live cache at decision time could
+                        // target an asset the warning never fired on (N→1 asset drift).
+                        var warnedStory = ((node["payload"] ?? node) as JsonObject)?["story_id"]
+                            is JsonValue wv && wv.TryGetValue<string>(out var ws) ? ws : null;
+                        var snapshot = warnedStory is not null && _stories.TryGetValue(warnedStory, out var snap) ? snap : null;
                         _pending[id] = new PendingOutput(
                             id,
                             result.Message.Key,
                             node,
-                            DateTimeOffset.UtcNow);
+                            DateTimeOffset.UtcNow,
+                            snapshot);
                     }
                 }
 
@@ -695,7 +704,7 @@ public sealed class DashboardService : BackgroundService
         {
             var envelope = pending.Output as JsonObject;
             var payload = envelope?["payload"] as JsonObject ?? envelope;
-            var (targetKind, targetId, storyFallback) = ResolveAuditTarget(payload);
+            var (targetKind, targetId, storyFallback) = ResolveAuditTarget(payload, pending.StorySnapshot);
             var skillId = payload?["skill_id"] is JsonValue skv && skv.TryGetValue<string>(out var sk) ? sk : "unknown-skill";
             var storyId = payload?["story_id"] is JsonValue sidv && sidv.TryGetValue<string>(out var sid) ? sid : null;
             var now = DateTimeOffset.UtcNow;
@@ -707,10 +716,13 @@ public sealed class DashboardService : BackgroundService
                 ["action"] = action,
                 ["target"] = new JsonObject { ["kind"] = targetKind, ["id"] = targetId },
                 ["actor"] = new JsonObject { ["actor_id"] = reviewer, ["actor_type"] = "user" },
-                ["reason"] = $"Dashboard gate decision '{action}' on staged output '{pending.OutputId}' from skill '{skillId}'"
+                // [story-scoped] is a DETERMINISTIC leading token — consumers match on it,
+                // not on prose (the audit schema is closed, so reason is the only carrier).
+                ["reason"] = (storyFallback ? "[story-scoped] " : "")
+                    + $"Dashboard gate decision '{action}' on staged output '{pending.OutputId}' from skill '{skillId}'"
                     + (storyId is null ? "" : $" (story '{storyId}')")
                     + (storyFallback
-                        ? " — story-scoped: target.id is the STORY key, not an asset id (no STORY target kind in v0.3.1; v0.3.2 candidate)"
+                        ? " — target.id is the STORY key, not an asset id (no STORY target kind in v0.3.1; v0.3.2 candidate)"
                         : ""),
                 ["recorded_at"] = now.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'"),
             };
@@ -754,12 +766,13 @@ public sealed class DashboardService : BackgroundService
     /// Map a staged output onto the locked audit target set (LINK | ASSET | TELLING), most
     /// specific tier first: an explicit link:/asset: scope wins; else any affected_fields
     /// path "assets.{id}.…" names the asset; else a bare "assets"/"assets[]…" field
-    /// resolves through the story cache when the story has exactly ONE asset (multi-asset
-    /// stories stay story-scoped — precise per-asset anchors arrive with the firing-anchor
-    /// upgrade). Story-scoped remainder returns StoryFallback=true: v0.3.1 has no STORY
-    /// target kind (v0.3.2 candidate), so the caller must label the id as a story key.
+    /// resolves through the STAGING-TIME story snapshot when that story had exactly ONE
+    /// asset (point-in-time correct: the live cache can move between staging and decision;
+    /// multi-asset stories stay story-scoped — per-asset anchors arrive with the
+    /// firing-anchor upgrade). Story-scoped remainder returns StoryFallback=true: v0.3.1
+    /// has no STORY target kind (v0.3.2 candidate); the caller labels the id as a story key.
     /// </summary>
-    private (string Kind, string Id, bool StoryFallback) ResolveAuditTarget(JsonObject? payload)
+    private static (string Kind, string Id, bool StoryFallback) ResolveAuditTarget(JsonObject? payload, JsonNode? storySnapshot)
     {
         var scope = payload?["scope"] is JsonValue scv && scv.TryGetValue<string>(out var sc) ? sc : null;
         if (scope is not null && scope.StartsWith("link:", StringComparison.Ordinal))
@@ -780,20 +793,20 @@ public sealed class DashboardService : BackgroundService
                     return ("ASSET", parts[1], false);
                 if (parts[0] is "assets" or "assets[]") sawBareAssets = true;
             }
-            if (sawBareAssets && SingleAssetIdFor(storyId) is { } onlyAsset)
+            if (sawBareAssets && SingleAssetIdFor(storySnapshot) is { } onlyAsset)
                 return ("ASSET", onlyAsset, false);
         }
 
         return ("ASSET", storyId ?? "unknown", true);
     }
 
-    /// <summary>The story's asset_id iff the cached story has exactly one asset — the only
-    /// case where a bare "assets" affected-field pins to an asset without guessing.</summary>
-    private string? SingleAssetIdFor(string? storyId)
+    /// <summary>The story's asset_id iff the staging-time snapshot has exactly one asset —
+    /// the only case where a bare "assets" affected-field pins to an asset without guessing.</summary>
+    private static string? SingleAssetIdFor(JsonNode? story)
     {
-        if (storyId is null || !_stories.TryGetValue(storyId, out var node)) return null;
-        var story = (node as JsonObject)?["payload"] as JsonObject ?? node as JsonObject;
-        if (story?["assets"] is not JsonArray { Count: 1 } assets) return null;
+        if (story is null) return null;
+        var payload = (story as JsonObject)?["payload"] as JsonObject ?? story as JsonObject;
+        if (payload?["assets"] is not JsonArray { Count: 1 } assets) return null;
         return assets[0] is JsonObject a && a["asset_id"] is JsonValue v && v.TryGetValue<string>(out var id) ? id : null;
     }
 
@@ -801,7 +814,8 @@ public sealed class DashboardService : BackgroundService
         string OutputId,
         string? StoryKey,
         JsonNode Output,
-        DateTimeOffset StagedAt);
+        DateTimeOffset StagedAt,
+        JsonNode? StorySnapshot = null);
 
     public sealed record DecisionResult(bool Ok, string Status, string? PublishedTopic);
 }

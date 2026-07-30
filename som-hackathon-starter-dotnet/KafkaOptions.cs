@@ -21,8 +21,9 @@ public sealed class KafkaOptions
 
     // v0.3.1 distribution layer (§3.3) — TAMS junction, produced by MockMamService
     // until a real MAM/TAMS participant joins. Remaining families (som.link.*,
-    // som.telling.*) are WS1 of the Aug hackathon; som.system.audit is produced
-    // by MediaCoordinatorService (WITHHELD non-action reports) ahead of WS1.
+    // som.telling.*) are WS1 of the Aug hackathon; som.system.audit has two live
+    // producers ahead of WS1 — MediaCoordinatorService (WITHHELD non-actions) and
+    // the dashboard gate (CLEARED/WITHHELD decision records).
     public string DeliveryTopic { get; set; } = "som.delivery.media_available";
     public string AuditTopic { get; set; } = "som.system.audit";
 

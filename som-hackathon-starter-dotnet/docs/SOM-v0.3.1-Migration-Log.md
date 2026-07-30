@@ -50,7 +50,7 @@ _Branch `som-v031-ibc-readiness`. Running record of changes. Companion to `SOM-v
 - ⚠️ **`evidential_position` defaulting** — applied `TERTIARY` to all migrated assets as the safe default. Real values (PRIMARY for raw feeds/SOTs, etc.) need an editorial pass; relevant to the Provenance proof.
 
 ### Still pending (waiting on final schema)
-- ⏳ Distribution-layer producers/consumers: `som.link.*`, `som.telling.*`, `som.delivery.media_available`, `som.system.audit` (topics + payloads).
+- ⏳ Distribution-layer producers/consumers: `som.link.*`, `som.telling.*` (WS1, Aug). ✅ `som.delivery.media_available` (mock MAM producer + media coordinator consumer) and `som.system.audit` (coordinator `WITHHELD` non-actions + dashboard gate decisions) are live.
 - ⏳ Asset `media_refs[]` / `authenticity_credential` / `voice_count`, `compliance[].media_range` on the seeds that need them for the demos.
 - ⏳ Firing-rule upgrade to the (evidential_position × outlet/path) anchor in `RuleEngine.cs`.
 - 🟡 **All C# changes need `dotnet build` on the Mac** — no compiler in this environment.
@@ -83,7 +83,7 @@ _Branch `som-v031-ibc-readiness`. Running record of changes. Companion to `SOM-v
 
 - ✅ **`MockMamService.cs`** — no MAM participant in the IBC PoC, so this stands in for the TAMS media store's bus contract: naming authority for `tams://mock-mam-store/<id>` Source URIs + `som.delivery.media_available` producer. Full v0.3.1 envelopes (`originating_system.system_type: "archive"`), Source URI + TAMS timerange per the 29 Jun re-key (no `flow_id`). **Write-only on the bus by design** — no query API, nothing other participants read. Payload + envelope shapes verified against the vendored schemas (offline validation; see `docs/SOM-Hackathon-Aug-2026-Scope.md` WS2a).
 - ✅ **`content/mam-catalog.json`** — 3 catalogued Sources (courthouse pool feed keyed to worked-example `a2`; hurricane landfall feed for D1·B5; UGC clip reserved for the v0.3.2 orphan stretch). WS2 wires these IDs into the seeds' `media_refs[]`.
-- ✅ **`KafkaOptions.DeliveryTopic`** (+ `appsettings.json`) — first distribution-layer topic; `som.link.*` / `som.telling.*` / `som.system.audit` remain WS1.
+- ✅ **`KafkaOptions.DeliveryTopic`** (+ `appsettings.json`) — first distribution-layer topic; `som.link.*` / `som.telling.*` remain WS1 (`som.system.audit` has since landed: coordinator + dashboard producers).
 - ✅ **Simulator** — new `media-available` action + `media-arrival` scenario: publish → three growing-timerange emits (`[0:0_30:0)` → `[0:0_75:0)` → `[0:0_1260:0)`), mimicking a TAMS recording addressable while still growing. `SimAction` gains `SourceId`/`TimeRange`.
 - ✅ **Endpoints** — `GET /api/mam/catalog`, `POST /api/mam/emit/{sourceId}` (optional body `{timeRange, assetId}`).
 - 🟡 **Not yet compiled** — written off-Mac; `dotnet build` + smoke-test is the first hackathon-prep step.
