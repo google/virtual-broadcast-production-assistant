@@ -409,7 +409,8 @@ public sealed class DashboardService : BackgroundService
     /// and broadcasts a dashboard refresh.
     /// </summary>
     private async Task<RerunResult> RepublishAsync(
-        string storyId, Action<JsonNode> mutate, CancellationToken ct, string? causationId = null)
+        string storyId, Action<JsonNode> mutate, CancellationToken ct,
+        string? causationId = null, JsonObject? identity = null)
     {
         if (!_stories.TryGetValue(storyId, out var cached))
             return new RerunResult(false, "story_not_seen", 0);
@@ -434,7 +435,9 @@ public sealed class DashboardService : BackgroundService
         {
             clone["message_id"] = Guid.NewGuid().ToString();
             clone["timestamp"] = DateTimeOffset.UtcNow.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'");
-            clone["originating_system"] = DashboardIdentity();
+            // The envelope records the ACT's actor: a delegating caller (the media
+            // coordinator) passes its own identity so the republish and its audit agree.
+            clone["originating_system"] = identity ?? DashboardIdentity();
             ((JsonObject)clone).Remove("causation_id");
             if (causationId is not null) clone["causation_id"] = causationId;
         }
@@ -500,8 +503,9 @@ public sealed class DashboardService : BackgroundService
     /// coordinator). Same semantics as the lifecycle-simulator endpoints: bump
     /// sequence_number, stamp updated_at, clear stale pending, republish.
     /// </summary>
-    public Task<RerunResult> MutateStoryAsync(string storyId, Action<JsonNode> mutate, CancellationToken ct, string? causationId = null) =>
-        RepublishAsync(storyId, mutate, ct, causationId);
+    public Task<RerunResult> MutateStoryAsync(string storyId, Action<JsonNode> mutate, CancellationToken ct,
+        string? causationId = null, JsonObject? identity = null) =>
+        RepublishAsync(storyId, mutate, ct, causationId, identity);
 
     /// <summary>
     /// Reset the dashboard view: clear the pending queue and tell every connected dashboard
@@ -673,6 +677,10 @@ public sealed class DashboardService : BackgroundService
         var messageType =
             staged?["message_type"] is JsonValue mtv && mtv.TryGetValue<string>(out var mt) ? mt
             : payload["message_type"] is JsonValue pmv && pmv.TryGetValue<string>(out var pmt) ? pmt
+            // No message_type anywhere (legacy bare payload): derive from the id field so a
+            // suggestion/enrichment is not mislabeled as a warning.
+            : payload["suggestion_id"] is not null ? "skill.suggestion.created"
+            : payload["enrichment_id"] is not null ? "story.enrichment"
             : "skill.warning.raised";
         var envelope = new JsonObject
         {
