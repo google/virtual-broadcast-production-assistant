@@ -407,6 +407,40 @@ def test_get_flow_segments_basic(client, mock_db):
     assert len(response.json()) == 2
 
 
+def test_get_flow_segments_reverse_order(client, mock_db):
+    from mediatimestamp.immutable import TimeRange
+    t1 = TimeRange.from_str("100_200")
+    t2 = TimeRange.from_str("300_400")
+    t3 = TimeRange.from_str("500_600")
+
+    mock_db.collection("segments").document("s1").set({
+        "object_id": "obj-1",
+        "flow_id": "flow-1",
+        "timerange": "100_200",
+        "timerange_start": t1.start.to_nanosec(),
+        "timerange_end": t1.end.to_nanosec()
+    })
+    mock_db.collection("segments").document("s2").set({
+        "object_id": "obj-2",
+        "flow_id": "flow-1",
+        "timerange": "300_400",
+        "timerange_start": t2.start.to_nanosec(),
+        "timerange_end": t2.end.to_nanosec()
+    })
+    mock_db.collection("segments").document("s3").set({
+        "object_id": "obj-3",
+        "flow_id": "flow-1",
+        "timerange": "500_600",
+        "timerange_start": t3.start.to_nanosec(),
+        "timerange_end": t3.end.to_nanosec()
+    })
+
+    response = client.get("/flows/flow-1/segments?reverse_order=true")
+    assert response.status_code == 200
+    data = response.json()
+    assert [segment["object_id"] for segment in data] == ["obj-3", "obj-2", "obj-1"]
+
+
 def test_get_flow_segments_filter_and_invalid_timerange(client, mock_db):
     # Seed segments (with standard timestamps, e.g. 100s -> 100_000_000_000 ns)
     from mediatimestamp.immutable import TimeRange
