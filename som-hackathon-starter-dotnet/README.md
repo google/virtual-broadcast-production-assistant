@@ -379,46 +379,53 @@ Due to circular dependencies between Artifact Registry, Cloud Build, and Cloud R
     terraform apply
     ```
 
-### Connecting Remotely via Tailscale (for Developers)
+### Remote Access & Testing Options
 
-To subscribe to Managed Kafka topics or run a local skill worker against the cloud cluster, developers need network-level access to the GCP VPC. We use Tailscale as a subnet router.
+Depending on your laptop environment (personal vs. locked-down corporate device), pick the option that works best for you:
 
-#### 1. Administrator Setup (Once after deployment)
-If you did not provide a `tailscale_auth_key` in `terraform.tfvars`, the subnet router VM was provisioned but not authenticated.
-1. SSH into the router VM using the command from Terraform outputs:
+#### Option A: Corporate Laptop / Zero VPN (Recommended for Restricted Devices)
+
+If third-party VPN apps like Tailscale are blocked on your corporate machine:
+
+1. **Use the Live Cloud Run Gateway**:
+   - The central skill worker and dashboard are hosted at `https://som-skill-worker-582032169035.europe-west1.run.app`.
+   - **Interactive Dashboard**: Open the URL in any web browser to view live story pipelines and approve/reject staged warnings.
+   - **Upload Skills via REST API**:
+     ```bash
+     curl -X POST https://som-skill-worker-582032169035.europe-west1.run.app/api/skills \
+       -H "Content-Type: application/json" \
+       -d @skills/your-skill.json
+     ```
+2. **Develop & Test Locally using Docker**:
+   - Start local KRaft Kafka: `docker compose up -d`
+   - Run the app locally: `dotnet run`
+   - Iteratively build and validate your skill on `localhost:9092` before submitting your skill JSON to the central bus.
+3. **Browser-Based Google Cloud Shell**:
+   - Open [shell.cloud.google.com](https://shell.cloud.google.com) to run `gcloud` and test Kafka topics directly from inside Google Cloud.
+
+---
+
+#### Option B: Tailscale Subnet Router (For Direct Kafka TCP Access)
+
+If you need your local code to connect directly to the Managed Kafka TCP broker (`10.0.0.0/24`):
+
+1. **Install Tailscale**: Download from [tailscale.com/download](https://tailscale.com/download).
+2. **Join with Auth Key (Fastest — No Google Login)**:
    ```bash
-   gcloud compute ssh som-tailscale-router --tunnel-through-iap --project <project_id> --zone <zone>
+   tailscale up --authkey=<OBTAIN_KEY_FROM_ORGANIZER> --accept-routes
    ```
-2. Run `sudo tailscale up --advertise-routes=10.0.0.0/24` and follow the printed URL to authenticate.
-3. In your **Tailscale Admin Console**:
-   - Locate the `som-tailscale-router` device.
-   - Go to **Route settings** (under the meatball menu next to the device).
-   - Enable the advertised route `10.0.0.0/24`.
-   - Optionally disable key expiry on this device so it doesn't disconnect.
+3. **Shared Account Access (Fallback)**:
+   - If your organization requires joining via the shared Tailscale account, request access credentials directly from the hackathon organizers. *(Note: Credentials are never committed to git or GitHub).*
 
-#### 2. Developer Laptop Configuration
-Each developer who needs to connect from their local machine must do the following:
-
-1. **Install Tailscale**: Download and install Tailscale from [tailscale.com](https://tailscale.com).
-2. **Join the Tailnet**: Log in to the same Tailscale network used by the project.
-3. **Accept Subnet Routes**:
-   - **macOS / Windows**: Open Tailscale settings and ensure **Use Subnet Routes** (or "Accept Subnet Routes") is toggled ON.
-   - **Linux**: Run `sudo tailscale up --accept-routes`.
-4. **Authenticate with GCP (ADC)**:
-   Ensure you have the GCP SDK installed, then run:
+4. **Run the Application locally against Managed Kafka**:
    ```bash
-   gcloud auth login
    gcloud auth application-default login
-   ```
-   *Note: Your GCP user account must be granted the `roles/managedkafka.client` role in the GCP project to authenticate with Kafka.*
-5. **Run the Application**:
-   Configure the application to use the GCP Managed Kafka bootstrap server (find the actual URL in your terraform outputs or ask the administrator):
-   ```bash
-   export Kafka__BootstrapServers="bootstrap.som-kafka-cluster.[...].managedkafka.[...].cloud.goog:9092"
+
+   export Kafka__BootstrapServers="bootstrap.som-kafka-cluster.europe-west1.managedkafka.ibc-smart-stories.cloud.goog:9092"
    export Kafka__SecurityProtocol="SaslSsl"
    export Kafka__SaslMechanism="Plain"
-   export Kafka__SaslUsername="YOUR_GCP_EMAIL@example.com" # must match the ADC login identity
-   
+   export Kafka__SaslUsername="your-email@domain.com"
+
    dotnet run
    ```
 
