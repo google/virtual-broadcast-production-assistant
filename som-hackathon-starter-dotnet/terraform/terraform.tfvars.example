@@ -5,3 +5,5 @@ image_url    = "us-central1-docker.pkg.dev/your-project-id/som-repo/som-skill-wo
 repository_name = "som-repo"
 kafka_bootstrap_servers = "host:port"
 cloudbuild_bucket = "som-infra-examples_cloudbuild"
+tailscale_auth_key = "tskey-auth-XXXXX"
+

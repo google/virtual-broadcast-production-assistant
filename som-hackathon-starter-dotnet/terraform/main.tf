@@ -29,6 +29,18 @@ resource "google_project_service" "artifactregistry" {
   disable_on_destroy = false
 }
 
+resource "google_project_service" "dns" {
+  service            = "dns.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "cloudbuild" {
+  service            = "cloudbuild.googleapis.com"
+  disable_on_destroy = false
+}
+
+
+
 
 # Networking
 resource "google_compute_network" "vpc" {
@@ -339,6 +351,18 @@ resource "google_compute_instance" "tailscale_router" {
 }
 
 
+# Cloud DNS Inbound Policy for Split-DNS via Tailscale
+resource "google_dns_policy" "inbound_policy" {
+  name                      = "som-dns-inbound-policy"
+  enable_inbound_forwarding = true
+
+  networks {
+    network_url = google_compute_network.vpc.id
+  }
+
+  depends_on = [google_project_service.dns]
+}
+
 # TODO(security): Implement Identity-Aware Proxy (IAP) to restrict public access once developer identities are collected.
 resource "google_cloud_run_v2_service_iam_member" "public_access" {
   project  = var.project_id
@@ -347,3 +371,28 @@ resource "google_cloud_run_v2_service_iam_member" "public_access" {
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
+
+# Cloud Build Trigger for automatic deployment when changes land in som-hackathon-starter-dotnet
+resource "google_cloudbuild_trigger" "som_worker_trigger" {
+  name        = "som-skill-worker-trigger"
+  location    = var.region
+  description = "Trigger builds and deploys when changes land in som-hackathon-starter-dotnet"
+
+  repository_event_config {
+    repository = "projects/${var.project_id}/locations/${var.region}/connections/github-connection/repositories/google-virtual-broadcast-production-assistant"
+
+    push {
+      branch = "^main$"
+    }
+  }
+
+  included_files  = ["som-hackathon-starter-dotnet/**"]
+  filename        = "som-hackathon-starter-dotnet/cloudbuild.yaml"
+  service_account = google_service_account.cloudbuild_sa.id
+
+  depends_on = [
+    google_project_service.cloudbuild
+  ]
+}
+
+
