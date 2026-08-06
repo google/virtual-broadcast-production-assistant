@@ -20,15 +20,23 @@ the starter with no code:
 
 ## Tier 3 — HyperContent's own agent (method stays in HC infrastructure)
 
-Two capabilities run as HyperContent's own executor against `story.context` and publish
-`skill.suggestion.created` — the skill *declares*; the method runs in HC infrastructure (as AP's
-skills do). The declarations are in [`skills/`](skills/):
+Two capabilities run as HyperContent's own external executor (an `external Kafka consumer/publisher`,
+exactly like AP's wire-fact-check): the executor is never invoked over HTTP — it self-subscribes to
+`som.story.context`, runs the method in HC infrastructure, and publishes `skill.suggestion.created`
+to `som.skills.staging` plus a `skill.run.completed` audit to `som.skills.runs`. The skill JSON is a
+**registration-only** dashboard stub (advert + non-firing sentinel rule) that keeps the capability
+visible and governable and declares the `produces[]` the bus admits. The registration stubs live
+alongside the reference dashboard's skills at
+[`../som-hackathon-starter-dotnet/skills/`](../som-hackathon-starter-dotnet/skills/):
 
-- **`reshape-per-path`** — one story → a *Telling* per outlet/path (article, brief, explainer, …),
-  each a recombination of the story's own facts.
-- **`atomise-and-bond`** — the story's **fact-graph**: atoms (facts + source attribution) linked by
-  `must-travel-with` **bonds**, so a required caveat cannot be dropped from any derived telling
-  (e.g. an unverified casualty figure is bonded to its "not independently verified" caveat).
+- **`hypercontent-reshape-per-path.json`** — one story → a *Telling* per outlet/path (article, brief,
+  explainer, …), each a recombination of the story's own facts.
+- **`hypercontent-atomise-and-bond.json`** — the story's **fact-graph**: atoms (facts + source
+  attribution) linked by `must-travel-with` **bonds**, so a required caveat cannot be dropped from any
+  derived telling (e.g. an unverified casualty figure is bonded to its "not independently verified"
+  caveat).
+
+The human-readable capability notes are in [`skills/`](skills/) (`*.SKILL.md`).
 
 ## What is not here
 

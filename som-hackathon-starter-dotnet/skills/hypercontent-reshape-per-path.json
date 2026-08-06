@@ -1,0 +1,90 @@
+{
+  "id": "hypercontent/reshape-per-path",
+  "version": "0.2.0",
+  "name": "HyperContent Reshape Per Path",
+  "description": "Dashboard registration for HyperContent's reshape-per-path skill. The production skill consumes story.context, and for each planned outlet/path (article, brief, explainer, reel, ...) recombines the story's OWN elements (headline + story_meaning) into a distinct Telling — never inventing facts — then publishes flat skill.suggestion.created outputs to som.skills.staging plus skill.run.completed audit records to som.skills.runs. This JSON keeps the skill visible and governable in the dashboard; real processing runs in HyperContent's own executor (external Kafka consumer/publisher).",
+  "skill_type": "vendor",
+  "disclosure_level": "L1",
+  "migration_policy": "cold",
+  "reads": [
+    "story_id",
+    "headline",
+    "story_meaning",
+    "planning.paths",
+    "content_refs[].uri",
+    "content_refs[].content_format"
+  ],
+  "produces": [
+    "skill.suggestion.created",
+    "skill.run.completed"
+  ],
+  "advert": {
+    "role": "one story -> a Telling per outlet/path, recombined from the story's own facts",
+    "operates_on": ["story.context"],
+    "produces": ["skill.suggestion.created", "skill.run.completed"],
+    "target_system_types": ["content_composition", "automation"],
+    "fires_on": ["headline", "story_meaning", "planning"]
+  },
+  "runtime": {
+    "owner": "HyperContent",
+    "executor_id": "hypercontent-reshape-agent-01",
+    "system_type": "content_composition",
+    "deployment_region": "us-east-1",
+    "deployment_name": "HyperContent SOM reshape agent",
+    "execution_model": "external Kafka consumer/publisher",
+    "dashboard_file_purpose": "registration_only"
+  },
+  "kafka": {
+    "consumes": ["som.story.context"],
+    "publishes": {
+      "approval_staging": "som.skills.staging",
+      "run_audit": "som.skills.runs"
+    },
+    "approval_flow": "DashboardService approves staged suggestions and republishes accepted items to som.skills.events."
+  },
+  "output_contracts": [
+    {
+      "message_type": "skill.suggestion.created",
+      "topic": "som.skills.staging",
+      "shape": "flat_som_v0_2_dashboard_compatible",
+      "id_field": "suggestion_id",
+      "required_top_level_fields": [
+        "som_version", "message_id", "message_type", "timestamp", "source",
+        "suggestion_id", "skill_id", "skill_version", "story_id", "story_version",
+        "scope", "suggestion_type", "confidence", "content_type", "variants",
+        "output", "tools_invoked", "disclosure_levels_used", "context_snapshot"
+      ],
+      "variant_fields": ["variant_id", "content_type", "format", "label", "confidence", "payload", "preview", "title", "detail"],
+      "notes": "One variant per outlet/path; each is a recombination of the story's own facts."
+    },
+    {
+      "message_type": "skill.run.completed",
+      "topic": "som.skills.runs",
+      "shape": "flat_som_v0_2_dashboard_compatible",
+      "id_field": "run_id",
+      "required_top_level_fields": [
+        "som_version", "message_id", "message_type", "timestamp", "source",
+        "run_id", "skill_id", "skill_version", "story_id", "story_version",
+        "triggered_by", "inputs", "outputs", "latency_ms", "outcome"
+      ],
+      "outcome_enum": ["COMPLETED", "FAILED", "SKIPPED", "CONFLICTED"],
+      "outputs_fields": ["warning_ids", "suggestion_ids", "enrichment_ids"]
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "hypercontent-reshape-per-path-registration-only",
+      "name": "Registration sentinel",
+      "description": "Non-firing sentinel rule. Reshape-per-path execution is handled by HyperContent's own external executor, not by this dashboard rule engine.",
+      "type": "field_present",
+      "config": {
+        "field": "extensions.com.hypercontent.registration_only_force_reshape"
+      },
+      "default_severity": "inform",
+      "output_message_type": "skill.warning.raised",
+      "affected_fields": ["headline", "story_meaning", "planning.paths"],
+      "detail_template": "HyperContent Reshape Per Path registration sentinel fired. Real processing should be performed by HyperContent's external skill worker.",
+      "rationale": "This file registers HyperContent's real external skill with the dashboard. The sentinel should not fire on normal SOM stories."
+    }
+  ]
+}

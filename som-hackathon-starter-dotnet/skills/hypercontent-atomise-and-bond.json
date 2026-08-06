@@ -1,0 +1,89 @@
+{
+  "id": "hypercontent/atomise-and-bond",
+  "version": "0.2.0",
+  "name": "HyperContent Atomise and Bond",
+  "description": "Dashboard registration for HyperContent's atomise-and-bond skill. The production skill consumes story.context, breaks the story into atoms (facts + source attribution) and derives must-travel-with bonds between them (e.g. an unverified casualty figure bonded to its 'not independently verified' caveat), then publishes the fact-graph as flat skill.suggestion.created outputs to som.skills.staging plus skill.run.completed audit records to som.skills.runs. A bonded caveat cannot be dropped from any derived telling. This JSON keeps the skill visible and governable in the dashboard; real processing runs in HyperContent's own executor (external Kafka consumer/publisher).",
+  "skill_type": "vendor",
+  "disclosure_level": "L1",
+  "migration_policy": "cold",
+  "reads": [
+    "story_id",
+    "headline",
+    "story_meaning",
+    "story_meaning.provenance_refs",
+    "content_refs[].uri",
+    "content_refs[].content_format"
+  ],
+  "produces": [
+    "skill.suggestion.created",
+    "skill.run.completed"
+  ],
+  "advert": {
+    "role": "the story's fact-graph: atoms + must-travel-with bonds so a required caveat cannot be dropped",
+    "operates_on": ["story.context"],
+    "produces": ["skill.suggestion.created", "skill.run.completed"],
+    "target_system_types": ["content_composition", "automation"],
+    "fires_on": ["headline", "story_meaning"]
+  },
+  "runtime": {
+    "owner": "HyperContent",
+    "executor_id": "hypercontent-atomise-agent-01",
+    "system_type": "content_composition",
+    "deployment_region": "us-east-1",
+    "deployment_name": "HyperContent SOM atomise agent",
+    "execution_model": "external Kafka consumer/publisher",
+    "dashboard_file_purpose": "registration_only"
+  },
+  "kafka": {
+    "consumes": ["som.story.context"],
+    "publishes": {
+      "approval_staging": "som.skills.staging",
+      "run_audit": "som.skills.runs"
+    },
+    "approval_flow": "DashboardService approves staged suggestions and republishes accepted items to som.skills.events."
+  },
+  "output_contracts": [
+    {
+      "message_type": "skill.suggestion.created",
+      "topic": "som.skills.staging",
+      "shape": "flat_som_v0_2_dashboard_compatible",
+      "id_field": "suggestion_id",
+      "required_top_level_fields": [
+        "som_version", "message_id", "message_type", "timestamp", "source",
+        "suggestion_id", "skill_id", "skill_version", "story_id", "story_version",
+        "scope", "suggestion_type", "confidence", "content_type", "output",
+        "tools_invoked", "disclosure_levels_used", "context_snapshot"
+      ],
+      "notes": "output carries atoms[] and bonds[] (bond_type must-travel-with); a derived telling cannot drop a bonded caveat."
+    },
+    {
+      "message_type": "skill.run.completed",
+      "topic": "som.skills.runs",
+      "shape": "flat_som_v0_2_dashboard_compatible",
+      "id_field": "run_id",
+      "required_top_level_fields": [
+        "som_version", "message_id", "message_type", "timestamp", "source",
+        "run_id", "skill_id", "skill_version", "story_id", "story_version",
+        "triggered_by", "inputs", "outputs", "latency_ms", "outcome"
+      ],
+      "outcome_enum": ["COMPLETED", "FAILED", "SKIPPED", "CONFLICTED"],
+      "outputs_fields": ["warning_ids", "suggestion_ids", "enrichment_ids"]
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "hypercontent-atomise-and-bond-registration-only",
+      "name": "Registration sentinel",
+      "description": "Non-firing sentinel rule. Atomise-and-bond execution is handled by HyperContent's own external executor, not by this dashboard rule engine.",
+      "type": "field_present",
+      "config": {
+        "field": "extensions.com.hypercontent.registration_only_force_atomise"
+      },
+      "default_severity": "inform",
+      "output_message_type": "skill.warning.raised",
+      "affected_fields": ["headline", "story_meaning", "story_meaning.provenance_refs"],
+      "detail_template": "HyperContent Atomise and Bond registration sentinel fired. Real processing should be performed by HyperContent's external skill worker.",
+      "rationale": "This file registers HyperContent's real external skill with the dashboard. The sentinel should not fire on normal SOM stories."
+    }
+  ]
+}
