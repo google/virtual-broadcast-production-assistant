@@ -1,0 +1,62 @@
+{
+  "id": "hypercontent/gate-treatment-by-sensitivity",
+  "version": "0.2.0",
+  "name": "Gate Treatment by Sensitivity",
+  "description": "Authored by HyperContent. A safety gate on any reshaping / reach step. When a story's subject is sensitive, some audience editions and some treatments are incompatible and must not be produced — no children's edition of an atrocity, no gamified/'exciting' vertical reel of a mass-casualty event, no upbeat framing of a disaster. The skill declares; the executor holds those tellings for standards review before they are composed and renders the rest in a sober register. Nothing about the story changes — only which tellings are allowed. Backed by HyperContent's shipped sensitivity policy.",
+  "skill_type": "NEWSROOM",
+  "disclosure_level": "L2",
+  "migration_policy": "COLD",
+  "reads": [
+    "headline",
+    "story_meaning.summary",
+    "story_meaning.what",
+    "lifecycle.phase",
+    "compliance",
+    "planning"
+  ],
+  "produces": [
+    "skill.warning.raised",
+    "skill.run.completed"
+  ],
+  "advert": {
+    "role": "audience/treatment safety gate for derived formats",
+    "operates_on": ["story.context"],
+    "produces": ["skill.warning.raised", "skill.run.completed"],
+    "target_system_types": ["content_composition", "automation"],
+    "fires_on": ["headline", "story_meaning", "compliance"]
+  },
+  "rules": [
+    {
+      "rule_id": "hc-sensitivity-conflict",
+      "name": "Sensitive subject — armed conflict / violence / disaster",
+      "description": "Detects a grave subject in the headline that makes a children's edition or a gamified/'exciting' reel treatment incompatible.",
+      "type": "term_match",
+      "config": {
+        "field": "headline",
+        "terms": ["war", "conflict", "airstrike", "air strike", "shelling", "attack", "terror", "shooting", "gunman", "weapon", "explosion", "bomb", "casualties", "killed", "dead", "massacre", "hostage", "assault", "abuse", "hurricane", "landfall", "earthquake", "flood", "wildfire", "disaster", "evacuat", "overdose", "narcotics", "suicide", "self-harm"],
+        "case_sensitive": false
+      },
+      "default_severity": "hold",
+      "output_message_type": "skill.warning.raised",
+      "affected_fields": ["planning.audiences", "planning.paths"],
+      "detail_template": "Sensitive subject ('{term}') in the headline. A children's edition or a gamified/'exciting' vertical reel of this story must NOT be produced; hold those tellings for standards review and compose the rest in a sober register.",
+      "rationale": "HyperContent's sensitivity policy gates on the audience × treatment, not the subject: the story is fully reportable for a general audience, but specific incompatible tellings (children's edition, gamified reel, upbeat framing) are held. Deterministic over the declared/observed subject."
+    },
+    {
+      "rule_id": "hc-sensitivity-summary",
+      "name": "Sensitive subject — in the story meaning",
+      "description": "Second pass over the human-written story_meaning summary, which often carries the grave detail (distressing imagery, rescue, victims) even when the headline is neutral.",
+      "type": "term_match",
+      "config": {
+        "field": "story_meaning.summary",
+        "terms": ["distressing", "graphic", "casualties", "victims", "fatalities", "rescue", "bodies", "wounded", "atrocity", "abuse", "self-harm", "suicide", "overdose", "children killed", "minors"],
+        "case_sensitive": false
+      },
+      "default_severity": "hold",
+      "output_message_type": "skill.warning.raised",
+      "affected_fields": ["planning.audiences", "planning.paths"],
+      "detail_template": "Story meaning notes sensitive content ('{term}'). Hold any children's-audience or gamified/reel telling for standards review; the general-audience telling proceeds in a sober register.",
+      "rationale": "The subject often lives in the editor-written story_meaning rather than the headline. Same gate: block the incompatible audience × treatment, never the story."
+    }
+  ]
+}
