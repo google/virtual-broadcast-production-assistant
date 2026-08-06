@@ -1,0 +1,57 @@
+{
+  "id": "hypercontent/flag-on-omission",
+  "version": "0.2.0",
+  "name": "Flag on Omission",
+  "description": "Authored by HyperContent. A reshaped format is a smaller surface than the original, so the risk is that a required element is lost in the reshaping — a figure without its caveat, a claim without its attribution. This skill flags stories carrying an unqualified figure or a claim with no provenance, so the executor keeps the required companion travelling with the element in every derived telling. Flag, never rewrite: a human makes the call.",
+  "skill_type": "NEWSROOM",
+  "disclosure_level": "L2",
+  "migration_policy": "COLD",
+  "reads": [
+    "story_meaning.summary",
+    "story_meaning.provenance_refs",
+    "compliance"
+  ],
+  "produces": [
+    "skill.warning.raised",
+    "skill.run.completed"
+  ],
+  "advert": {
+    "role": "required-element coverage guard for derived formats",
+    "operates_on": ["story.context"],
+    "produces": ["skill.warning.raised", "skill.run.completed"],
+    "target_system_types": ["content_composition", "automation"],
+    "fires_on": ["story_meaning"]
+  },
+  "rules": [
+    {
+      "rule_id": "hc-omission-unqualified-figure",
+      "name": "Figure present — required caveat must travel with it",
+      "description": "A hard number in the story meaning (casualty count, category, magnitude) must keep its verification caveat and attribution in every reshaped telling.",
+      "type": "field_regex",
+      "config": {
+        "field": "story_meaning.summary",
+        "pattern": "(Category\\s*\\d+|Magnitude\\s*\\d|\\b\\d[\\d,]*\\s*(dead|killed|injured|wounded|missing|fatalities|casualties|people|homes)\\b)",
+        "case_sensitive": false
+      },
+      "default_severity": "flag",
+      "output_message_type": "skill.warning.raised",
+      "affected_fields": ["story_meaning.summary"],
+      "detail_template": "The story carries a figure ('{match}'). Ensure its verification caveat and attribution travel with it in every derived telling — a feed card or a reel must not show the number alone.",
+      "rationale": "In a shorter format the caveat is the first thing dropped. This flags the figure so the required companion is preserved through reshaping. Flag, not hold — the editor decides."
+    },
+    {
+      "rule_id": "hc-omission-no-provenance",
+      "name": "Claim with no provenance",
+      "description": "A story whose meaning carries no provenance references cannot have its sourcing preserved through reshaping; flag it before any derived telling is built.",
+      "type": "field_absent",
+      "config": {
+        "field": "story_meaning.provenance_refs"
+      },
+      "default_severity": "flag",
+      "output_message_type": "skill.warning.raised",
+      "affected_fields": ["story_meaning.provenance_refs"],
+      "detail_template": "No provenance references on the story meaning. A derived telling cannot preserve sourcing that isn't there — attach provenance before reshaping.",
+      "rationale": "Omission guard: what a telling must not drop. Fires only when provenance is genuinely absent, so a well-sourced story stays silent."
+    }
+  ]
+}
