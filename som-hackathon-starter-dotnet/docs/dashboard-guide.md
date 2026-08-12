@@ -35,7 +35,7 @@ These are separate surfaces — knowing which is which is most of the learning c
 | Lane | Fed by | Card shows |
 |---|---|---|
 | **Stories on Bus** | `som.story.context` | Latest version of each story: phase, priority, warnings count, phase timeline. Click → lifecycle panel. |
-| **Skill Runs** | `som.skills.runs` | One card per skill execution: outcome (COMPLETED/SKIPPED), latency, output counts (w/s/e). Click → full run record. |
+| **Skill Runs** | `som.skills.runs` | One card per skill execution: outcome (COMPLETED / SKIPPED / FAILED — FAILED means the skill threw and needs human review), latency, output counts (w/s/e). Click → full run record. |
 | **Pending Approval** | `som.skills.staging` | Staged skill outputs awaiting your call: rule, severity, story, detail, **Approve** / **Reject**. |
 | **Decisions** | your clicks | Approvals republish to `som.skills.events`; rejections to `som.skills.rejected` — both with reviewer + timestamp stamped on the envelope. |
 

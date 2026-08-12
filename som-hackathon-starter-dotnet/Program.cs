@@ -319,8 +319,12 @@ app.MapPost("/api/publish/{scenario}", async (string scenario, IOptions<KafkaOpt
         return Results.NotFound(new { error = $"unknown scenario '{scenario}'", valid_scenarios = TestProducer.Scenarios });
     try
     {
-        await TestProducer.RunAsync(kafka.Value, scenario);
-        return Results.Ok(new { published = scenario });
+        var count = await TestProducer.RunAsync(kafka.Value, scenario);
+        // A known scenario that published nothing means its seed file was missing or
+        // unparseable — surface it as a 500 instead of a misleading {"published": ...}.
+        return count > 0
+            ? Results.Ok(new { published = scenario })
+            : Results.Problem($"scenario '{scenario}' is known but nothing was published — seed file missing or unreadable");
     }
     catch (Exception ex)
     {

@@ -141,6 +141,7 @@ button { font: inherit; cursor: pointer; }
 .tag.hold { background: #3a1818; color: #fca5a5; }
 .tag.completed { background: #12302a; color: #6ee7b7; }
 .tag.skipped { background: #1a2236; color: var(--text-muted); }
+.tag.failed { background: #3a1818; color: #fca5a5; }
 .tag.approved { background: #12302a; color: #6ee7b7; }
 .tag.rejected { background: #3a1818; color: #fca5a5; }
 .tag.warning { background: #28291a; color: #e8d580; }
@@ -158,6 +159,7 @@ button { font: inherit; cursor: pointer; }
 [data-theme="light"] .tag.hold { background: #fee2e2; color: #991b1b; }
 [data-theme="light"] .tag.completed { background: #d1fae5; color: #065f46; }
 [data-theme="light"] .tag.skipped { background: #e5e7eb; color: #374151; }
+[data-theme="light"] .tag.failed { background: #fee2e2; color: #991b1b; }
 [data-theme="light"] .tag.approved { background: #d1fae5; color: #065f46; }
 [data-theme="light"] .tag.rejected { background: #fee2e2; color: #991b1b; }
 [data-theme="light"] .tag.warning { background: #fef3c7; color: #92400e; }
@@ -1198,6 +1200,10 @@ function eventSummary(e) {
   return `<code>${escapeHtml(topic)}</code>`;
 }
 
+// Backing buffer for the story-panel timeline: openSpEvent indexes into this instead
+// of the payload being serialized into an onclick attribute. Declared before its
+// writer (renderStoryPanel) and reader (openSpEvent).
+let _spTimelineEvents = [];
 function renderStoryPanel() {
   if (!_openStoryId) return;
   const storyId = _openStoryId;
@@ -1264,7 +1270,6 @@ function renderStoryPanel() {
 }
 
 // Open the modal for a story-panel timeline event by index into the last render.
-let _spTimelineEvents = [];
 function openSpEvent(i) {
   const e = _spTimelineEvents[i];
   if (!e) return;
@@ -1323,8 +1328,8 @@ async function rerunSkill(storyId) {
 async function publish(scenario) {
   try {
     const res = await fetch(`/api/publish/${encodeURIComponent(scenario)}`, { method: 'POST' });
-    if (!res.ok) console.error('publish failed', await res.text());
-  } catch (err) { console.error(err); }
+    if (!res.ok) { const t = await res.text(); console.error('publish failed', t); showToast(`Publish failed: ${t}`, 'danger'); }
+  } catch (err) { console.error(err); showToast('Publish failed: ' + err.message, 'danger'); }
 }
 
 async function decide(id, decision) {
@@ -1334,8 +1339,8 @@ async function decide(id, decision) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ decision, reviewer: 'dashboard-user' }),
     });
-    if (!res.ok) console.error('decision failed', await res.text());
-  } catch (err) { console.error(err); }
+    if (!res.ok) { const t = await res.text(); console.error('decision failed', t); showToast(`Decision failed: ${t}`, 'danger'); }
+  } catch (err) { console.error(err); showToast('Decision failed: ' + err.message, 'danger'); }
 }
 
 function clearTimeline() {
@@ -1675,7 +1680,7 @@ function openHelp(tab) {
 async function renderHelp() {
   const body = document.getElementById('modal-body');
   const tabBtn = (id, label) => `
-    <button onclick="openHelp('${id}')" style="padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;border:1px solid ${helpTab === id ? 'var(--border)' : 'transparent'};border-bottom:none;background:${helpTab === id ? 'var(--bg-surface2)' : 'transparent'};color:${helpTab === id ? 'var(--text)' : 'var(--text-muted)'};">${label}</button>`;
+    <button onclick="openHelp(${jsArg(id)})" style="padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;border:1px solid ${helpTab === id ? 'var(--border)' : 'transparent'};border-bottom:none;background:${helpTab === id ? 'var(--bg-surface2)' : 'transparent'};color:${helpTab === id ? 'var(--text)' : 'var(--text-muted)'};">${label}</button>`;
   const bar = `<div style="display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:12px;">${tabBtn('quick', 'Quick reference')}${tabBtn('guide', 'User guide')}</div>`;
 
   if (helpTab === 'guide') {
@@ -1874,7 +1879,7 @@ async function renderSimulator() {
     </div>`).join('');
 
   const tabBtn = (id, label, live) => `
-    <button onclick="setSimTab('${id}')" style="padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;border:1px solid ${simTab === id ? 'var(--border)' : 'transparent'};border-bottom:none;background:${simTab === id ? 'var(--bg-surface2)' : 'transparent'};color:${simTab === id ? 'var(--text)' : 'var(--text-muted)'};">
+    <button onclick="setSimTab(${jsArg(id)})" style="padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;border:1px solid ${simTab === id ? 'var(--border)' : 'transparent'};border-bottom:none;background:${simTab === id ? 'var(--bg-surface2)' : 'transparent'};color:${simTab === id ? 'var(--text)' : 'var(--text-muted)'};">
       ${label}${live ? ' <span style="color:#6ee7b7;">●</span>' : ''}
     </button>`;
 
@@ -2014,6 +2019,7 @@ function computeStatsForSkill(skillId) {
   const total = filteredRuns.length;
   const completed = filteredRuns.filter(r => r.outcome === 'COMPLETED').length;
   const skipped = filteredRuns.filter(r => r.outcome === 'SKIPPED').length;
+  const failed = filteredRuns.filter(r => r.outcome === 'FAILED').length;
   const avgLatency = total === 0 ? 0
     : Math.round(filteredRuns.reduce((s, r) => s + (r.latency_ms || 0), 0) / total);
   const totalWarnings = filteredRuns.reduce((s, r) => s + (r.outputs?.warning_ids?.length || 0), 0);
@@ -2027,7 +2033,7 @@ function computeStatsForSkill(skillId) {
     : pending.size;
   const decided = approved + rejected;
   const approvalRate = decided === 0 ? null : Math.round((approved / decided) * 100);
-  return { total, completed, skipped, avgLatency, totalWarnings,
+  return { total, completed, skipped, failed, avgLatency, totalWarnings,
            approved, rejected, pendingNow, approvalRate };
 }
 
@@ -2152,7 +2158,7 @@ function renderSkillDetail(skill) {
       <div>
         <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Live runtime stats — ${escapeHtml(skill.id)} (this session)</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;">
-          ${statBox('Runs', stats.total, `${stats.completed} done · ${stats.skipped} skipped`)}
+          ${statBox('Runs', stats.total, `${stats.completed} done · ${stats.skipped} skipped${stats.failed ? ` · ${stats.failed} failed` : ''}`)}
           ${statBox('Avg latency', stats.avgLatency + ' ms', '')}
           ${statBox('Warnings', stats.totalWarnings, '')}
           ${statBox('Pending', stats.pendingNow, 'awaiting decision')}

@@ -70,16 +70,19 @@ public static class TestProducer
     /// CLI entry point. Builds a minimal IConfiguration since no host exists when invoked
     /// with `dotnet run -- --test-producer`.
     /// </summary>
-    public static Task RunAsync(string? scenario = null)
+    public static Task<int> RunAsync(string? scenario = null)
         => RunAsync(LoadOptionsFromConfiguration(), scenario);
 
     /// <summary>
     /// In-process entry point. Caller supplies the same KafkaOptions used by SkillWorker
     /// and DashboardService so a single config source drives every Kafka client.
     /// </summary>
-    public static async Task RunAsync(KafkaOptions options, string? scenario = null)
+    /// <summary>Publishes the requested scenario(s); returns the count actually published so
+    /// a caller can tell a valid-name-but-missing-seed miss from a real publish.</summary>
+    public static async Task<int> RunAsync(KafkaOptions options, string? scenario = null)
     {
         var topic = options.StoryContextTopic;
+        var published = 0;
 
         var config = new ProducerConfig
         {
@@ -158,8 +161,10 @@ public static class TestProducer
 
             Console.WriteLine($"  → Partition {result.Partition.Value}, Offset {result.Offset.Value}");
             Console.WriteLine();
+            published++;
         }
 
         Console.WriteLine("Done. Your skill worker should pick these up.");
+        return published;
     }
 }
