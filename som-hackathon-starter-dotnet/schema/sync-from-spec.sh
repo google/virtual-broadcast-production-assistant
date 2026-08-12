@@ -11,12 +11,18 @@ DST="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [ -d "$SRC" ] || { echo "Spec schema folder not found: $SRC"; echo "Set SOM_SPEC_DIR to your SOM spec folder."; exit 1; }
 
 echo "Vendoring from: $SRC"
-mkdir -p "$DST/examples" "$DST/v0.3.1-proposed/examples"
+mkdir -p "$DST/examples" "$DST/v0.3.1-proposed/examples" "$DST/v0.3.2-proposed/examples"
 cp "$SRC"/som-v0.3-*.schema.json            "$DST"/
 cp "$SRC"/examples/*.json                    "$DST/examples/"            2>/dev/null || true
 cp "$SRC"/v0.3.1-proposed/*.json             "$DST/v0.3.1-proposed/"     2>/dev/null || true
 cp "$SRC"/v0.3.1-proposed/examples/*.json    "$DST/v0.3.1-proposed/examples/" 2>/dev/null || true
 cp "$SRC"/v0.3.1-proposed/README.md          "$DST/v0.3.1-proposed/"     2>/dev/null || true
+# v0.3.2 — the IBC pack (only story-context/telling/delivery change; link/audit stay v0.3.1,
+# envelope/skill-warning stay flat v0.3). Scaffold's validate.py/generator are NOT vendored —
+# this repo's schema/validate.py covers the whole pack.
+cp "$SRC"/v0.3.2-proposed/som-v0.3.2-*.schema.json "$DST/v0.3.2-proposed/" 2>/dev/null || true
+cp "$SRC"/v0.3.2-proposed/examples/*.json    "$DST/v0.3.2-proposed/examples/" 2>/dev/null || true
+cp "$SRC"/v0.3.2-proposed/README.md          "$DST/v0.3.2-proposed/"     2>/dev/null || true
 
 echo "Vendored. Now validate:"
 echo "  python3 schema/validate.py"

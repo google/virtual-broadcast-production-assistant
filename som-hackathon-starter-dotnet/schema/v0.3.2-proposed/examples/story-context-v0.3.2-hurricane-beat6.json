@@ -1,0 +1,158 @@
+{
+  "story_id": "hurricane-2026-0911",
+  "slug": "HURRICANE-LANDFALL",
+  "headline": "Hurricane makes Cat 4 landfall; 40,000 outages confirmed",
+  "story_type": "ACTIVE",
+  "lifecycle": {
+    "phase": "BREAKING",
+    "phase_entered_at": "2026-09-11T14:00:00Z"
+  },
+  "sequence_number": 7,
+  "updated_at": "2026-09-11T16:41:00Z",
+  "newsroom_id": "nbcu-nyc",
+  "priority": {
+    "level": "URGENT",
+    "reason": "landfall; outage figure confirmed"
+  },
+  "editorial_source": [
+    {
+      "source_id": "src-fema-presser",
+      "source_type": "OFFICIAL",
+      "provider": "FEMA",
+      "credibility": "TRUSTED",
+      "received_at": "2026-09-11T16:20:00Z"
+    }
+  ],
+  "assets": [
+    {
+      "asset_id": "asset-presser-feed",
+      "asset_type": "VIDEO",
+      "status": "READY",
+      "evidential_position": "PRIMARY",
+      "acquisition_state": "CAPTURED",
+      "media_refs": [
+        {
+          "source": "tams://tams-gcp-store/9f2e7c1a",
+          "label": "FEMA presser feed",
+          "time_range": "[0:0_1260:0)"
+        }
+      ]
+    },
+    {
+      "asset_id": "asset-presser-transcript",
+      "asset_type": "TRANSCRIPT",
+      "status": "READY",
+      "derived_from": ["asset-presser-feed"],
+      "provenance": {
+        "author": "MODEL",
+        "model": "asr-extract",
+        "model_version": "2.1",
+        "confidence": 0.97,
+        "generated_at": "2026-09-11T16:25:00Z",
+        "review": {
+          "state": "CONFIRMED",
+          "reviewer": "std-desk-jsmith",
+          "reviewed_at": "2026-09-11T16:35:00Z"
+        }
+      }
+    },
+    {
+      "asset_id": "asset-outage-lower-third",
+      "asset_type": "LOWER_THIRD",
+      "status": "READY",
+      "evidential_position": "TERTIARY",
+      "standards_clearance": {
+        "status": "CLEARED",
+        "blocked_by": [],
+        "last_reviewed": "2026-09-11T16:40:00Z"
+      },
+      "usage": [
+        {
+          "link_id": "link-hurricane-broadcast",
+          "destination_id": "dest-one-bulletin",
+          "state": "committed"
+        }
+      ]
+    }
+  ],
+  "assertions": [
+    {
+      "assertion_id": "assn-outage-01",
+      "assertion_type": "FACT_CHECK",
+      "target": {
+        "kind": "STORY",
+        "id": "hurricane-2026-0911"
+      },
+      "claim": {
+        "metric": "residences_without_power",
+        "value": 40000
+      },
+      "attributed_to": "FEMA Director",
+      "asserted_at": "2026-09-11T16:22:00Z",
+      "confidence": 0.95,
+      "originated_from": "asset-presser-transcript",
+      "review": {
+        "state": "CONFIRMED",
+        "reviewer": "std-desk-jsmith",
+        "reviewed_at": "2026-09-11T16:40:00Z"
+      },
+      "provenance": {
+        "author": "MODEL",
+        "model": "asr-extract",
+        "model_version": "2.1"
+      }
+    }
+  ],
+  "compliance": [
+    {
+      "flag_id": "flag-outage-unconfirmed",
+      "type": "EDITORIAL_REVIEW",
+      "severity": "HIGH",
+      "detail": "Outage figure unconfirmed pending authority statement",
+      "raised_by": "standards",
+      "raised_at": "2026-09-11T15:00:00Z",
+      "status": "RESOLVED"
+    },
+    {
+      "flag_id": "flag-casualty-unconfirmed",
+      "type": "EDITORIAL_REVIEW",
+      "severity": "CRITICAL",
+      "detail": "Casualty figure unconfirmed",
+      "raised_by": "standards",
+      "raised_at": "2026-09-11T15:10:00Z",
+      "status": "ACTIVE"
+    }
+  ],
+  "editorial_gates": [
+    {
+      "gate_id": "gate-outage-broadcast",
+      "gate_type": "STANDARDS_APPROVAL",
+      "status": "APPROVED",
+      "blocks": [
+        {
+          "kind": "ASSET",
+          "ref": "asset-outage-lower-third"
+        }
+      ]
+    }
+  ],
+  "story_meaning": {
+    "who": "Gulf Coast residents, NHC, FEMA",
+    "what": "Hurricane Cat 4 landfall; 40,000 outages confirmed",
+    "when": "2026-09-11",
+    "where": "Gulf Coast",
+    "summary": "Cat 4 landfall on the Gulf Coast; FEMA confirms 40,000 residences without power."
+  },
+  "content_refs": [
+    {
+      "uri": "https://wire.ap.org/stories/hurricane-xyz.json",
+      "content_format": "ap-som-body-json-v1",
+      "source_id": "src-fema-presser"
+    }
+  ],
+  "extensions": {
+    "com.nbcu.hurricane.": {
+      "outages_confirmed": 40000
+    }
+  }
+}

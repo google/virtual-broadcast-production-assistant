@@ -27,15 +27,20 @@ def load(p): return json.load(open(p))
 ENV   = load(os.path.join(SCH, "som-v0.3-envelope.schema.json"))
 STORY = load(os.path.join(SCH, "som-v0.3-story-context.schema.json"))
 WARN  = load(os.path.join(SCH, "som-v0.3-skill-warning.schema.json"))
-# v0.3.1-proposed (PENDING the 30 June lock — used for distribution + the story-context point update)
-P = os.path.join(SCH, "v0.3.1-proposed")
+# The v0.3.2 pack (invariant #8): only story-context/telling/delivery changed in v0.3.2;
+# link-event + system-audit stay authoritative at v0.3.1; envelope + skill-warning stay flat v0.3.
+P   = os.path.join(SCH, "v0.3.1-proposed")
+P32 = os.path.join(SCH, "v0.3.2-proposed")
 STORY31 = load(os.path.join(P, "som-v0.3.1-story-context.schema.json"))
+STORY32 = load(os.path.join(P32, "som-v0.3.2-story-context.schema.json"))
 LINK    = load(os.path.join(P, "som-v0.3.1-link-event.schema.json"))
-TELL    = load(os.path.join(P, "som-v0.3.1-telling-event.schema.json"))
-DELIV   = load(os.path.join(P, "som-v0.3.1-delivery-media-available.schema.json"))
+TELL    = load(os.path.join(P32, "som-v0.3.2-telling-event.schema.json"))
+DELIV   = load(os.path.join(P32, "som-v0.3.2-delivery-media-available.schema.json"))
 AUDIT   = load(os.path.join(P, "som-v0.3.1-system-audit.schema.json"))
 
-# Payload schema by message_type. Seeds are v0.3.1-shaped → use the point-update story-context.
+# Payload schema by message_type. story.context flips to STORY32 with the seed migration
+# (ai_enrichments is hard-rejected in v0.3.2 — seeds must migrate in the same change).
+# Telling/delivery are additive in v0.3.2, so v0.3.1 fixtures still validate.
 BY_TYPE = {
     "story.context": STORY31,
     "skill.warning.raised": WARN,
@@ -60,7 +65,9 @@ def payload_schema(d, path, released_story):
     if "link" in name:                                          return LINK
     if "telling" in name:                                       return TELL
     if "delivery" in name:                                      return DELIV
-    if "story" in name or ("story_id" in d and "slug" in d):    return STORY if released_story else STORY31
+    if "story" in name or ("story_id" in d and "slug" in d):
+        if "v0.3.2" in name:                                    return STORY32
+        return STORY if released_story else STORY31
     return None
 
 def check_message(path, *, released_story=False, enforce_pack=False):
@@ -82,6 +89,7 @@ def main():
         (glob.glob(os.path.join(ROOT, "seed-stories", "*.json")), {"enforce_pack": True}, 5, "seed-stories"),
         (glob.glob(os.path.join(SCH, "examples", "*.json")), {"released_story": True}, 1, "schema/examples"),
         (glob.glob(os.path.join(P, "examples", "*.json")), {}, 5, "v0.3.1-proposed/examples"),
+        (glob.glob(os.path.join(P32, "examples", "*.json")), {}, 4, "v0.3.2-proposed/examples"),
         (glob.glob(os.path.join(ROOT, "mos-bridge", "samples", "*.expected.json")), {"enforce_pack": True}, 1, "mos-bridge fixtures"),
     ]
     targets = []

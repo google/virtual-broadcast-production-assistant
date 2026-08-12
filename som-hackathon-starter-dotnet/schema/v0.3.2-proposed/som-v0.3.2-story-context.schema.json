@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://som.spec/schema/v0.3.1-proposed/story-context",
-  "title": "SOM v0.3.1 PROPOSED \u2014 story.context payload (point update)",
-  "description": "Payload schema per v0.3 Technical \u00a74.2\u2013\u00a74.8. TARGET shape \u2014 legacy v0.2-shaped payloads will NOT validate (by design; see SOM-048 migration \u2014 the 0.2.0 wire-version freeze was retired 12 Aug 2026, som_version now carries the pack version). instances[] and broadcaster_id are hard-rejected. verification_status/provider_type intentionally absent pending the 10 Jun WG fork decision (\u00a74.3). v0.3.1 additions: asset.media_refs[] (the media_source leg, TAMS Source-URI references + time ranges \u2014 Source re-key 29 Jun, lazy-consensus to 1 Jul), asset.voice_count (#22 publisher-asserted marking), compliance[].media_range (Source+time restricted-stretch flag). verification_status/provider_type remain absent \u2014 proposal \u00a71 resolves the fork by dropping both. ERRATA 15 Jul 2026: asset_type gains TRANSCRIPT (locked 29 Jun, omitted from the 30 Jun re-cut).",
+  "$id": "https://som.spec/schema/v0.3.2-proposed/story-context",
+  "title": "SOM v0.3.2 PROPOSED \u2014 story.context payload (point update)",
+  "description": "Point update of the locked v0.3.1 story-context schema (30 Jun lock + Source re-key), generated from it programmatically. v0.3.2 window, freeze ~1 Aug 2026. Changes: (1) asset_type gains TRANSCRIPT (locked v0.3.1 29 Jun \u2014 carried here because the 30 Jun re-cut omitted it) plus the promoted generative outputs SUMMARY/SOCIAL_POST/ARTICLE/ANALYSIS (AI-outputs refactor, principle ratified 29 Jun; registry direction \u2014 governed-but-extensible); (2) asset.provenance \u2014 authorship-general provenance object (author HUMAN/MODEL, never AI-keyed); (3) assertions[] \u2014 claims-about-content (FACT_CHECK/DETECTION/MATCH) with target reusing the audit target set and a structured review state; ai_enrichments[] is hard-rejected (narrowed to assertions[]; generative outputs are Assets \u2014 SOM-048 migration is breaking, needs the disambiguation rule); (4) story_type gains ORPHAN (PROPOSED, Morag 5 Jul asks / John 9 Jul reply \u2014 minimal shell story holding an unmatched UGC clip; trivially filterable via the story_type predicate; pending WG acceptance); (5) editorial_gate.blocks[] contract restored ({kind ASSET|PHASE, ref}; bare string DEPRECATED \u2014 element-level-hold reply 1 Jul). som_version carries the pack version (0.3.2) \u2014 the SOM-048 0.2.0 wire freeze was retired 12 Aug 2026.",
   "type": "object",
   "required": [
     "story_id",
@@ -29,8 +29,10 @@
         "ACTIVE",
         "KILLED",
         "SPIKED",
-        "ARCHIVED"
-      ]
+        "ARCHIVED",
+        "ORPHAN"
+      ],
+      "description": "ORPHAN is PROPOSED (v0.3.2): a minimal shell story minted to hold a clip that arrived with no story (UGC / found media) until a proposed match is confirmed. On confirm the clip MOVES to the real story (same asset_id, original timestamps; asset-targeted som.system.audit records the association change) and the shell ALWAYS retires to ARCHIVED (Morag, accepted 13 Jul) \u2014 the reason it closed (resolved onto a story, or rejected/discarded) lives in the audit trail, so the terminal story_type carries no distinction; never deleted. Consumers exclude orphans with the same single story_type predicate used for KILLED/SPIKED."
     },
     "lifecycle": {
       "$ref": "#/$defs/lifecycle"
@@ -221,12 +223,7 @@
         "$ref": "#/$defs/asset"
       }
     },
-    "ai_enrichments": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/ai_enrichment"
-      }
-    },
+    "ai_enrichments": false,
     "skills_config": {
       "$ref": "#/$defs/skills_config"
     },
@@ -267,7 +264,13 @@
     "instances": false,
     "broadcaster_id": false,
     "sources": false,
-    "content_ref": false
+    "content_ref": false,
+    "assertions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/assertion"
+      }
+    }
   },
   "additionalProperties": false,
   "allOf": [
@@ -500,8 +503,34 @@
         },
         "blocks": {
           "type": "array",
+          "description": "Contract restored (v0.3.2; was a bare string array \u2014 dropped wording). Names the things this gate holds: {kind ASSET, ref asset_id} or {kind PHASE, ref lifecycle-phase token}, reusing the UPPER target-kind vocabulary. Bare strings DEPRECATED (accepted for migration only).",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "ref"
+                ],
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "ASSET",
+                      "PHASE"
+                    ]
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "string",
+                "description": "DEPRECATED \u2014 migrate to {kind, ref}"
+              }
+            ]
           }
         }
       },
@@ -594,6 +623,10 @@
                 "MAP",
                 "SOCIAL_CARD",
                 "TRANSCRIPT",
+                "SUMMARY",
+                "SOCIAL_POST",
+                "ARTICLE",
+                "ANALYSIS",
                 "CUSTOM"
               ]
             },
@@ -602,7 +635,7 @@
               "pattern": "^x-[a-z0-9_]+$"
             }
           ],
-          "description": "ERRATA 15 Jul 2026: TRANSCRIPT added \u2014 locked at v0.3.1 (29 Jun AI-outputs decision, glossary v0.345 CONFIRMED) but omitted from the 30 Jun re-cut. Caught by Janet Gardner. No other change."
+          "description": "TRANSCRIPT locked at v0.3.1 (29 Jun; the 30 Jun re-cut omitted it \u2014 carried here). SUMMARY/SOCIAL_POST/ARTICLE/ANALYSIS promoted from enrichment_type at v0.3.2 (AI-outputs refactor; the Telling test: publishes \u2192 needs a Telling \u2192 is an Asset). PROMPTER duplication resolved \u2014 it now lives here only. Direction: governed-but-extensible registry (same model as Platform / framing_treatment); vendor values keep the x- prefix."
         },
         "status": {
           "type": "string",
@@ -610,9 +643,10 @@
             "READY",
             "IN_PRODUCTION",
             "PREPARED",
-            "INVALIDATED"
+            "INVALIDATED",
+            "FINALIZING"
           ],
-          "description": "Editorial-state only (decision #16). LIVE/AIRED are DERIVED from the Telling, never stored here"
+          "description": "Editorial-state only (decision #16). LIVE/AIRED are DERIVED from the Telling, never stored here FINALIZING is PROPOSED (v0.3.2, Morag naming 13 Jul / consortium deck 15 Jul): a derived output that is complete but still finishing \u2014 e.g. a transcription still growing after the parent media is CAPTURED. Describes the state (processing remains), not the cause; distinct from acquisition_state, which is primary-assets-only."
         },
         "evidential_position": {
           "type": "string",
@@ -799,71 +833,9 @@
         "framing_treatment": {
           "type": "string",
           "description": "v0.3.2 (field) / v0.4 (registry): flat governed per-newsroom registry key (UPPER_SNAKE canonical, x-<lowercase> vendor). SECONDARY/TERTIARY assets; single value for v0.3.2."
-        }
-      },
-      "additionalProperties": false
-    },
-    "ai_enrichment": {
-      "type": "object",
-      "required": [
-        "enrichment_id",
-        "model",
-        "enrichment_type",
-        "content",
-        "generated_at"
-      ],
-      "properties": {
-        "enrichment_id": {
-          "type": "string"
-        },
-        "model": {
-          "type": "string"
-        },
-        "enrichment_type": {
-          "type": "string",
-          "enum": [
-            "SUMMARY",
-            "SOCIAL_POST",
-            "ANALYSIS",
-            "ARTICLE",
-            "PROMPTER"
-          ]
-        },
-        "confidence": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
-        },
-        "content": {
-          "type": "string"
         },
         "provenance": {
-          "type": "object",
-          "properties": {
-            "input_sources": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "prompt_hash": {
-              "type": "string"
-            },
-            "guardrails_applied": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "additionalProperties": false
-        },
-        "human_reviewed": {
-          "type": "boolean"
-        },
-        "generated_at": {
-          "type": "string",
-          "format": "date-time"
+          "$ref": "#/$defs/authorship_provenance"
         }
       },
       "additionalProperties": false
@@ -1024,6 +996,224 @@
       "type": "string",
       "pattern": "^[\\[(](\\d+:\\d+)?_(\\d+:\\d+)?[\\])]$",
       "description": "TAMS timerange \u2014 bracketed inclusive/exclusive over seconds:nanoseconds timestamps (e.g. [0:500000000_1:0) ). Open-ended start or end permitted."
+    },
+    "review_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state"
+      ],
+      "description": "Shared human-review record (replaces the v0.3.1 ai_enrichments[].human_reviewed boolean, which had no rejected state). REJECTED entries are marked, not deleted \u2014 the trail must show what was declined.",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "PENDING",
+            "CONFIRMED",
+            "REJECTED"
+          ]
+        },
+        "reviewer": {
+          "type": "string",
+          "description": "Audit actor_id shape"
+        },
+        "reviewed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "authorship_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "author"
+      ],
+      "description": "Authorship-general provenance (v0.3.2, principle ratified 29 Jun): who or what authored this output. NOT AI-keyed \u2014 a human-captured TRANSCRIPT carries author HUMAN with no model. confidence is optional and asset-type-specific (meaningful for TRANSCRIPT/classifiers; generative free text has no calibrated confidence \u2014 do not populate a number that means nothing). Shaped as a sibling of the audit / skill-applied record so it can later assert into a C2PA manifest.",
+      "properties": {
+        "author": {
+          "type": "string",
+          "enum": [
+            "HUMAN",
+            "MODEL"
+          ]
+        },
+        "model": {
+          "type": "string"
+        },
+        "model_version": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "input_sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "prompt_hash": {
+          "type": "string"
+        },
+        "review": {
+          "$ref": "#/$defs/review_state"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "author": {
+                "const": "HUMAN"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "model"
+                  ]
+                },
+                {
+                  "required": [
+                    "model_version"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assertion_id",
+        "assertion_type",
+        "target",
+        "claim",
+        "asserted_at",
+        "provenance"
+      ],
+      "description": "A claim-about-a-thing (v0.3.2; the record ai_enrichments[] narrows to \u2014 renamed off the ai_ prefix, a human fact-checker produces verdicts too). One record shape with a discriminator, not three bespoke ones. MATCH doubles as the proposed story match for the orphan/discovery beats: a proposal, not a commitment, until review.state is CONFIRMED. Authoritative-home rule (Jon 1 Jul / Janet corrections): assertions[] is the single authoritative home for a confirmed fact value; story_meaning echoes it, extensions may carry a typed copy \u2014 on disagreement the assertion wins.",
+      "properties": {
+        "assertion_id": {
+          "type": "string"
+        },
+        "assertion_type": {
+          "type": "string",
+          "enum": [
+            "FACT_CHECK",
+            "DETECTION",
+            "MATCH"
+          ]
+        },
+        "target": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "id"
+          ],
+          "description": "What the claim is about \u2014 reuses the audit target set.",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "ASSET",
+                "LINK",
+                "TELLING",
+                "STORY"
+              ]
+            },
+            "id": {
+              "type": "string"
+            }
+          }
+        },
+        "claim": {
+          "type": "object",
+          "description": "Typed claim payload, per assertion_type: FACT_CHECK {metric, value} \u2014 skills grip on typed fields, not prose; DETECTION {detection, ...}; MATCH {story_id} \u2014 the proposed story."
+        },
+        "attributed_to": {
+          "type": "string",
+          "description": "Who made the underlying claim (e.g. FEMA Director)"
+        },
+        "asserted_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "originated_from": {
+          "type": "string",
+          "description": "Ref to the source transcript/asset the claim came from"
+        },
+        "review": {
+          "$ref": "#/$defs/review_state"
+        },
+        "provenance": {
+          "$ref": "#/$defs/authorship_provenance"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "assertion_type": {
+                "const": "FACT_CHECK"
+              }
+            },
+            "required": [
+              "assertion_type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "claim": {
+                "required": [
+                  "metric",
+                  "value"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "assertion_type": {
+                "const": "MATCH"
+              }
+            },
+            "required": [
+              "assertion_type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "claim": {
+                "required": [
+                  "story_id"
+                ]
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

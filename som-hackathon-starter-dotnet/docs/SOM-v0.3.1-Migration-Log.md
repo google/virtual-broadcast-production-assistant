@@ -87,3 +87,11 @@ _Branch `som-v031-ibc-readiness`. Running record of changes. Companion to `SOM-v
 - ✅ **Simulator** — new `media-available` action + `media-arrival` scenario: publish → three growing-timerange emits (`[0:0_30:0)` → `[0:0_75:0)` → `[0:0_1260:0)`), mimicking a TAMS recording addressable while still growing. `SimAction` gains `SourceId`/`TimeRange`.
 - ✅ **Endpoints** — `GET /api/mam/catalog`, `POST /api/mam/emit/{sourceId}` (optional body `{timeRange, assetId}`).
 - 🟡 **Not yet compiled** — written off-Mac; `dotnet build` + smoke-test is the first hackathon-prep step.
+
+## 2026-08-12 — v0.3.2 pack vendored + wire version carries the pack
+
+- 📌 **Decision context:** v0.3.2 is the IBC target (WG, early Aug); the four open v0.3.2 shapes were dispositioned as **deferred to v0.4** with interim rules (12 Aug — see spec `schema/v0.3.2-proposed/README.md`). The SOM-048 `0.2.0` wire freeze is **retired** (12 Aug): `som_version` now carries the schema pack version — hackathon users read `0.2.0` against v0.3.1 payloads and reasonably concluded they were on the wrong schema.
+- ✅ **`SomEnvelope.Version` constant** (`SomEnvelope.cs`) replaces the six scattered `"0.2.0"` literals across SkillWorker / DashboardService (decision + audit) / MediaCoordinatorService / MockMamService / MosToSomBridge. Seeds + mos-bridge golden fixtures bumped to `0.3.2`; `validate.py` `PACK_VERSION` fails any repo-owned envelope fixture that drifts.
+- ✅ **Vendored `schema/v0.3.2-proposed/`** (3 changed schemas + README + 4 examples) via the extended `sync-from-spec.sh`. Per pack invariant #8: envelope + skill-warning stay flat `som-v0.3-*`, link-event + system-audit stay `v0.3.1-proposed/`.
+- ✅ **Sync also picked up today's spec-side description fixes**: `skill.warning.scope` now states the ratified `{level}:{id}` semantics (closes the 24 Jun reconciliation's "at source" item — drop "Delivery"); envelope `som_version` description documents the pack-version rule; story-context descriptions no longer claim the wire is `0.2.0`.
+- ✅ **`validate.py` rewired to the v0.3.2 pack**: telling/delivery → v0.3.2 schemas (additive — v0.3.1 fixtures still pass), new `v0.3.2-proposed/examples` group (min 4). `story.context` flips to the v0.3.2 schema together with the seed `ai_enrichments` migration (hard-rejected in v0.3.2 — same change, next entry). **19/19 PASS.**
