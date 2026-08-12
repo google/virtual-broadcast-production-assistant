@@ -313,6 +313,10 @@ app.MapPost("/api/reset", async (DashboardService dash, CancellationToken ct) =>
 
 app.MapPost("/api/publish/{scenario}", async (string scenario, IOptions<KafkaOptions> kafka) =>
 {
+    // Reject unknown scenarios up front — RunAsync would otherwise log to stdout and
+    // return, leaving the caller a misleading 200 {"published": "<anything>"}.
+    if (!TestProducer.HasScenario(scenario))
+        return Results.NotFound(new { error = $"unknown scenario '{scenario}'", valid_scenarios = TestProducer.Scenarios });
     try
     {
         await TestProducer.RunAsync(kafka.Value, scenario);
