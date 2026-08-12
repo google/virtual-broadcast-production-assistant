@@ -20,7 +20,6 @@ namespace SomSkillWorker.MosBridge;
 /// </summary>
 public static class MosToSomBridge
 {
-    private const string SomVersion = "0.2.0";   // wire version until v0.3 ratifies (SOM-048)
     private const string BridgeId   = "mos-bridge-london-01";
 
     /// <summary>Top-level dispatch: MOS message element → the SOM messages to publish.</summary>
@@ -188,7 +187,7 @@ public static class MosToSomBridge
     /// </summary>
     private static JsonObject Envelope(string messageType, string topic, string correlationId, JsonObject payload) => new()
     {
-        ["som_version"] = SomVersion,
+        ["som_version"] = SomEnvelope.Version,
         ["message_id"] = Guid.NewGuid().ToString(),
         ["correlation_id"] = correlationId,
         ["message_type"] = messageType,

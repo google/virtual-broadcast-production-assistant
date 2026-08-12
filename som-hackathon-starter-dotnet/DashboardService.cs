@@ -684,7 +684,7 @@ public sealed class DashboardService : BackgroundService
             : "skill.warning.raised";
         var envelope = new JsonObject
         {
-            ["som_version"] = "0.2.0",
+            ["som_version"] = SomEnvelope.Version,
             ["message_id"] = Guid.NewGuid().ToString(),
             ["correlation_id"] = staged?["correlation_id"] is JsonValue cv && cv.TryGetValue<string>(out var corr) ? corr : Guid.NewGuid().ToString(),
             ["message_type"] = messageType,
@@ -737,7 +737,7 @@ public sealed class DashboardService : BackgroundService
 
             var auditEnvelope = new JsonObject
             {
-                ["som_version"] = "0.2.0",
+                ["som_version"] = SomEnvelope.Version,
                 ["message_id"] = Guid.NewGuid().ToString(),
                 // Thread the staged output's lifecycle: same correlation, caused by the staged message.
                 ["correlation_id"] = envelope?["correlation_id"] is JsonValue cv && cv.TryGetValue<string>(out var corr) ? corr : Guid.NewGuid().ToString(),

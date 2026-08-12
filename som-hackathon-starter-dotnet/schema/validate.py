@@ -17,6 +17,11 @@ except ImportError:
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # repo/som-hackathon-starter-dotnet
 SCH  = os.path.join(ROOT, "schema")
+
+# som_version = the schema pack version (SOM-048 0.2.0 wire freeze retired 12 Aug 2026).
+# Must match SomEnvelope.Version in SomEnvelope.cs — this check catches seed/fixture drift.
+PACK_VERSION = "0.3.2"
+
 def load(p): return json.load(open(p))
 
 ENV   = load(os.path.join(SCH, "som-v0.3-envelope.schema.json"))
@@ -58,22 +63,26 @@ def payload_schema(d, path, released_story):
     if "story" in name or ("story_id" in d and "slug" in d):    return STORY if released_story else STORY31
     return None
 
-def check_message(path, *, released_story=False):
+def check_message(path, *, released_story=False, enforce_pack=False):
     """Validate either a full envelope (envelope + payload) or a bare payload fixture."""
     d = load(path)
     if isinstance(d, dict) and "payload" in d and "som_version" in d:   # full envelope
         sch = payload_schema(d, path, released_story)
-        return errs(ENV, d) + (errs(sch, d["payload"]) if sch else [])
+        version_errs = []
+        if enforce_pack and d["som_version"] != PACK_VERSION:
+            version_errs = [type("E", (), {"message":
+                f"som_version '{d['som_version']}' != pack version '{PACK_VERSION}' (keep in step with SomEnvelope.Version)"})()]
+        return version_errs + errs(ENV, d) + (errs(sch, d["payload"]) if sch else [])
     sch = payload_schema(d, path, released_story)                        # bare payload fixture
     return errs(sch, d) if sch else [type("E", (), {"message": "no schema matched"})()]
 
 def main():
     # (glob_dir, min_expected) — a deleted fixture directory must FAIL, not read as "all valid".
     groups = [
-        (glob.glob(os.path.join(ROOT, "seed-stories", "*.json")), {}, 5, "seed-stories"),
+        (glob.glob(os.path.join(ROOT, "seed-stories", "*.json")), {"enforce_pack": True}, 5, "seed-stories"),
         (glob.glob(os.path.join(SCH, "examples", "*.json")), {"released_story": True}, 1, "schema/examples"),
         (glob.glob(os.path.join(P, "examples", "*.json")), {}, 5, "v0.3.1-proposed/examples"),
-        (glob.glob(os.path.join(ROOT, "mos-bridge", "samples", "*.expected.json")), {}, 1, "mos-bridge fixtures"),
+        (glob.glob(os.path.join(ROOT, "mos-bridge", "samples", "*.expected.json")), {"enforce_pack": True}, 1, "mos-bridge fixtures"),
     ]
     targets = []
     for files, opts, minimum, label in groups:

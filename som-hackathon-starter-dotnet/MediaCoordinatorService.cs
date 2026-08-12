@@ -341,7 +341,7 @@ public sealed class MediaCoordinatorService : BackgroundService
         var now = DateTimeOffset.UtcNow;
         var envelope = new JsonObject
         {
-            ["som_version"] = "0.2.0",
+            ["som_version"] = SomEnvelope.Version,
             ["message_id"] = Guid.NewGuid().ToString(),
             // Echo the triggering arrival's correlation so the chain is traceable end to end;
             // mint one only if the arrival had none (flat/legacy producer).
