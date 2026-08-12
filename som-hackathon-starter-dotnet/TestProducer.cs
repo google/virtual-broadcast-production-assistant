@@ -33,6 +33,9 @@ public static class TestProducer
     /// <summary>Available scenarios in the order they should appear in the UI.</summary>
     public static IReadOnlyList<string> Scenarios => ScenarioFiles.Keys.ToArray();
 
+    /// <summary>True if {scenario} names a known seed scenario (case-insensitive).</summary>
+    public static bool HasScenario(string scenario) => ScenarioFiles.ContainsKey(scenario);
+
     /// <summary>
     /// Returns the raw SOM envelope JSON for a given scenario, or null if unknown.
     /// </summary>

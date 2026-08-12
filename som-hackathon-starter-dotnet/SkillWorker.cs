@@ -111,7 +111,18 @@ public class SkillWorker : BackgroundService
                                 skill.Id, string.Join(",", operatesOn));
                         continue;
                     }
-                    await EvaluateSkillAsync(skill, storyContext, storyId, result.Message.Key, correlationId, previous, stoppingToken);
+                    try
+                    {
+                        await EvaluateSkillAsync(skill, storyContext, storyId, result.Message.Key, correlationId, previous, stoppingToken);
+                    }
+                    catch (Exception skillEx)
+                    {
+                        // Fail CLOSED and VISIBLE: one skill throwing must not abort the rest,
+                        // and "the check crashed" must be distinguishable on the bus from
+                        // "the check ran clean". Emit a FAILED run record, then carry on.
+                        _logger.LogError(skillEx, "Skill {SkillId} threw on {StoryId} — emitting FAILED run record", skill.Id, storyId);
+                        await PublishFailedRunAsync(skill, storyId, result.Message.Key, correlationId, stoppingToken);
+                    }
                 }
 
                 if (hasStoryId) _previousStories[storyId] = storyContext.DeepClone();
@@ -167,6 +178,26 @@ public class SkillWorker : BackgroundService
 
         _logger.LogInformation("Skill {SkillId}@{Version} on {StoryId}: {Count} warnings in {Ms}ms",
             skill.Id, skill.Version, storyId, warningIds.Count, sw.ElapsedMilliseconds);
+    }
+
+    /// <summary>
+    /// Publish a FAILED skill.run.completed record when a skill throws. Best-effort:
+    /// if even this publish fails the loop still continues (we are already in a catch),
+    /// but the local error log above preserves the evidence.
+    /// </summary>
+    private async Task PublishFailedRunAsync(SkillDefinition skill, string storyId, string? messageKey, string? correlationId, CancellationToken ct)
+    {
+        try
+        {
+            var runPayload = BuildRunRecord(skill, Guid.NewGuid().ToString(), storyId, messageKey,
+                new List<string>(), 0, failed: true);
+            var runMsg = BuildEnvelope("skill.run.completed", _options.SkillRunsTopic, correlationId, runPayload);
+            await PublishAsync(_options.SkillRunsTopic, storyId, runMsg.ToJsonString(), ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to publish FAILED run record for skill {SkillId} on {StoryId}", skill.Id, storyId);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -233,13 +264,17 @@ public class SkillWorker : BackgroundService
     }
 
     /// <summary>Build skill.run.completed audit record (Amendment 1, hackathon brief §8.1).</summary>
+    /// <param name="failed">When true, emit outcome FAILED with human_review_required — the
+    /// skill threw and produced nothing, which must be distinguishable on the bus from a
+    /// clean run that raised no warnings (SKIPPED).</param>
     private static JsonNode BuildRunRecord(
         SkillDefinition skill,
         string runId,
         string storyId,
         string? messageKey,
         List<string> warningIds,
-        long latencyMs)
+        long latencyMs,
+        bool failed = false)
     {
         // Payload only — message_type and timestamp live on the envelope (BuildEnvelope).
         return new JsonObject
@@ -266,8 +301,8 @@ public class SkillWorker : BackgroundService
                 ["enrichment_ids"] = new JsonArray(),
             },
             ["latency_ms"] = latencyMs,
-            ["outcome"] = warningIds.Count > 0 ? "COMPLETED" : "SKIPPED",
-            ["human_review_required"] = warningIds.Count > 0,
+            ["outcome"] = failed ? "FAILED" : warningIds.Count > 0 ? "COMPLETED" : "SKIPPED",
+            ["human_review_required"] = failed || warningIds.Count > 0,
         };
     }
 
