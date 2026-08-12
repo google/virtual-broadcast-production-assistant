@@ -99,46 +99,45 @@
           "resolution": "1920x1080"
         },
         "evidential_position": "TERTIARY"
-      }
-    ],
-    "ai_enrichments": [
+      },
       {
-        "enrichment_id": "ai-summary-004",
-        "model": "claude-sonnet-4-20250514",
-        "enrichment_type": "SUMMARY",
-        "confidence": 0.95,
-        "content": "New York City Council voted 7-2 to approve a $2.1 billion expansion of the public transit system, adding three new rail lines expected to be operational by 2030.",
+        "asset_id": "ai-summary-004",
+        "asset_type": "SUMMARY",
+        "status": "READY",
         "provenance": {
+          "author": "MODEL",
+          "model": "claude-sonnet-4",
+          "model_version": "20250514",
+          "confidence": 0.95,
+          "generated_at": "2026-05-12T10:12:00Z",
           "input_sources": [
             "src-nyc-council-clerk",
             "src-mta-press"
           ],
           "prompt_hash": "sha256:f6a7b8c9...",
-          "guardrails_applied": [
-            "factual_grounding"
-          ]
-        },
-        "human_reviewed": true,
-        "generated_at": "2026-05-12T10:12:00Z"
+          "review": {
+            "state": "CONFIRMED"
+          }
+        }
       },
       {
-        "enrichment_id": "ai-social-post-001",
-        "model": "claude-sonnet-4-20250514",
-        "enrichment_type": "SOCIAL_POST",
-        "confidence": 0.88,
-        "content": "JUST IN: NYC Council approves $2.1B transit expansion \u2014 3 new rail lines coming by 2030. The 7-2 vote caps months of debate over funding sources.",
+        "asset_id": "ai-social-post-001",
+        "asset_type": "SOCIAL_POST",
+        "status": "IN_PRODUCTION",
         "provenance": {
+          "author": "MODEL",
+          "model": "claude-sonnet-4",
+          "model_version": "20250514",
+          "confidence": 0.88,
+          "generated_at": "2026-05-12T10:14:00Z",
           "input_sources": [
             "src-nyc-council-clerk"
           ],
           "prompt_hash": "sha256:a7b8c9d0...",
-          "guardrails_applied": [
-            "factual_grounding",
-            "character_limit_280"
-          ]
-        },
-        "human_reviewed": false,
-        "generated_at": "2026-05-12T10:14:00Z"
+          "review": {
+            "state": "PENDING"
+          }
+        }
       }
     ],
     "skills_config": {

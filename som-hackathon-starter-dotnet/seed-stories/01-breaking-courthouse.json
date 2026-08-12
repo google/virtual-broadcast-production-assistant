@@ -129,27 +129,25 @@
           }
         ],
         "voice_count": 1
-      }
-    ],
-    "ai_enrichments": [
+      },
       {
-        "enrichment_id": "ai-summary-001",
-        "model": "claude-sonnet-4-20250514",
-        "enrichment_type": "SUMMARY",
-        "confidence": 0.92,
-        "content": "Federal jury returns surprise not-guilty verdict in Jones fraud trial, contradicting widely expected conviction.",
+        "asset_id": "ai-summary-001",
+        "asset_type": "SUMMARY",
+        "status": "IN_PRODUCTION",
         "provenance": {
+          "author": "MODEL",
+          "model": "claude-sonnet-4",
+          "model_version": "20250514",
+          "confidence": 0.92,
+          "generated_at": "2026-04-01T14:45:05Z",
           "input_sources": [
             "src-ap-20260401-1444"
           ],
           "prompt_hash": "sha256:f1e2d3c4...",
-          "guardrails_applied": [
-            "factual_grounding",
-            "legal_sensitivity"
-          ]
-        },
-        "human_reviewed": false,
-        "generated_at": "2026-04-01T14:45:05Z"
+          "review": {
+            "state": "PENDING"
+          }
+        }
       }
     ],
     "skills_config": {

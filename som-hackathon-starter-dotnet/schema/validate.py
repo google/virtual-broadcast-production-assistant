@@ -38,11 +38,11 @@ TELL    = load(os.path.join(P32, "som-v0.3.2-telling-event.schema.json"))
 DELIV   = load(os.path.join(P32, "som-v0.3.2-delivery-media-available.schema.json"))
 AUDIT   = load(os.path.join(P, "som-v0.3.1-system-audit.schema.json"))
 
-# Payload schema by message_type. story.context flips to STORY32 with the seed migration
-# (ai_enrichments is hard-rejected in v0.3.2 — seeds must migrate in the same change).
-# Telling/delivery are additive in v0.3.2, so v0.3.1 fixtures still validate.
+# Payload schema by message_type. Seeds are v0.3.2-shaped (ai_enrichments migrated to
+# assets[] + authorship provenance). Telling/delivery are additive in v0.3.2, so v0.3.1
+# fixtures still validate.
 BY_TYPE = {
-    "story.context": STORY31,
+    "story.context": STORY32,
     "skill.warning.raised": WARN,
     "link.committed": LINK, "link.gate_changed": LINK, "link.withdrawn": LINK,
     "telling.started": TELL, "telling.ended": TELL, "telling.exposed": TELL,
