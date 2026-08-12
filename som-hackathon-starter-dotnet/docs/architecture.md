@@ -147,7 +147,7 @@ Local-dev story source. Two modes:
 | Layer | File | Purpose |
 |-------|------|---------|
 | 1. Static | `SkillValidation.cs` | Schema + config key checks. Runs on every POST/PUT. |
-| 2. Dry-run | `SkillDryRunner.cs` | Evaluate against all 5 seed stories without publishing. |
+| 2. Dry-run | `SkillDryRunner.cs` | Evaluate against all 6 seed stories without publishing. |
 | 3. AI review | `SkillReviewer.cs` | LLM-based editorial review (Gemini or Claude). |
 
 See [skill-validation.md](skill-validation.md) for the full reference.

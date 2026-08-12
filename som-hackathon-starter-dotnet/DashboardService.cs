@@ -730,7 +730,7 @@ public sealed class DashboardService : BackgroundService
                     + $"Dashboard gate decision '{action}' on staged output '{pending.OutputId}' from skill '{skillId}'"
                     + (storyId is null ? "" : $" (story '{storyId}')")
                     + (storyFallback
-                        ? " — target.id is the STORY key, not an asset id (no STORY target kind in the audit schema; not adopted at v0.3.2, tracks to v0.4)"
+                        ? " — target.id is the STORY key, not an asset id (the audit schema has no STORY target kind)"
                         : ""),
                 ["recorded_at"] = now.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'"),
             };

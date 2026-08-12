@@ -27,7 +27,7 @@ Work: add topics to `KafkaOptions`/`Program.cs`; producers/consumers; `usage[]` 
 
 ## 2. `story.context` payload migration — SOM-048  [RATIFIED, partial]
 
-The 5 seeds (`seed-stories/*.json`) are pure v0.2. Per `01-breaking-courthouse.json`:
+The seeds (`seed-stories/*.json`) were pure v0.2 at analysis time. Per `01-breaking-courthouse.json`:
 
 | Current (v0.2) | v0.3.1 target | Decision |
 |---|---|---|
@@ -80,7 +80,7 @@ v0.3.1 **locked 30 June** (by email; Source re-key folded in, objection window c
 
 ### Done since 23 June (items 1–2 of the suggested order)
 
-- ✅ §2 payload migration — all 5 seeds validate against the v0.3.1 story-context + envelope schemas.
+- ✅ §2 payload migration — all 6 seeds validate against the current pack (v0.3.2 story-context + envelope schemas).
 - ✅ §3 lifecycle phases — `PhaseOrder` fixed to `DEVELOPING → READY_TO_AIR → BREAKING → PUBLISHED`; simulator descriptions updated.
 - ✅ §4 output contract — skill-warning envelope, `scope`, `skill_warning_ref`, `correlation_id` threading.
 - ✅ MOS→SOM bridge scaffold (`mos-bridge/`, emits `story.context` + `link.committed`).

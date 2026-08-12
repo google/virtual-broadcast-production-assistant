@@ -11,14 +11,17 @@ All rule paths are relative to `payload`. Messages travel as full SOM envelopes 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `som_version` | string | yes | The **schema pack version** the payload conforms to — `"0.3.2"` on the current pack. (The SOM-048 `0.2.0` wire freeze was retired 12 Aug 2026; traffic recorded before then reads `0.2.0`.) Informative only — never branch on it; `message_type` identifies the payload family. |
-| `message_id` | string (UUIDv7) | yes | Unique per message |
-| `correlation_id` | string (UUIDv7) | yes | Links all messages about the same story lifecycle — thread it end-to-end |
-| `causation_id` | string (UUIDv7) | no | The message that directly caused this one |
+| `message_id` | string (UUID, v7 recommended) | yes | Unique per message |
+| `correlation_id` | string (UUID, v7 recommended) | yes | Links all messages about the same story lifecycle — thread it end-to-end |
+| `causation_id` | string (UUID) | no | The message that directly caused this one |
 | `message_type` | string | yes | Payload family, e.g. `"story.context"`, `"skill.warning.raised"` |
 | `timestamp` | string (ISO 8601) | yes | When the message was produced — lives HERE, never in the payload (decision #18) |
 | `originating_system` | object | yes | Origin system: `system_id` + `system_type` required; `system_name`, `vendor`, `version` optional. (Renamed from `source` at v0.3.) |
 | `topic` | string | yes | Kafka topic name (`som.` prefix) |
 | `payload` | object | yes | The typed payload |
+| `modification_header` | object | no | On snapshot-style messages such as `story.context` (`story_version`, `modified_at/by`, `change_summary`, `history`) |
+| `_actors` | object | no | Key-value map of short-key actor lookups |
+| `@context` | string or object | no | JSON-LD context — deferred in v0.3, permitted for forward compatibility |
 | `extensions` | object | no | Vendor fields, reverse-domain namespaced (`com.{vendor}.*`); consumers ignore-if-unknown |
 
 The envelope is a **closed object** — unknown top-level fields fail validation, and legacy `source` / `signature` are hard-rejected.
@@ -31,7 +34,7 @@ If a rule config predates the v0.3.x migration, these payload paths moved:
 |----------|-----|
 | `sources[]` | `editorial_source[]` (credibility enum: `TRUSTED` \| `VERIFIED` \| `ENDORSED` \| `UNVERIFIED`) |
 | `skills_config.broadcaster` | `skills_config.newsroom` |
-| `instances[]` | **hard-rejected** since v0.3.1 — links/tellings model distribution |
+| `instances[]` | **hard-rejected** since v0.3 — links/tellings model distribution |
 | `ai_enrichments[]` | **hard-rejected** since v0.3.2 — generative output that publishes is an `assets[]` entry with `provenance` (authorship + review state); claims about content are `assertions[]` |
 | `collaboration.version` | `collaboration.editing_version` |
 
@@ -62,10 +65,10 @@ The 6 included seed stories exercise different combinations of fields:
 | Scenario | Key fields exercised |
 |----------|----------------------|
 | `breaking` | Full `compliance[]`, `editorial_gates[]`, `premise` with change, `government_approval` |
-| `breaking-no-compliance` | Empty `compliance[]` (fires `phase_with_missing_field`), `priority.level = FLASH` |
+| `breaking-no-compliance` | `compliance` key absent (fires `phase_with_missing_field`), `priority.level = URGENT` |
 | `informal` | `headline` with informal terms (fires `term_match`), `compliance[]` with MINOR_INVOLVED + LEGAL_REVIEW |
 | `clean` | All fields present and well-formed — no rules should fire |
-| `election` | `DEVELOPING` phase, `premise` with high confidence, `VOTING_RIGHTS` editorial gate |
-| `hurricane` | `acquisition_state` CAPTURING → CAPTURED (fires `field_changed` on the second publish), `media_refs[]` TAMS Source URIs |
+| `election` | `DEVELOPING` phase, `premise` with high confidence, `EDITORIAL_HOLD` editorial gate |
+| `hurricane` | `acquisition_state` CAPTURING → CAPTURED (fires `field_changed` on the coordinator's CAPTURED republish), `media_refs[]` TAMS Source URIs |
 
 Use `GET /api/seed-stories/{scenario}` to inspect any envelope in full.

@@ -161,7 +161,7 @@ You don't have to run inside this process — anything that speaks Kafka + JSON 
 
 **Anything the spec doesn't cover yet** goes under `payload.extensions["com.{yourvendor}.{field}"]` — the *designed* escape hatch, not a workaround. Consumers must silently ignore keys they don't recognise. Two live examples in this repo: `com.ibc-poc.capture_complete` on delivery events, `com.nbcu.citations` on warnings.
 
-**Validate before you publish**: drop your candidate payload next to the examples in `schema/v0.3.1-proposed/examples/` and run `python3 schema/validate.py` — same harness the repo's own fixtures use.
+**Validate before you publish**: drop your candidate payload next to the examples in `schema/v0.3.2-proposed/examples/` (story.context / telling / delivery; link and audit payloads live in `schema/v0.3.1-proposed/examples/`) and run `python3 schema/validate.py` — same harness the repo's own fixtures use.
 
 ## 8. Curl cookbook — the whole loop from a shell
 

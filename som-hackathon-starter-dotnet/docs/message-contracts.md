@@ -1,11 +1,11 @@
 # SOM Message Contracts — Skill Outputs
 
-Companion to [`som-v02-envelope.md`](./som-v02-envelope.md). That doc covers the inbound `story.context` shape; this one covers the **outbound** messages skills produce, and two cross-cutting v0.2.1 conventions:
+Companion to [`som-v02-envelope.md`](./som-v02-envelope.md). That doc covers the envelope and rule field-paths (payload shapes live in the vendored schemas); this one covers the **outbound** messages skills produce, and two cross-cutting conventions:
 
 1. **`instance_ref`** — how a skill output binds to a specific story instance.
 2. **`extensions.com.{vendor}.{...}`** — how vendors add fields without changing the spec.
 
-Wire baseline: SOM v0.2 plus Amendments A1–A5 (the "v0.2.1-hackathon" label). v0.3 ratifies post-event.
+Wire baseline: the **v0.3.2 pack** (`som_version: "0.3.2"` — the SOM-048 `0.2.0` freeze was retired 12 Aug 2026). Historical: the May hackathon ran SOM v0.2 plus Amendments A1–A5 (the "v0.2.1-hackathon" label).
 
 ---
 
@@ -25,9 +25,9 @@ Use the **suffixed** message type names on the wire. The unsuffixed forms in the
 
 ---
 
-## `asset_type` enum — v0.2.1-hackathon canonical set
+## `asset_type` enum
 
-The v0.2 spec (Table 12) defines a broader canonical enum; for the hackathon, seeds and skills use a narrowed subset. Vendor-specific values use an `x-` prefix per SOM-039.
+The authoritative enum is the v0.3.2 story-context schema (`VIDEO` … `TRANSCRIPT` | `SUMMARY` | `SOCIAL_POST` | `ARTICLE` | `ANALYSIS` | `CUSTOM`); the narrowed v0.2.1-hackathon subset below is what the original seeds exercised. Vendor-specific values use an `x-` prefix per SOM-039.
 
 **Case convention:**
 

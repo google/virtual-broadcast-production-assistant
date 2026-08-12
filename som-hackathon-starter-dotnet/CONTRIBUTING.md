@@ -90,7 +90,7 @@ Runs on every `POST /api/skills`. Checks schema, config keys, rule ID uniqueness
 
 ### Layer 2 — Dry-run (required before submission)
 
-Run your skill against all 5 seed stories:
+Run your skill against all 6 seed stories:
 
 ```bash
 curl -s -X POST http://localhost:5050/api/skills/<your-vendor-id>/dry-run | jq .
@@ -98,7 +98,7 @@ curl -s -X POST http://localhost:5050/api/skills/<your-vendor-id>/dry-run | jq .
 
 Or click **🧪 Dry-run** in the dashboard's skill panel.
 
-**Minimum requirement:** your skill must match at least one seed story. If none of the 5 scenarios trigger your rules, either your rules are too narrow or you need to add a seed story that demonstrates your use case (see below).
+**Minimum requirement:** your skill must match at least one seed story. If none of the 6 scenarios trigger your rules, either your rules are too narrow or you need to add a seed story that demonstrates your use case (see below).
 
 ### Layer 3 — AI review (recommended)
 
@@ -106,13 +106,13 @@ If a Gemini or Anthropic API key is configured, click **🤖 AI review** on your
 
 ## Adding a seed story
 
-If the existing 5 scenarios don't exercise your skill:
+If the existing 6 scenarios don't exercise your skill:
 
 1. Create a JSON file in `seed-stories/` following the SOM envelope format (see [docs/som-v02-envelope.md](docs/som-v02-envelope.md)).
 2. Register it in `TestProducer.cs` by adding an entry to `ScenarioFiles`.
 3. The dry-runner and dashboard pick it up automatically.
 
-Name your file with a two-digit prefix for ordering: `06-your-scenario.json`.
+Name your file with a two-digit prefix for ordering: `07-your-scenario.json`.
 
 ## Submission checklist
 

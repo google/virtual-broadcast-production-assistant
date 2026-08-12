@@ -60,7 +60,7 @@ Every message on every subscribed topic, newest first — one line per message w
 
 ### 1. Test your vendor skill
 1. Register/edit your skill (**Skills** → add, or `POST /api/skills`) — static validation runs automatically.
-2. **Dry-run** it against all five seeds to see which stories fire which rules, without touching the bus.
+2. **Dry-run** it against all six seeds to see which stories fire which rules, without touching the bus.
 3. Publish a seed (header button) or run the **multi-vendor-stream** scenario for load.
 4. Watch your skill's run cards appear; approve/reject its staged outputs; check the approval-rate stat.
 

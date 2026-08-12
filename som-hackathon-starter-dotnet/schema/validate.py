@@ -3,12 +3,13 @@
 Validate this repo's SOM JSON against the VENDORED schemas in this folder.
 
 Checks: seed-stories/*.json, schema/examples/*.json, schema/v0.3.1-proposed/examples/*.json,
-and mos-bridge/samples/*.expected.json — envelope + the right payload schema for each.
+schema/v0.3.2-proposed/examples/*.json, and mos-bridge/samples/*.expected.json — envelope +
+the right payload schema for each. Also pins C# SomEnvelope.Version to PACK_VERSION below.
 
 Run:  python3 schema/validate.py        (exits non-zero on any failure)
 Requires: pip install jsonschema
 """
-import json, sys, glob, os
+import json, re, sys, glob, os
 
 try:
     from jsonschema.validators import validator_for
@@ -19,10 +20,15 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # repo/som-h
 SCH  = os.path.join(ROOT, "schema")
 
 # som_version = the schema pack version (SOM-048 0.2.0 wire freeze retired 12 Aug 2026).
-# Must match SomEnvelope.Version in SomEnvelope.cs — this check catches seed/fixture drift.
+# Pinned against SomEnvelope.Version in SomEnvelope.cs (checked in main()) and enforced
+# on every repo-owned envelope fixture — code, seeds and validator cannot drift apart.
 PACK_VERSION = "0.3.2"
 
-def load(p): return json.load(open(p))
+def load(p):
+    try:
+        return json.load(open(p))
+    except FileNotFoundError:
+        sys.exit(f"Missing vendored schema: {p} — run `bash schema/sync-from-spec.sh` first")
 
 ENV   = load(os.path.join(SCH, "som-v0.3-envelope.schema.json"))
 STORY = load(os.path.join(SCH, "som-v0.3-story-context.schema.json"))
@@ -73,20 +79,28 @@ def payload_schema(d, path, released_story):
 def check_message(path, *, released_story=False, enforce_pack=False):
     """Validate either a full envelope (envelope + payload) or a bare payload fixture."""
     d = load(path)
-    if isinstance(d, dict) and "payload" in d and "som_version" in d:   # full envelope
+    if isinstance(d, dict) and "payload" in d:   # meant to be a full envelope
         sch = payload_schema(d, path, released_story)
         version_errs = []
-        if enforce_pack and d["som_version"] != PACK_VERSION:
+        if enforce_pack and d.get("som_version") != PACK_VERSION:
             version_errs = [type("E", (), {"message":
-                f"som_version '{d['som_version']}' != pack version '{PACK_VERSION}' (keep in step with SomEnvelope.Version)"})()]
+                f"som_version '{d.get('som_version')}' != pack version '{PACK_VERSION}' (keep in step with SomEnvelope.Version)"})()]
         return version_errs + errs(ENV, d) + (errs(sch, d["payload"]) if sch else [])
     sch = payload_schema(d, path, released_story)                        # bare payload fixture
     return errs(sch, d) if sch else [type("E", (), {"message": "no schema matched"})()]
 
 def main():
+    # The wire version is stamped in exactly one code site (SomEnvelope.cs) — fail if this
+    # validator's PACK_VERSION ever disagrees with it.
+    cs = open(os.path.join(ROOT, "SomEnvelope.cs")).read()
+    m = re.search(r'const string Version = "([^"]+)"', cs)
+    if not m or m.group(1) != PACK_VERSION:
+        print(f"FATAL: SomEnvelope.Version ({m.group(1) if m else 'NOT FOUND'}) != validate.py PACK_VERSION ({PACK_VERSION})")
+        sys.exit(1)
+
     # (glob_dir, min_expected) — a deleted fixture directory must FAIL, not read as "all valid".
     groups = [
-        (glob.glob(os.path.join(ROOT, "seed-stories", "*.json")), {"enforce_pack": True}, 5, "seed-stories"),
+        (glob.glob(os.path.join(ROOT, "seed-stories", "*.json")), {"enforce_pack": True}, 6, "seed-stories"),
         (glob.glob(os.path.join(SCH, "examples", "*.json")), {"released_story": True}, 1, "schema/examples"),
         (glob.glob(os.path.join(P, "examples", "*.json")), {}, 5, "v0.3.1-proposed/examples"),
         (glob.glob(os.path.join(P32, "examples", "*.json")), {}, 4, "v0.3.2-proposed/examples"),

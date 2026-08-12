@@ -1,10 +1,10 @@
 # SOM v0.3.1 — Distribution-Layer Message Contracts
 
-_Service: `som-hackathon-starter-dotnet` · schema pack: [`schema/v0.3.1-proposed/`](../schema/v0.3.1-proposed/) · companion to [`message-contracts.md`](./message-contracts.md) (skill outputs) and [`som-v02-envelope.md`](./som-v02-envelope.md) (envelope)._
+_Service: `som-hackathon-starter-dotnet` · schema pack: [`schema/v0.3.2-proposed/`](../schema/v0.3.2-proposed/) (story.context / telling / delivery) + [`schema/v0.3.1-proposed/`](../schema/v0.3.1-proposed/) (link, audit) · companion to [`message-contracts.md`](./message-contracts.md) (skill outputs) and [`som-v02-envelope.md`](./som-v02-envelope.md) (envelope)._
 
 This is the partner-facing reference for the **v0.3.1 distribution layer** — the message families that sit under `som.link.*`, `som.telling.*`, `som.delivery.*`, and `som.system.*`. For each family: the topic, the JSON Schema, one canonical example, and which IBC demo beat it proves. Every payload here validates against the vendored schemas via [`schema/validate.py`](../schema/validate.py).
 
-> **Schema vs producer status.** All the schemas below are **ratified v0.3.1** and safe to build against. The reference implementation covers them unevenly — `som.delivery.media_available` has a mock producer (`MockMamService`) **and a reference consumer** (`MediaCoordinatorService`, which flips `acquisition_state` on capture-complete and records `WITHHELD` audits for unmatched arrivals); `som.system.audit` has **two** live producers (the coordinator's `WITHHELD` non-actions and the dashboard's human gate decisions — approve → `CLEARED`, reject → `WITHHELD`); `som.link.*` and `som.telling.*` are the 6 Aug hackathon build (WS1). "Producer" columns say which is which. The contract is stable regardless of implementation status — integrate against the schema.
+> **Schema vs producer status.** The schemas below are the **v0.3.2 IBC pack** — telling and delivery changed at v0.3.2 (`transforms[]`, locator-on-arrival); link and audit are unchanged from ratified v0.3.1 — and safe to build against. The reference implementation covers them unevenly — `som.delivery.media_available` has a mock producer (`MockMamService`) **and a reference consumer** (`MediaCoordinatorService`, which flips `acquisition_state` on capture-complete and records `WITHHELD` audits for unmatched arrivals); `som.system.audit` has **two** live producers (the coordinator's `WITHHELD` non-actions and the dashboard's human gate decisions — approve → `CLEARED`, reject → `WITHHELD`); `som.link.*` and `som.telling.*` are the 6 Aug hackathon build (WS1). "Producer" columns say which is which. The contract is stable regardless of implementation status — integrate against the schema.
 
 ---
 
@@ -59,7 +59,7 @@ Message-type names are the **suffixed** forms on the wire (e.g. `skill.warning.r
 
 ## `som.delivery.media_available` — the TAMS junction
 
-**Topic:** `som.delivery.media_available` · **Schema:** [`som-v0.3.1-delivery-media-available.schema.json`](../schema/v0.3.1-proposed/som-v0.3.1-delivery-media-available.schema.json)
+**Topic:** `som.delivery.media_available` · **Schema:** [`som-v0.3.2-delivery-media-available.schema.json`](../schema/v0.3.2-proposed/som-v0.3.2-delivery-media-available.schema.json)
 
 Announces that media has **arrived in (or is growing inside) a TAMS/MAM store**. This is the MAM→bus junction and nothing more — SOM never queries the MAM. `source` **MUST** be a fully-qualified TAMS Source URI (`tams://store/id`), re-keyed 29 Jun from the old `flow_id`. A recording that is still being captured is addressable: emit repeatedly with a **growing** `time_range`.
 
@@ -79,7 +79,7 @@ Announces that media has **arrived in (or is growing inside) a TAMS/MAM store**.
 - `time_range` is a TAMS timerange (or list): bracketed `seconds:nanoseconds` bounds, e.g. `[0:0_134:0)`. Open-ended start/end permitted.
 - **Proves:** D1·B5 — media-arrival without a MAM participant. Drive it locally with the `media-arrival` simulator scenario, the Mock MAM panel in the dashboard's Simulator modal, or `POST /api/mam/emit/{sourceId}`.
 
-**What consumers do with it.** The event is an availability handshake — pub/sub, no orchestration. The reference consumer (`MediaCoordinatorService`) demonstrates the canonical reactions: a known asset's story is republished with `acquisition_state: CAPTURING → CAPTURED` when the arrival carries the capture-complete extension (below), rolling arrivals are noted without a state change, and an arrival matching **no** story yields a `WITHHELD` record on `som.system.audit` — never a new story by default (story-from-media is the v0.3.2 ORPHAN lane, enabled via `Coordinator:OrphanPreview`). "Capture finished" is not a first-class v0.3.1 delivery field, so the reference implementation carries it exactly the way partners are told to carry their own pre-ratification concepts:
+**What consumers do with it.** The event is an availability handshake — pub/sub, no orchestration. The reference consumer (`MediaCoordinatorService`) demonstrates the canonical reactions: a known asset's story is republished with `acquisition_state: CAPTURING → CAPTURED` when the arrival carries the capture-complete extension (below), rolling arrivals are noted without a state change, and an arrival matching **no** story yields a `WITHHELD` record on `som.system.audit` — never a new story by default (story-from-media is the v0.3.2 ORPHAN lane, enabled via `Coordinator:OrphanPreview`). "Capture finished" is not a first-class delivery field (v0.3.2 included), so the reference implementation carries it exactly the way partners are told to carry their own not-yet-ratified concepts:
 
 ```json
 "extensions": { "com.ibc-poc.capture_complete": true }
@@ -120,7 +120,7 @@ A **link** is the connection between an Asset and a Destination (decision #3). `
 
 ## `som.telling.*` — on-air state (derived, never stored)
 
-**Topics:** `som.telling.started` · `som.telling.ended` · `som.telling.exposed` · **Schema:** [`som-v0.3.1-telling-event.schema.json`](../schema/v0.3.1-proposed/som-v0.3.1-telling-event.schema.json)
+**Topics:** `som.telling.started` · `som.telling.ended` · `som.telling.exposed` · **Schema:** [`som-v0.3.2-telling-event.schema.json`](../schema/v0.3.2-proposed/som-v0.3.2-telling-event.schema.json)
 
 On-air state is **derived from the Telling stream**, never stored on the asset — this is why `asset.status` has no `LIVE`/`AIRED` value (#16). `exposure_start`/`exposure_end` are immutable and event-stamped; `scheduled_start` is mutable intended-air and is **never** used to derive on-air state.
 

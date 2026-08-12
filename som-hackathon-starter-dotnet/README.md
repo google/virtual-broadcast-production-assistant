@@ -170,7 +170,7 @@ Six SOM envelopes in `seed-stories/` (v0.3.2-shaped payloads; `som_version` carr
 | `election` | Virginia Governor Race Too Close to Call as Polls Close | DEVELOPING | Standard developing story — no warnings expected |
 | `hurricane` | Hurricane Makes Landfall Near Gulf Coast as Category 3 Storm | BREAKING | Live-feed asset `asset-landfall-feed` still **CAPTURING** with an open-ended TAMS range — the story the mock MAM and media coordinator act on |
 
-Each envelope is a full SOM message (`som_version`, `message_id`, `correlation_id`, `originating_system`, `payload`) with rich v0.3.1 `payload` fields including `lifecycle`, `priority`, `compliance[]`, `editorial_gates[]`, `editorial_source[]`, `assets[]` (with `media_refs[]`/`acquisition_state` where media-backed), `skills_config`, and `content_refs[]`.
+Each envelope is a full SOM message (`som_version`, `message_id`, `correlation_id`, `originating_system`, `payload`) with rich v0.3.2 `payload` fields including `lifecycle`, `priority`, `compliance[]`, `editorial_gates[]`, `editorial_source[]`, `assets[]` (with `media_refs[]`/`acquisition_state` where media-backed), `skills_config`, and `content_refs[]`.
 
 ### content_refs
 
@@ -281,7 +281,7 @@ The skill registry header in the dashboard shows a status badge: `🤖 google/ge
 | `POST` | `/api/stories/{id}/add-compliance` | Body: `{type, severity, detail}`, append flag and republish |
 | `POST` | `/api/reset` | Wipe dashboard view (in-memory + UI broadcast) |
 | `GET` | `/api/seed-stories` | List of seed scenario names |
-| `GET` | `/api/seed-stories/{scenario}` | Raw SOM v0.2 envelope JSON |
+| `GET` | `/api/seed-stories/{scenario}` | Raw SOM envelope JSON |
 | `GET` | `/api/mam/catalog` | Mock-MAM source catalog (TAMS stand-in) |
 | `POST` | `/api/mam/emit/{sourceId}` | Emit `som.delivery.media_available`; optional body `{timeRange, assetId, captureComplete}` |
 | `GET` | `/api/simulator/status` | Current sim state (running scenario, auto-stream on/off) |

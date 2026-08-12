@@ -19,10 +19,13 @@ cp "$SRC"/v0.3.1-proposed/examples/*.json    "$DST/v0.3.1-proposed/examples/" 2>
 cp "$SRC"/v0.3.1-proposed/README.md          "$DST/v0.3.1-proposed/"     2>/dev/null || true
 # v0.3.2 — the IBC pack (only story-context/telling/delivery change; link/audit stay v0.3.1,
 # envelope/skill-warning stay flat v0.3). Scaffold's validate.py/generator are NOT vendored —
-# this repo's schema/validate.py covers the whole pack.
-cp "$SRC"/v0.3.2-proposed/som-v0.3.2-*.schema.json "$DST/v0.3.2-proposed/" 2>/dev/null || true
+# this repo's schema/validate.py covers the whole pack. The schema cp is NOT error-suppressed:
+# validate.py hard-requires these three files, so a missing/renamed spec folder must fail HERE,
+# not print "Vendored." over a silent no-op.
+cp "$SRC"/v0.3.2-proposed/som-v0.3.2-*.schema.json "$DST/v0.3.2-proposed/"
 cp "$SRC"/v0.3.2-proposed/examples/*.json    "$DST/v0.3.2-proposed/examples/" 2>/dev/null || true
 cp "$SRC"/v0.3.2-proposed/README.md          "$DST/v0.3.2-proposed/"     2>/dev/null || true
+ls "$DST"/v0.3.2-proposed/som-v0.3.2-*.schema.json >/dev/null
 
 echo "Vendored. Now validate:"
 echo "  python3 schema/validate.py"
