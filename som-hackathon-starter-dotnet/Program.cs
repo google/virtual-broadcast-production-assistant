@@ -218,6 +218,11 @@ app.MapPost("/api/decision/{id}", async (
 // source of record, and any participant could serve this same directory role.
 app.MapGet("/api/stories", (DashboardService dash) => Results.Ok(dash.SnapshotStories()));
 
+// The SOM schema pack version this build targets — the same value stamped on every
+// envelope's som_version. Sourced from SomEnvelope.Version so the UI badge can never
+// drift from the wire.
+app.MapGet("/api/version", () => Results.Ok(new { som_version = SomEnvelope.Version }));
+
 app.MapPost("/api/stories/{storyId}/rerun", async (
     string storyId, DashboardService dash, CancellationToken ct) =>
 {
