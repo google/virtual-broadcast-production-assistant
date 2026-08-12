@@ -40,7 +40,7 @@ export async function startWorker(): Promise<void> {
         if (!message.value) return;
 
         const envelope = JSON.parse(message.value.toString());
-        // SOM v0.2 envelope wraps the story under "payload"; tolerate flat payloads too.
+        // The SOM envelope wraps the story under "payload"; tolerate flat payloads too.
         const storyContext = envelope.payload ?? envelope;
         const storyId: string = storyContext.story_id ?? "unknown";
         const messageKey = message.key?.toString();

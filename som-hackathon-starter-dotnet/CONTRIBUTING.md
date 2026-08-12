@@ -108,7 +108,7 @@ If a Gemini or Anthropic API key is configured, click **🤖 AI review** on your
 
 If the existing 5 scenarios don't exercise your skill:
 
-1. Create a JSON file in `seed-stories/` following the SOM v0.2 envelope format (see [docs/som-v02-envelope.md](docs/som-v02-envelope.md)).
+1. Create a JSON file in `seed-stories/` following the SOM envelope format (see [docs/som-v02-envelope.md](docs/som-v02-envelope.md)).
 2. Register it in `TestProducer.cs` by adding an entry to `ScenarioFiles`.
 3. The dry-runner and dashboard pick it up automatically.
 

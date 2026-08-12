@@ -113,7 +113,7 @@ In-memory `ConcurrentDictionary` of `SkillDefinition` records, backed by JSON fi
 
 Stateless interpreter that evaluates a `SkillRule` against a `JsonNode` story payload. Six built-in rule types cover most editorial logic. Each type has required `config` keys validated by Layer 1 (static validation). Returns `RuleMatch` records with detail strings rendered from `detail_template`.
 
-Field access uses dot-notation paths (e.g. `lifecycle.phase`) walked via `GetByPath`. See [SOM v0.2 envelope reference](som-v02-envelope.md) for all available paths.
+Field access uses dot-notation paths (e.g. `lifecycle.phase`) walked via `GetByPath`. See the [SOM envelope reference](som-v02-envelope.md) for all available paths.
 
 ### SkillWorker
 
@@ -216,7 +216,7 @@ docker run -p 8080:8080 -e ASPNETCORE_ENVIRONMENT=Production \
 
 | Message type | Direction | Schema |
 |-------------|-----------|--------|
-| `story.context` | Inbound | Full SOM v0.2 envelope (see [som-v02-envelope.md](som-v02-envelope.md)) |
+| `story.context` | Inbound | Full SOM envelope (see [som-v02-envelope.md](som-v02-envelope.md)) |
 | `skill.warning.raised` | Outbound | `severity` (hold/flag/inform), `rule_id`, `affected_fields[]`, `detail` |
 | `skill.suggestion.created` | Outbound | `variants[]` with confidence scores (Amendment 3) |
 | `story.enrichment` | Outbound | `representation_type` (prompter/article/summary/social_post) (Amendment 5) |

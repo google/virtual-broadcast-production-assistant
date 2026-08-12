@@ -567,8 +567,8 @@ public sealed class DashboardService : BackgroundService
     /// materialised from the bus. This is a read-only CACHE of the bus, never a second
     /// home for the truth — and serving it is a role any participant could fill, not a
     /// privilege of this process. Live set = story_type ACTIVE/PLANNED only: closed
-    /// types (KILLED/SPIKED/ARCHIVED) are over, and ORPHAN is v0.3.2 preview scaffolding
-    /// that must not leak into a directory partners browse.
+    /// types (KILLED/SPIKED/ARCHIVED) are over, and ORPHAN shells are excluded the same
+    /// way (v0.3.2 rule: one story_type predicate covers KILLED/SPIKED/ORPHAN alike).
     /// </summary>
     public IReadOnlyCollection<JsonObject> SnapshotStories()
     {
@@ -730,7 +730,7 @@ public sealed class DashboardService : BackgroundService
                     + $"Dashboard gate decision '{action}' on staged output '{pending.OutputId}' from skill '{skillId}'"
                     + (storyId is null ? "" : $" (story '{storyId}')")
                     + (storyFallback
-                        ? " — target.id is the STORY key, not an asset id (no STORY target kind in v0.3.1; v0.3.2 candidate)"
+                        ? " — target.id is the STORY key, not an asset id (no STORY target kind in the audit schema; not adopted at v0.3.2, tracks to v0.4)"
                         : ""),
                 ["recorded_at"] = now.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'"),
             };
@@ -777,8 +777,9 @@ public sealed class DashboardService : BackgroundService
     /// resolves through the STAGING-TIME story snapshot when that story had exactly ONE
     /// asset (point-in-time correct: the live cache can move between staging and decision;
     /// multi-asset stories stay story-scoped — per-asset anchors arrive with the
-    /// firing-anchor upgrade). Story-scoped remainder returns StoryFallback=true: v0.3.1
-    /// has no STORY target kind (v0.3.2 candidate); the caller labels the id as a story key.
+    /// firing-anchor upgrade). Story-scoped remainder returns StoryFallback=true: the audit
+    /// schema has no STORY target kind (not adopted at v0.3.2 — assertions got STORY, audit
+    /// did not; tracks to v0.4). The caller labels the id as a story key.
     /// </summary>
     private static (string Kind, string Id, bool StoryFallback) ResolveAuditTarget(JsonObject? payload, JsonNode? storySnapshot)
     {

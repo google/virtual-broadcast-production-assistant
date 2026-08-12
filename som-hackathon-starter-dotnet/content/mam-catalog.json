@@ -18,6 +18,6 @@
     "label": "UGC flood clip (WhatsApp)",
     "duration_seconds": 42,
     "asset_id": "asset-ugc-flood-clip",
-    "notes": "Deliberately referenced by NO seed story: emitting it demos the coordinator's WITHHELD safe-state audit, or — with Coordinator:OrphanPreview=true — the v0.3.2-preview ORPHAN story."
+    "notes": "Deliberately referenced by NO seed story: emitting it demos the coordinator's WITHHELD safe-state audit, or — with Coordinator:OrphanPreview=true — an ORPHAN shell story (the v0.3.2 orphan lane)."
   }
 ]

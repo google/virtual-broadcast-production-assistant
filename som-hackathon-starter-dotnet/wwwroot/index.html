@@ -510,7 +510,7 @@ button { font: inherit; cursor: pointer; }
     <button class="theme-toggle danger" onclick="resetBus()" title="Clear the dashboard view — Kafka topics and messages are NOT deleted"><svg class="icon"><use href="#i-trash"/></svg> Reset bus</button>
     <button class="theme-toggle" onclick="openBusTopology()" title="Bus topology: producers, topics, consumers"><svg class="icon"><use href="#i-network"/></svg> Topology</button>
     <button class="theme-toggle" onclick="openSkillInfo()" title="Skill registry — rules, live stats, AI review"><svg class="icon"><use href="#i-robot"/></svg> Skills</button>
-    <button class="theme-toggle" onclick="openSeedLibrary()" title="Browse raw SOM v0.2 envelopes"><svg class="icon"><use href="#i-braces"/></svg> SOM JSON</button>
+    <button class="theme-toggle" onclick="openSeedLibrary()" title="Browse raw SOM envelopes"><svg class="icon"><use href="#i-braces"/></svg> SOM JSON</button>
     <button class="theme-toggle" onclick="openHelp()" title="How the dashboard fits together — surfaces, lanes, and what each button does">? Help</button>
     <div id="ws-status" class="ws-status"><span class="dot"></span><span id="ws-label">connecting…</span></div>
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme"><svg class="icon" id="theme-icon"><use href="#i-sun"/></svg></button>
@@ -1353,7 +1353,7 @@ function handleBusEvent(msg) {
   if (_openStoryId && eventStoryId({ payload }) === _openStoryId) renderStoryPanel();
 
   if (topic.endsWith('story.context')) {
-    // Tolerate either flat payloads (TestProducer) or full SOM v0.2 envelopes (payload-wrapped).
+    // Tolerate either flat payloads (TestProducer) or full SOM envelopes (payload-wrapped).
     const story = payload?.payload || payload;
     if (story?.story_id) stories.set(story.story_id, story);
     renderStories();
@@ -2540,10 +2540,10 @@ async function openSeedLibrary() {
   }
 
   const body = document.getElementById('modal-body');
-  document.getElementById('modal-title').textContent = 'SOM v0.2 Envelopes (seed-stories/)';
+  document.getElementById('modal-title').textContent = 'SOM Envelopes (seed-stories/)';
   body.innerHTML = `
     <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;" id="seed-tabs"></div>
-    <pre class="code-block" id="seed-json" style="max-height:60vh;">Choose a scenario to view its raw SOM v0.2 envelope.</pre>`;
+    <pre class="code-block" id="seed-json" style="max-height:60vh;">Choose a scenario to view its raw SOM envelope.</pre>`;
   const tabs = document.getElementById('seed-tabs');
   for (const s of scenarios) {
     const btn = document.createElement('button');

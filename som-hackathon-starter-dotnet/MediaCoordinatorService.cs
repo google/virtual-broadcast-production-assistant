@@ -20,9 +20,10 @@ namespace SomSkillWorker;
 ///        availability is the normal live-feed case; consumers take what exists so far).
 ///   3. Unknown asset → the safe-state non-action from the skills model: record a WITHHELD
 ///        audit on som.system.audit ("no story references this asset; declined to act").
-///   4. Unknown asset + Coordinator:OrphanPreview=true → v0.3.2 PREVIEW: author a minimal
-///        story_type ORPHAN story wrapping the media instead of withholding. Clearly labeled;
-///        ORPHAN is NOT in the locked v0.3.1 schema — this exists to demo the v0.3.2 direction.
+///   4. Unknown asset + Coordinator:OrphanPreview=true → author a minimal story_type ORPHAN
+///        shell story wrapping the media instead of withholding (the v0.3.2 ORPHAN lane;
+///        clearly labeled). Off by default — authoring stories from media is a coordinator
+///        policy choice, not a pack requirement.
 /// </summary>
 public sealed class MediaCoordinatorService : BackgroundService
 {
@@ -97,7 +98,7 @@ public sealed class MediaCoordinatorService : BackgroundService
         consumer.Subscribe(_kafka.DeliveryTopic);
         _logger.LogInformation(
             "MediaCoordinator: consuming {Topic} (orphan preview: {Orphan})",
-            _kafka.DeliveryTopic, _orphanPreview ? "ON — v0.3.2 behaviour" : "off");
+            _kafka.DeliveryTopic, _orphanPreview ? "ON — authors ORPHAN shells" : "off");
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -287,10 +288,10 @@ public sealed class MediaCoordinatorService : BackgroundService
     }
 
     /// <summary>
-    /// v0.3.2 PREVIEW (Coordinator:OrphanPreview=true): wrap unmatched media in a minimal
-    /// ORPHAN story so it enters the editorial workflow instead of being withheld. ORPHAN
-    /// is a v0.3.2 scaffold story_type, NOT in locked v0.3.1 — the story is labeled and
-    /// carries extensions["com.ibc-poc.orphan_preview"] so nobody mistakes it for ratified.
+    /// The v0.3.2 ORPHAN lane (Coordinator:OrphanPreview=true): wrap unmatched media in a
+    /// minimal story_type ORPHAN shell so it enters the editorial workflow instead of being
+    /// withheld. The story is labeled and carries extensions["com.ibc-poc.orphan_preview"]
+    /// so coordinator-authored shells are distinguishable from newsroom-minted ones.
     /// </summary>
     private async Task PublishOrphanStoryAsync(string assetId, string source, string? timeRange, bool captureComplete, string? correlationId, string? causationId, CancellationToken ct)
     {
@@ -300,7 +301,7 @@ public sealed class MediaCoordinatorService : BackgroundService
         {
             ["story_id"] = storyId,
             ["slug"] = $"ORPHAN-{assetId.ToUpperInvariant()}",
-            ["headline"] = $"[ORPHAN · v0.3.2 preview] Unmatched media arrival — {assetId}",
+            ["headline"] = $"[ORPHAN] Unmatched media arrival — {assetId}",
             ["story_type"] = "ORPHAN",
             // No lifecycle block: lifecycle is ACTIVE-only (decision #19) and ORPHAN carries none.
             ["assets"] = new JsonArray
@@ -331,7 +332,7 @@ public sealed class MediaCoordinatorService : BackgroundService
 
         await ProduceAsync(_kafka.StoryContextTopic, "story.context", storyId, payload, correlationId, causationId, ct);
         _logger.LogWarning(
-            "MediaCoordinator: ORPHAN PREVIEW — authored {StoryId} for unmatched asset {AssetId} (v0.3.2 behaviour, not ratified)",
+            "MediaCoordinator: ORPHAN — authored shell {StoryId} for unmatched asset {AssetId}",
             storyId, assetId);
     }
 

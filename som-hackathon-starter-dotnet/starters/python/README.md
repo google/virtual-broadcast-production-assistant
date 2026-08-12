@@ -66,7 +66,7 @@ This starter does **not** include a dashboard — use the shared .NET dashboard 
 
 ## Seed stories
 
-Five SOM v0.2 envelopes in `../../seed-stories/` (shared with all starters):
+Six SOM envelopes in `../../seed-stories/` (shared with all starters):
 
 | Scenario | Tests |
 |----------|-------|
