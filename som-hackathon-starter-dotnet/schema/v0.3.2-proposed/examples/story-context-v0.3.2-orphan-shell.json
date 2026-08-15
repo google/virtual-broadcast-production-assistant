@@ -1,10 +1,10 @@
 {
-  "story_id": "orphan-2026-0708-01",
+  "story_id": "orphan-2026-0911-01",
   "slug": "ORPHAN-UGC-CLIP",
   "headline": "Unmatched UGC clip — flood water at overpass",
   "story_type": "ORPHAN",
   "sequence_number": 1,
-  "updated_at": "2026-07-08T11:05:00Z",
+  "updated_at": "2026-09-11T11:05:00Z",
   "newsroom_id": "nbcu-nyc",
   "editorial_source": [
     {
@@ -12,7 +12,7 @@
       "source_type": "USER_GENERATED",
       "provider": "WhatsApp tip line",
       "credibility": "UNVERIFIED",
-      "received_at": "2026-07-08T11:00:00Z"
+      "received_at": "2026-09-11T11:00:00Z"
     }
   ],
   "assets": [
@@ -45,7 +45,7 @@
       "claim": {
         "story_id": "hurricane-2026-0911"
       },
-      "asserted_at": "2026-07-08T11:03:00Z",
+      "asserted_at": "2026-09-11T11:03:00Z",
       "confidence": 0.91,
       "review": {
         "state": "PENDING"

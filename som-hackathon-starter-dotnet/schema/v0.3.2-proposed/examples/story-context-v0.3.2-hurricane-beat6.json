@@ -88,7 +88,7 @@
         "value": 40000
       },
       "attributed_to": "FEMA Director",
-      "asserted_at": "2026-09-11T16:22:00Z",
+      "asserted_at": "2026-09-11T16:27:00Z",
       "confidence": 0.95,
       "originated_from": "asset-presser-transcript",
       "review": {
@@ -98,8 +98,8 @@
       },
       "provenance": {
         "author": "MODEL",
-        "model": "asr-extract",
-        "model_version": "2.1"
+        "model": "claim-extract",
+        "model_version": "1.2"
       }
     }
   ],

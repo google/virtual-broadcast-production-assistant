@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://som.spec/schema/v0.3.2-proposed/delivery-media-available",
   "title": "SOM v0.3.2 PROPOSED \u2014 delivery.media_available payload",
-  "description": "Point update of the locked v0.3.1 delivery.media_available. v0.3.2 change (9 Jul, John): the arrival event gains the locator branch for SYMMETRY with asset-side media_refs[] \u2014 media in SOM is any media, not just TAMS. Locked v0.3.1 requires a tams:// source only, so a non-TAMS clip/image (MAM path, S3 key, CMS id) can be referenced by an asset but its arrival cannot be announced; this mirrors media_refs[]' anyOf(source|locator) onto the event. DEFERRED (12 Aug 2026): time_range semantics against a non-TAMS locator are well-defined only for TAMS today \u2014 pinned at v0.4. Interim: producers SHOULD omit time_range on a bare locator; consumers MUST NOT assume offset-from-zero.",
+  "description": "Point update of the locked v0.3.1 delivery.media_available. v0.3.2 change (9 Jul, John): the arrival event gains the locator branch for SYMMETRY with asset-side media_refs[] \u2014 media in SOM is any media, not just TAMS. Locked v0.3.1 requires a tams:// source only, so a non-TAMS clip/image (MAM path, S3 key, CMS id) can be referenced by an asset but its arrival cannot be announced; this mirrors media_refs[]' anyOf(source|locator) onto the event. PINNED: time_range against a locator is offset from the referenced file's own zero. A SOM locator points at a stored file, not a conform against embedded source timecode, so the ten-hour-start and source-versus-record reconciliation problem does not arise; where a non-TAMS store carries its own internal timing the range is still offset from the file's zero, never from an embedded label.",
   "type": "object",
   "required": [
     "message_type",
@@ -29,7 +29,7 @@
       "description": "Fully-qualified TAMS Source URI \u2014 tams://store/id; resolves across remote/second-hand stores. Replaces flow_id (Source re-key 29 Jun)."
     },
     "time_range": {
-      "description": "Optional TAMS time range, or list of ranges, onto the Source.",
+      "description": "Optional time range, or list of ranges. Against a TAMS source, ranges are onto the Source timeline. Against a locator, ranges are offset from the referenced file's own zero: a SOM locator points at a stored file, not a conform against embedded source timecode, so the ten-hour-start and source-versus-record reconciliation problem does not arise. Where a non-TAMS store carries its own internal timing the range is still offset from the file's zero, never from an embedded label \u2014 which keeps the door open for stores that segment natively.",
       "anyOf": [
         {
           "$ref": "#/$defs/timerange"
