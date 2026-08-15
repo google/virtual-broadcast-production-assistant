@@ -88,6 +88,19 @@ if [ "$CHECK" = 1 ]; then
   exit 0
 fi
 
+# Stamp the spec-side sync ledger so cowork/spec sessions can see the repo pulled
+# the spec as of today. Line-replace, so the value must stay on one line. Missing
+# ledger (older spec snapshot) is fine — skip, don't fail the vendor over it.
+STATE="$SRC/SYNC-STATE.md"
+if [ -f "$STATE" ]; then
+  BRANCH=$(git -C "$DST" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
+  SHA=$(git -C "$DST" rev-parse --short HEAD 2>/dev/null || echo "?")
+  stamp_tmp=$(mktemp)
+  awk -v line="LAST REPO VENDOR:  $(date +%F) — branch $BRANCH, HEAD $SHA at vendor time (sync not yet committed on top of it)" \
+    '/^LAST REPO VENDOR:/ {print line; next} {print}' "$STATE" > "$stamp_tmp" && mv "$stamp_tmp" "$STATE"
+  echo "Stamped $STATE"
+fi
+
 echo "Vendored. Now validate:"
 echo "  python3 schema/validate.py"
 echo "Then note the sync in docs/SOM-v0.3.1-Migration-Log.md."
