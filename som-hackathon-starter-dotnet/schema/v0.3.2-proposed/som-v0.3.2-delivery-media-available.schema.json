@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://som.spec/schema/v0.3.2-proposed/delivery-media-available",
+  "title": "SOM v0.3.2 PROPOSED \u2014 delivery.media_available payload",
+  "description": "Point update of the locked v0.3.1 delivery.media_available. v0.3.2 change (9 Jul, John): the arrival event gains the locator branch for SYMMETRY with asset-side media_refs[] \u2014 media in SOM is any media, not just TAMS. Locked v0.3.1 requires a tams:// source only, so a non-TAMS clip/image (MAM path, S3 key, CMS id) can be referenced by an asset but its arrival cannot be announced; this mirrors media_refs[]' anyOf(source|locator) onto the event. PINNED: time_range against a locator is offset from the referenced file's own zero. A SOM locator points at a stored file, not a conform against embedded source timecode, so the ten-hour-start and source-versus-record reconciliation problem does not arise; where a non-TAMS store carries its own internal timing the range is still offset from the file's zero, never from an embedded label.",
+  "type": "object",
+  "required": [
+    "message_type",
+    "delivery_id",
+    "asset_id",
+    "arrived_in",
+    "arrived_at"
+  ],
+  "properties": {
+    "message_type": {
+      "type": "string",
+      "const": "delivery.media_available"
+    },
+    "delivery_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "asset_id": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string",
+      "pattern": "^tams://[^/]+/.+",
+      "description": "Fully-qualified TAMS Source URI \u2014 tams://store/id; resolves across remote/second-hand stores. Replaces flow_id (Source re-key 29 Jun)."
+    },
+    "time_range": {
+      "description": "Optional time range, or list of ranges. Against a TAMS source, ranges are onto the Source timeline. Against a locator, ranges are offset from the referenced file's own zero: a SOM locator points at a stored file, not a conform against embedded source timecode, so the ten-hour-start and source-versus-record reconciliation problem does not arise. Where a non-TAMS store carries its own internal timing the range is still offset from the file's zero, never from an embedded label \u2014 which keeps the door open for stores that segment natively.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/timerange"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/timerange"
+          }
+        }
+      ]
+    },
+    "arrived_in": {
+      "type": "string",
+      "description": "Receiving system (system_id)"
+    },
+    "arrived_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "extensions": {
+      "type": "object",
+      "patternProperties": {
+        "^com\\.[a-z0-9-]+\\.": {}
+      },
+      "additionalProperties": false
+    },
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "store",
+        "ref"
+      ],
+      "description": "Non-TAMS media store reference (mirrors media_refs[].locator).",
+      "properties": {
+        "store": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "timerange": {
+      "type": "string",
+      "pattern": "^[\\[(](\\d+:\\d+)?_(\\d+:\\d+)?[\\])]$",
+      "description": "TAMS timerange \u2014 bracketed inclusive/exclusive over seconds:nanoseconds timestamps (e.g. [0:500000000_1:0) ). Open-ended start or end permitted."
+    }
+  },
+  "anyOf": [
+    {
+      "required": [
+        "source"
+      ]
+    },
+    {
+      "required": [
+        "locator"
+      ]
+    }
+  ]
+}

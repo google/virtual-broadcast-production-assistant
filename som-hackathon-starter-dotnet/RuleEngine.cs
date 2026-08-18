@@ -87,15 +87,24 @@ public sealed class RuleEngine
         var values = GetStringArray(rule.Config, "values");
         if (field is null || values.Length == 0) yield break;
 
-        var actual = GetByPath(story, field)?.GetValue<string>();
-        if (actual is null) yield break;
-
-        foreach (var v in values)
+        // Ordered resolution: walk the candidates in document order and stop at the FIRST
+        // one the configured set matches. On a scalar path that is the old behaviour. On an
+        // array path (tags[].value) it is the trigger-policy rule — a story tagged both
+        // business and sport, against a map that only knows sport, resolves to sport rather
+        // than falling through to the default. Earliest match wins, so routing is
+        // deterministic when a story is genuinely two things.
+        foreach (var candidate in GetByPathAll(story, field))
         {
-            if (string.Equals(actual, v, StringComparison.OrdinalIgnoreCase))
+            var actual = candidate is JsonValue ? candidate.GetValue<string>() : null;
+            if (actual is null) continue;
+
+            foreach (var v in values)
             {
-                yield return new RuleMatch(rule, RenderDetail(rule, ("value", v), ("field", field)));
-                yield break;
+                if (string.Equals(actual, v, StringComparison.OrdinalIgnoreCase))
+                {
+                    yield return new RuleMatch(rule, RenderDetail(rule, ("value", v), ("field", field)));
+                    yield break;
+                }
             }
         }
     }
@@ -224,6 +233,13 @@ public sealed class RuleEngine
     /// </summary>
     public static JsonNode? GetByPath(JsonNode root, string path)
     {
+        // A path carrying the [] wildcard has more than one candidate; the single-value
+        // callers want the first in document order. Without this, every rule type except
+        // field_changed silently resolved an array path to null — a rule pointed at
+        // tags[].value would never fire and never say why.
+        if (path.Contains("[]", StringComparison.Ordinal))
+            return GetByPathAll(root, path).FirstOrDefault(n => n is not null);
+
         JsonNode? current = root;
         foreach (var part in path.Split('.'))
         {
@@ -231,6 +247,22 @@ public sealed class RuleEngine
             current = current is JsonObject obj && obj.ContainsKey(part) ? obj[part] : null;
         }
         return current;
+    }
+
+    /// <summary>
+    /// Every node a path resolves to, in document order. One node for a scalar path,
+    /// one per array element for a [] wildcard path.
+    /// </summary>
+    public static IEnumerable<JsonNode?> GetByPathAll(JsonNode root, string path)
+    {
+        if (!path.Contains("[]", StringComparison.Ordinal))
+        {
+            yield return GetByPath(root, path);
+            yield break;
+        }
+
+        foreach (var (_, node) in GetByPathMulti(root, path))
+            yield return node;
     }
 
     private static bool IsEmpty(JsonNode? node)

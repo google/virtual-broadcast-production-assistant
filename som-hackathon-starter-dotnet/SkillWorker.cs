@@ -280,7 +280,7 @@ public class SkillWorker : BackgroundService
     {
         return new JsonObject
         {
-            ["som_version"] = "0.2.0",
+            ["som_version"] = SomEnvelope.Version,
             ["message_id"] = Guid.NewGuid().ToString(),
             ["correlation_id"] = correlationId ?? Guid.NewGuid().ToString(),
             ["message_type"] = messageType,

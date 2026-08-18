@@ -1,0 +1,11 @@
+{
+  "message_type": "delivery.media_available",
+  "delivery_id": "0190a000-0000-7000-8000-00000000ccc1",
+  "asset_id": "asset-still-embassy",
+  "locator": {
+    "store": "nbcu-image-mam",
+    "ref": "stills/2026/07/embassy-front-04.jpg"
+  },
+  "arrived_in": "nbcu-image-mam",
+  "arrived_at": "2026-07-09T15:00:00Z"
+}

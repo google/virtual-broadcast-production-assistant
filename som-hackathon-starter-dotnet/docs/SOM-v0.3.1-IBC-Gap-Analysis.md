@@ -27,7 +27,7 @@ Work: add topics to `KafkaOptions`/`Program.cs`; producers/consumers; `usage[]` 
 
 ## 2. `story.context` payload migration — SOM-048  [RATIFIED, partial]
 
-The 5 seeds (`seed-stories/*.json`) are pure v0.2. Per `01-breaking-courthouse.json`:
+The seeds (`seed-stories/*.json`) were pure v0.2 at analysis time. Per `01-breaking-courthouse.json`:
 
 | Current (v0.2) | v0.3.1 target | Decision |
 |---|---|---|
@@ -80,7 +80,7 @@ v0.3.1 **locked 30 June** (by email; Source re-key folded in, objection window c
 
 ### Done since 23 June (items 1–2 of the suggested order)
 
-- ✅ §2 payload migration — all 5 seeds validate against the v0.3.1 story-context + envelope schemas.
+- ✅ §2 payload migration — all 6 seeds validate against the current pack (v0.3.2 story-context + envelope schemas).
 - ✅ §3 lifecycle phases — `PhaseOrder` fixed to `DEVELOPING → READY_TO_AIR → BREAKING → PUBLISHED`; simulator descriptions updated.
 - ✅ §4 output contract — skill-warning envelope, `scope`, `skill_warning_ref`, `correlation_id` threading.
 - ✅ MOS→SOM bridge scaffold (`mos-bridge/`, emits `story.context` + `link.committed`).
@@ -97,8 +97,15 @@ v0.3.1 **locked 30 June** (by email; Source re-key folded in, objection window c
 
 ### Errata
 
-- ⚠️ **`TRANSCRIPT` missing from `asset_type`** in the vendored `som-v0.3.1-story-context.schema.json` (and the SOM-folder original). TRANSCRIPT-as-Asset was **locked at v0.3.1** (29 Jun AI-outputs decision, glossary v0.345 CONFIRMED) but the 30 Jun re-cut omitted the enum value. Fix both copies — one-line enum addition.
+- ✅ **`TRANSCRIPT` missing from `asset_type`** — RESOLVED by the 15 Jul v0.3.1 errata: TRANSCRIPT-as-Asset was locked at v0.3.1 (29 Jun AI-outputs decision, glossary v0.345 CONFIRMED), the 30 Jun re-cut omitted the enum value, and the errata restored it in both the SOM-folder original and the vendored copy.
 
-### v0.3.1 / v0.3.2 boundary — the rule for August
+### v0.3.1 / v0.3.2 boundary — superseded 12 Aug 2026
 
-**The IBC PoC ships on v0.3.1 only.** v0.3.2 exists solely as a rough draft (`SOM/schema/v0.3.2-proposed/` — assertions[], authorship provenance, ORPHAN story_type, telling.transforms[]); nothing in it is WG-agreed, and its freeze (~1 Aug) lands mid-hackathon. Because the worker is schema-agnostic, v0.3.2 is seed-data + schema work with **no C# refactor implied** — the only code-adjacent v0.3.2 item (the firing-rule anchor) is already on the v0.3.1 list above. Do not vendor v0.3.2 schemas into this branch; a v0.3.2 beat (orphan clip / edge transforms) is a stretch goal on a separate branch **only if** the WG accepts before the freeze.
+**The IBC PoC ships on v0.3.2.** The WG chose v0.3.2 as the IBC target (early Aug), and the four open v0.3.2 shapes were dispositioned as **deferred to v0.4** with normative interim rules on 12 Aug (see spec `schema/v0.3.2-proposed/README.md`). The rule below governed the August hackathon window and is kept for the record; this branch is the switch it forbade:
+
+- `schema/v0.3.2-proposed/` is now vendored (story-context / telling / delivery; link-event + system-audit stay v0.3.1, envelope + skill-warning stay flat v0.3 — pack invariant #8).
+- Seeds migrated off the hard-rejected `ai_enrichments[]` → `assets[]` with authorship provenance.
+- The SOM-048 `0.2.0` wire freeze is retired — `som_version` carries the pack version (`0.3.2`), centralized in `SomEnvelope.Version`.
+- As predicted, no C# refactor beyond the version constant: the worker is schema-agnostic, and the firing-rule anchor remains on the list above.
+
+*(Historical rule, Jul–Aug 2026: "The IBC PoC ships on v0.3.1 only… Do not vendor v0.3.2 schemas into this branch; a v0.3.2 beat is a stretch goal on a separate branch only if the WG accepts before the freeze.")*

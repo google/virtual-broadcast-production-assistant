@@ -60,7 +60,7 @@ Every message on every subscribed topic, newest first — one line per message w
 
 ### 1. Test your vendor skill
 1. Register/edit your skill (**Skills** → add, or `POST /api/skills`) — static validation runs automatically.
-2. **Dry-run** it against all five seeds to see which stories fire which rules, without touching the bus.
+2. **Dry-run** it against all six seeds to see which stories fire which rules, without touching the bus.
 3. Publish a seed (header button) or run the **multi-vendor-stream** scenario for load.
 4. Watch your skill's run cards appear; approve/reject its staged outputs; check the approval-rate stat.
 
@@ -77,7 +77,7 @@ Every message on every subscribed topic, newest first — one line per message w
 5. Manual variant: publish the **Hurricane** seed, then **Simulator → Mock MAM → Emit final (capture complete)** on `landfall-feed-01`. Custom ranges via `POST /api/mam/emit/{sourceId}` with `{"timeRange": "[0:0_30:0)", "captureComplete": true}`.
 
 ### 4. The safe-state path (unmatched media)
-Run **Simulator → Scripted scenarios → media-unmatched** (or Emit on the UGC clip): the arrival matches **no** story, so the coordinator declines to act and records a `WITHHELD` audit — an `AUDIT` line on the `som.system.audit` chip. That's by design (the skills-model safe-state stop), not a failure. With `Coordinator__OrphanPreview=true` set at app start, the coordinator instead authors a clearly-labeled **v0.3.2-preview ORPHAN story** that flows through skills like any other.
+Run **Simulator → Scripted scenarios → media-unmatched** (or Emit on the UGC clip): the arrival matches **no** story, so the coordinator declines to act and records a `WITHHELD` audit — an `AUDIT` line on the `som.system.audit` chip. That's by design (the skills-model safe-state stop), not a failure. With `Coordinator__OrphanPreview=true` set at app start, the coordinator instead authors a clearly-labeled **`story_type: ORPHAN` shell story** (the v0.3.2 orphan lane) that flows through skills like any other.
 
 ## Troubleshooting
 

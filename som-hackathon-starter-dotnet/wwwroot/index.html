@@ -510,7 +510,7 @@ button { font: inherit; cursor: pointer; }
     <button class="theme-toggle danger" onclick="resetBus()" title="Clear the dashboard view — Kafka topics and messages are NOT deleted"><svg class="icon"><use href="#i-trash"/></svg> Reset bus</button>
     <button class="theme-toggle" onclick="openBusTopology()" title="Bus topology: producers, topics, consumers"><svg class="icon"><use href="#i-network"/></svg> Topology</button>
     <button class="theme-toggle" onclick="openSkillInfo()" title="Skill registry — rules, live stats, AI review"><svg class="icon"><use href="#i-robot"/></svg> Skills</button>
-    <button class="theme-toggle" onclick="openSeedLibrary()" title="Browse raw SOM v0.2 envelopes"><svg class="icon"><use href="#i-braces"/></svg> SOM JSON</button>
+    <button class="theme-toggle" onclick="openSeedLibrary()" title="Browse raw SOM envelopes"><svg class="icon"><use href="#i-braces"/></svg> SOM JSON</button>
     <button class="theme-toggle" onclick="openHelp()" title="How the dashboard fits together — surfaces, lanes, and what each button does">? Help</button>
     <div id="ws-status" class="ws-status"><span class="dot"></span><span id="ws-label">connecting…</span></div>
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme"><svg class="icon" id="theme-icon"><use href="#i-sun"/></svg></button>
@@ -659,7 +659,7 @@ function fmtTime(ts) {
   try { return new Date(ts).toLocaleTimeString(); } catch { return ts; }
 }
 
-// Canonical SOM lifecycle phase order (Spec v0.2 §lifecycle).
+// Canonical SOM lifecycle phase order.
 // BREAKING is treated as parallel to DEVELOPING; both share index 2.
 const PHASE_ORDER = ['PLANNED', 'GATHERING', 'DEVELOPING', 'READY_TO_AIR', 'ON_AIR', 'PUBLISHED'];
 const PHASE_ALIAS = { BREAKING: 'DEVELOPING', COMPLETE: 'PUBLISHED' };
@@ -1353,7 +1353,7 @@ function handleBusEvent(msg) {
   if (_openStoryId && eventStoryId({ payload }) === _openStoryId) renderStoryPanel();
 
   if (topic.endsWith('story.context')) {
-    // Tolerate either flat payloads (TestProducer) or full SOM v0.2 envelopes (payload-wrapped).
+    // Tolerate either flat payloads (TestProducer) or full SOM envelopes (payload-wrapped).
     const story = payload?.payload || payload;
     if (story?.story_id) stories.set(story.story_id, story);
     renderStories();
@@ -1971,7 +1971,7 @@ const RULE_TYPE_HINTS = {
   term_match:                'config: { "field": "headline", "terms": ["cops","kids"], "case_sensitive": false }',
   phase_with_missing_field:  'config: { "phase_field": "lifecycle.phase", "phase": "BREAKING", "field": "compliance" }',
   field_value_in:            'config: { "field": "priority.level", "values": ["FLASH","URGENT"] }',
-  field_present:             'config: { "field": "ai_enrichments" }',
+  field_present:             'config: { "field": "assertions" }',
   field_absent:              'config: { "field": "editorial_gates" }',
   field_regex:               'config: { "field": "headline", "pattern": "\\\\b\\\\w{20,}\\\\b" }',
 };
@@ -2099,7 +2099,7 @@ function renderSkillDetail(skill) {
           <span class="card-id" style="font-size:12px;color:var(--ice);">${escapeHtml(skill.id)} @ ${escapeHtml(skill.version)}</span>
           <div style="display:flex;gap:6px;">
             <span class="tag suggestion">${escapeHtml((skill.skill_type||'').toUpperCase())}</span>
-            <button class="btn sm" onclick="dryRunSkill('${escapeHtml(skill.id)}')" title="Evaluate this skill against all 5 seed stories">${ic('flask','icon-sm')} Dry-run</button>
+            <button class="btn sm" onclick="dryRunSkill('${escapeHtml(skill.id)}')" title="Evaluate this skill against all 6 seed stories">${ic('flask','icon-sm')} Dry-run</button>
             <button class="btn sm" onclick="aiReviewSkill('${escapeHtml(skill.id)}')" title="AI-powered editorial review">${ic('robot','icon-sm')} AI review</button>
             <button class="btn sm" onclick="openSkillEditor('${escapeHtml(skill.id)}')">${ic('pencil','icon-sm')} Edit</button>
             <button class="btn sm reject" onclick="deleteSkill('${escapeHtml(skill.id)}')">${ic('trash','icon-sm')}</button>
@@ -2223,7 +2223,7 @@ function renderValidationBanner(validation) {
   </div>`;
 }
 
-// Layer 2: dry-run a skill against the 5 seed stories.
+// Layer 2: dry-run a skill against the 6 seed stories.
 async function dryRunSkill(skillId) {
   const body = document.getElementById('modal-body');
   const oldHtml = body.innerHTML;
@@ -2540,10 +2540,10 @@ async function openSeedLibrary() {
   }
 
   const body = document.getElementById('modal-body');
-  document.getElementById('modal-title').textContent = 'SOM v0.2 Envelopes (seed-stories/)';
+  document.getElementById('modal-title').textContent = 'SOM Envelopes (seed-stories/)';
   body.innerHTML = `
     <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;" id="seed-tabs"></div>
-    <pre class="code-block" id="seed-json" style="max-height:60vh;">Choose a scenario to view its raw SOM v0.2 envelope.</pre>`;
+    <pre class="code-block" id="seed-json" style="max-height:60vh;">Choose a scenario to view its raw SOM envelope.</pre>`;
   const tabs = document.getElementById('seed-tabs');
   for (const s of scenarios) {
     const btn = document.createElement('button');

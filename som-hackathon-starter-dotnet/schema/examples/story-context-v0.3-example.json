@@ -1,5 +1,5 @@
 {
-  "som_version": "0.2.0",
+  "som_version": "0.3.0",
   "message_id": "0190a000-0000-7000-8000-000000000001",
   "correlation_id": "0190a000-0000-7000-8000-000000000002",
   "message_type": "story.context",

@@ -165,8 +165,7 @@ public sealed class MockMamService : IDisposable
 
         var envelope = new JsonObject
         {
-            // Wire version stays 0.2.0 until v0.3 ratifies on the wire (SOM-048).
-            ["som_version"] = "0.2.0",
+            ["som_version"] = SomEnvelope.Version,
             ["message_id"] = Guid.NewGuid().ToString(),
             ["correlation_id"] = Guid.NewGuid().ToString(),
             ["message_type"] = "delivery.media_available",

@@ -2,11 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://som.spec/schema/v0.3/envelope",
   "title": "SOM v0.3 Message Envelope (DRAFT 2, 2026-06-10)",
-  "description": "Envelope per v0.3 Technical §4.1, decision #18 lock. Wire som_version remains 0.2.0 until v0.3 ratifies; this schema describes the TARGET shape. payload is polymorphic on message_type — see som-v0.3-story-context.schema.json and som-v0.3-skill-warning.schema.json.",
+  "description": "Envelope per v0.3 Technical §4.1, decision #18 lock. som_version carries the schema pack version the payload conforms to — 0.3.2 for the v0.3.2 pack; traffic before 12 Aug 2026 carried 0.2.0 under the SOM-048 wire freeze, now retired. payload is polymorphic on message_type — see som-v0.3-story-context.schema.json and som-v0.3-skill-warning.schema.json.",
   "type": "object",
   "required": ["som_version", "message_id", "correlation_id", "message_type", "timestamp", "originating_system", "topic", "payload"],
   "properties": {
-    "som_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "som_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "description": "The schema pack version the payload conforms to — 0.3.2 for the v0.3.2 pack (12 Aug 2026; hackathon-era traffic carried a frozen 0.2.0 under SOM-048, now retired). Informative, never a parsing discriminator — message_type identifies the payload family." },
     "message_id": { "type": "string", "format": "uuid", "description": "UUIDv7, time-ordered" },
     "correlation_id": { "type": "string", "format": "uuid", "description": "Required as of v0.3 (decision #18); links all messages about the same story lifecycle" },
     "causation_id": { "type": "string", "format": "uuid", "description": "Optional; ID of the message that directly caused this one" },

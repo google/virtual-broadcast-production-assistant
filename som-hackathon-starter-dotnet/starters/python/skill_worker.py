@@ -56,7 +56,7 @@ def start_worker() -> None:
 
             try:
                 envelope = json.loads(msg.value().decode("utf-8"))
-                # SOM v0.2 envelope wraps the story under "payload"; tolerate flat payloads too.
+                # The SOM envelope wraps the story under "payload"; tolerate flat payloads too.
                 story_context = envelope.get("payload", envelope)
                 story_id = story_context.get("story_id", "unknown")
                 message_key = msg.key().decode("utf-8") if msg.key() else None

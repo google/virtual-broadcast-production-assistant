@@ -3,12 +3,13 @@
 Validate this repo's SOM JSON against the VENDORED schemas in this folder.
 
 Checks: seed-stories/*.json, schema/examples/*.json, schema/v0.3.1-proposed/examples/*.json,
-and mos-bridge/samples/*.expected.json — envelope + the right payload schema for each.
+schema/v0.3.2-proposed/examples/*.json, and mos-bridge/samples/*.expected.json — envelope +
+the right payload schema for each. Also pins C# SomEnvelope.Version to PACK_VERSION below.
 
 Run:  python3 schema/validate.py        (exits non-zero on any failure)
 Requires: pip install jsonschema
 """
-import json, sys, glob, os
+import json, re, sys, glob, os
 
 try:
     from jsonschema.validators import validator_for
@@ -17,22 +18,37 @@ except ImportError:
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # repo/som-hackathon-starter-dotnet
 SCH  = os.path.join(ROOT, "schema")
-def load(p): return json.load(open(p))
+
+# som_version = the schema pack version (SOM-048 0.2.0 wire freeze retired 12 Aug 2026).
+# Pinned against SomEnvelope.Version in SomEnvelope.cs (checked in main()) and enforced
+# on every repo-owned envelope fixture — code, seeds and validator cannot drift apart.
+PACK_VERSION = "0.3.2"
+
+def load(p):
+    try:
+        return json.load(open(p))
+    except FileNotFoundError:
+        sys.exit(f"Missing vendored schema: {p} — run `bash schema/sync-from-spec.sh` first")
 
 ENV   = load(os.path.join(SCH, "som-v0.3-envelope.schema.json"))
 STORY = load(os.path.join(SCH, "som-v0.3-story-context.schema.json"))
 WARN  = load(os.path.join(SCH, "som-v0.3-skill-warning.schema.json"))
-# v0.3.1-proposed (PENDING the 30 June lock — used for distribution + the story-context point update)
-P = os.path.join(SCH, "v0.3.1-proposed")
+# The v0.3.2 pack (invariant #8): only story-context/telling/delivery changed in v0.3.2;
+# link-event + system-audit stay authoritative at v0.3.1; envelope + skill-warning stay flat v0.3.
+P   = os.path.join(SCH, "v0.3.1-proposed")
+P32 = os.path.join(SCH, "v0.3.2-proposed")
 STORY31 = load(os.path.join(P, "som-v0.3.1-story-context.schema.json"))
+STORY32 = load(os.path.join(P32, "som-v0.3.2-story-context.schema.json"))
 LINK    = load(os.path.join(P, "som-v0.3.1-link-event.schema.json"))
-TELL    = load(os.path.join(P, "som-v0.3.1-telling-event.schema.json"))
-DELIV   = load(os.path.join(P, "som-v0.3.1-delivery-media-available.schema.json"))
+TELL    = load(os.path.join(P32, "som-v0.3.2-telling-event.schema.json"))
+DELIV   = load(os.path.join(P32, "som-v0.3.2-delivery-media-available.schema.json"))
 AUDIT   = load(os.path.join(P, "som-v0.3.1-system-audit.schema.json"))
 
-# Payload schema by message_type. Seeds are v0.3.1-shaped → use the point-update story-context.
+# Payload schema by message_type. Seeds are v0.3.2-shaped (ai_enrichments migrated to
+# assets[] + authorship provenance). Telling/delivery are additive in v0.3.2, so v0.3.1
+# fixtures still validate.
 BY_TYPE = {
-    "story.context": STORY31,
+    "story.context": STORY32,
     "skill.warning.raised": WARN,
     "link.committed": LINK, "link.gate_changed": LINK, "link.withdrawn": LINK,
     "telling.started": TELL, "telling.ended": TELL, "telling.exposed": TELL,
@@ -55,25 +71,40 @@ def payload_schema(d, path, released_story):
     if "link" in name:                                          return LINK
     if "telling" in name:                                       return TELL
     if "delivery" in name:                                      return DELIV
-    if "story" in name or ("story_id" in d and "slug" in d):    return STORY if released_story else STORY31
+    if "story" in name or ("story_id" in d and "slug" in d):
+        if "v0.3.2" in name:                                    return STORY32
+        return STORY if released_story else STORY31
     return None
 
-def check_message(path, *, released_story=False):
+def check_message(path, *, released_story=False, enforce_pack=False):
     """Validate either a full envelope (envelope + payload) or a bare payload fixture."""
     d = load(path)
-    if isinstance(d, dict) and "payload" in d and "som_version" in d:   # full envelope
+    if isinstance(d, dict) and "payload" in d:   # meant to be a full envelope
         sch = payload_schema(d, path, released_story)
-        return errs(ENV, d) + (errs(sch, d["payload"]) if sch else [])
+        version_errs = []
+        if enforce_pack and d.get("som_version") != PACK_VERSION:
+            version_errs = [type("E", (), {"message":
+                f"som_version '{d.get('som_version')}' != pack version '{PACK_VERSION}' (keep in step with SomEnvelope.Version)"})()]
+        return version_errs + errs(ENV, d) + (errs(sch, d["payload"]) if sch else [])
     sch = payload_schema(d, path, released_story)                        # bare payload fixture
     return errs(sch, d) if sch else [type("E", (), {"message": "no schema matched"})()]
 
 def main():
+    # The wire version is stamped in exactly one code site (SomEnvelope.cs) — fail if this
+    # validator's PACK_VERSION ever disagrees with it.
+    cs = open(os.path.join(ROOT, "SomEnvelope.cs")).read()
+    m = re.search(r'const string Version = "([^"]+)"', cs)
+    if not m or m.group(1) != PACK_VERSION:
+        print(f"FATAL: SomEnvelope.Version ({m.group(1) if m else 'NOT FOUND'}) != validate.py PACK_VERSION ({PACK_VERSION})")
+        sys.exit(1)
+
     # (glob_dir, min_expected) — a deleted fixture directory must FAIL, not read as "all valid".
     groups = [
-        (glob.glob(os.path.join(ROOT, "seed-stories", "*.json")), {}, 5, "seed-stories"),
+        (glob.glob(os.path.join(ROOT, "seed-stories", "*.json")), {"enforce_pack": True}, 6, "seed-stories"),
         (glob.glob(os.path.join(SCH, "examples", "*.json")), {"released_story": True}, 1, "schema/examples"),
         (glob.glob(os.path.join(P, "examples", "*.json")), {}, 5, "v0.3.1-proposed/examples"),
-        (glob.glob(os.path.join(ROOT, "mos-bridge", "samples", "*.expected.json")), {}, 1, "mos-bridge fixtures"),
+        (glob.glob(os.path.join(P32, "examples", "*.json")), {}, 4, "v0.3.2-proposed/examples"),
+        (glob.glob(os.path.join(ROOT, "mos-bridge", "samples", "*.expected.json")), {"enforce_pack": True}, 1, "mos-bridge fixtures"),
     ]
     targets = []
     for files, opts, minimum, label in groups:

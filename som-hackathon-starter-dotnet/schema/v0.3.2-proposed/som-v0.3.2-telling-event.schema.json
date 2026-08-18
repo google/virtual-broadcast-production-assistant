@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://som.spec/schema/v0.3.2-proposed/telling-event",
+  "title": "SOM v0.3.2 PROPOSED \u2014 som.telling.* event payloads",
+  "description": "Payloads for telling.started / telling.ended / telling.exposed (v0.3.1 Proposal \u00a73.2), implementing the ratified event-pair semantics (\u00a75): exposure_start/exposure_end immutable and event-stamped; scheduled_start mutable; instantaneous exposures carry both with exposure_start = exposure_end. Stuck-LIVE guard and clock discipline are normative in \u00a75. v0.3.2 addition: transforms[] \u2014 edge reshapes recorded against the Telling (Morag 5 Jul ask / John 9 Jul reply). Boundary test: if the reshaped output gets its own TAMS Source it is a new Source as today; if not, it is a transform on the telling. The array is APPLICATION-ORDERED and APPEND-ONLY \u2014 entries are never edited or removed (the provenance claim depends on it). Compliance invariant: a telling-side transform NEVER lifts a compliance[].media_range hold \u2014 holds evaluate against the Source time range regardless of transforms.",
+  "type": "object",
+  "required": [
+    "message_type",
+    "telling_id",
+    "link_id"
+  ],
+  "properties": {
+    "message_type": {
+      "type": "string",
+      "enum": [
+        "telling.started",
+        "telling.ended",
+        "telling.exposed"
+      ]
+    },
+    "telling_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "link_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The link this Telling followed from \u2014 referenced, not duplicated"
+    },
+    "exposure_start": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "exposure_end": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "scheduled_start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Mutable intended-air; never used to derive on-air state"
+    },
+    "extensions": {
+      "type": "object",
+      "patternProperties": {
+        "^com\\.[a-z0-9-]+\\.": {}
+      },
+      "additionalProperties": false
+    },
+    "transforms": {
+      "type": "array",
+      "description": "Application-ordered, append-only edge reshapes on this telling; none of them new media.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "transform_type",
+          "applied_by",
+          "applied_at"
+        ],
+        "properties": {
+          "transform_id": {
+            "type": "string",
+            "description": "PROPOSED (Nigel 9 Jul / John counter-shape): stable handle for audit and modification history \u2014 audit records target the transform by id. Identity, not order: application order remains the array position (normative, safe because the array is append-only); applied_at is informational, never a sort key."
+          },
+          "transform_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "CROP",
+                  "TRIM",
+                  "CAPTION_BURN"
+                ]
+              },
+              {
+                "type": "string",
+                "pattern": "^x-[a-z0-9_]+$"
+              }
+            ],
+            "description": "Governed-but-extensible registry (same model as Platform / framing_treatment); seed values CROP / TRIM / CAPTION_BURN; vendor values x-lowercase."
+          },
+          "params": {
+            "type": "object",
+            "description": "Per-type payload (not generic from/to): CROP {aspect_ratio | geometry}, TRIM {time_range}, CAPTION_BURN {caption_ref | style}. Shapes settle with the registry."
+          },
+          "applied_by": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "actor_id",
+              "actor_type"
+            ],
+            "description": "Audit actor shape (shared convention).",
+            "properties": {
+              "actor_id": {
+                "type": "string"
+              },
+              "actor_type": {
+                "type": "string"
+              }
+            }
+          },
+          "applied_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "message_type": {
+            "const": "telling.started"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "exposure_start"
+        ],
+        "not": {
+          "required": [
+            "exposure_end"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "message_type": {
+            "const": "telling.ended"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "exposure_end"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "message_type": {
+            "const": "telling.exposed"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "exposure_start",
+          "exposure_end"
+        ]
+      }
+    }
+  ]
+}

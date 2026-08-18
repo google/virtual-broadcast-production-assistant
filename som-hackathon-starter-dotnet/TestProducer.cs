@@ -16,7 +16,7 @@ namespace SomSkillWorker;
 ///   dotnet run -- --test-producer --story clean
 ///   dotnet run -- --test-producer --story breaking-no-compliance
 ///
-/// Seed stories live in ./seed-stories/*.json — full SOM v0.2 story.context payloads.
+/// Seed stories live in ./seed-stories/*.json — full SOM envelopes with v0.3.2-shaped story.context payloads.
 /// </summary>
 public static class TestProducer
 {
@@ -34,7 +34,7 @@ public static class TestProducer
     public static IReadOnlyList<string> Scenarios => ScenarioFiles.Keys.ToArray();
 
     /// <summary>
-    /// Returns the raw SOM v0.2 envelope JSON for a given scenario, or null if unknown.
+    /// Returns the raw SOM envelope JSON for a given scenario, or null if unknown.
     /// </summary>
     public static async Task<string?> LoadScenarioJsonAsync(string scenario)
     {

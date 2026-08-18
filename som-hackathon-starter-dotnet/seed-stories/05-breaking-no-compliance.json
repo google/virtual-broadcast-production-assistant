@@ -1,5 +1,5 @@
 {
-  "som_version": "0.2.0",
+  "som_version": "0.3.2",
   "message_id": "019536a2-7c3f-7d8e-a1b2-000000000005",
   "correlation_id": "019536a0-5555-7000-8000-000000000005",
   "message_type": "story.context",
@@ -10,6 +10,12 @@
     "slug": "MANHATTAN-MIDTOWN-EXPLOSION",
     "headline": "Explosion Reported at Midtown Manhattan Office Tower",
     "story_type": "ACTIVE",
+    "tags": [
+      {
+        "scheme": "newsroom",
+        "value": "breaking"
+      }
+    ],
     "lifecycle": {
       "phase": "BREAKING",
       "phase_entered_at": "2026-05-06T18:01:30Z",
@@ -46,7 +52,6 @@
       ]
     },
     "assets": [],
-    "ai_enrichments": [],
     "skills_config": {
       "skills_spec_version": "2.0.0",
       "skill_executor_id": "executor-nbcu-nyc-01",
