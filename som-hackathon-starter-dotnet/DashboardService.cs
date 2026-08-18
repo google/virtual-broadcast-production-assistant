@@ -255,12 +255,22 @@ public sealed class DashboardService : BackgroundService
 
     public async Task<DecisionResult> DecideAsync(string outputId, string decision, string? reviewer, CancellationToken ct)
     {
+        // Validate the decision BEFORE removing the pending item. A malformed body
+        // (e.g. {"approved":true}) binds decision=null and, if we removed first, the
+        // staged warning would be destroyed by a downstream NRE before either branch
+        // could restore it. Reject up front so nothing is ever taken from the queue
+        // on a decision we cannot honour.
+        var verb = decision?.Trim().ToLowerInvariant();
+        if (verb is not ("approve" or "reject"))
+            return new DecisionResult(false,
+                "invalid_decision — body must be {\"decision\":\"approve\"|\"reject\"}", null);
+
         if (!_pending.TryRemove(outputId, out var pending))
             return new DecisionResult(false, "not_found", null);
 
         var key = pending.StoryKey ?? "";
 
-        if (decision.Equals("approve", StringComparison.OrdinalIgnoreCase))
+        if (verb == "approve")
         {
             // Republish to the production bus in a FRESH dashboard-attributed envelope —
             // envelope-level approved_by/at writes were schema-invalid (envelope is
@@ -302,7 +312,7 @@ public sealed class DashboardService : BackgroundService
             return new DecisionResult(true, "approved", _options.SkillEventsTopic);
         }
 
-        if (decision.Equals("reject", StringComparison.OrdinalIgnoreCase))
+        if (verb == "reject")
         {
             // Build inside the try — same restore guarantee as the approve branch.
             try
@@ -336,7 +346,7 @@ public sealed class DashboardService : BackgroundService
             return new DecisionResult(true, "rejected", _options.SkillRejectedTopic);
         }
 
-        // Unknown decision — put back the pending entry so the UI can retry.
+        // Unreachable: verb was validated to approve|reject before the item was removed.
         _pending[outputId] = pending;
         return new DecisionResult(false, "invalid_decision", null);
     }

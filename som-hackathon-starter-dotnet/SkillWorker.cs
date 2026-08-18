@@ -111,10 +111,17 @@ public class SkillWorker : BackgroundService
                                 skill.Id, string.Join(",", operatesOn));
                         continue;
                     }
+                    // EvaluateSkillAsync fails CLOSED and VISIBLE on its own: a skill that
+                    // throws emits a FAILED run record and returns, so one bad skill never
+                    // aborts the rest of the loop. Shutdown cancellation still propagates.
                     await EvaluateSkillAsync(skill, storyContext, storyId, result.Message.Key, correlationId, previous, stoppingToken);
                 }
 
                 if (hasStoryId) _previousStories[storyId] = storyContext.DeepClone();
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;   // graceful shutdown — not an error
             }
             catch (ConsumeException ex)
             {
@@ -141,32 +148,61 @@ public class SkillWorker : BackgroundService
         var sw = Stopwatch.StartNew();
         var warningIds = new List<string>();
 
-        foreach (var rule in skill.Rules)
+        try
         {
-            foreach (var match in _engine.Evaluate(rule, storyContext, previous))
+            foreach (var rule in skill.Rules)
             {
-                var warningPayload = BuildWarning(skill, match, storyId);
-                warningIds.Add(warningPayload["warning_id"]!.GetValue<string>());
-                var warningMsg = BuildEnvelope("skill.warning.raised", _options.SkillStagingTopic, correlationId, warningPayload);
-                await PublishAsync(_options.SkillStagingTopic, storyId, warningMsg.ToJsonString(), ct);
+                foreach (var match in _engine.Evaluate(rule, storyContext, previous))
+                {
+                    var warningPayload = BuildWarning(skill, match, storyId);
+                    warningIds.Add(warningPayload["warning_id"]!.GetValue<string>());
+                    var warningMsg = BuildEnvelope("skill.warning.raised", _options.SkillStagingTopic, correlationId, warningPayload);
+                    await PublishAsync(_options.SkillStagingTopic, storyId, warningMsg.ToJsonString(), ct);
+                }
             }
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;   // graceful shutdown, not a skill failure — let the consume loop stop
+        }
+        catch (Exception ex)
+        {
+            // Fail CLOSED and VISIBLE: emit a FAILED run record so "the check crashed" is
+            // distinguishable on the bus from "the check ran clean", and return without
+            // rethrowing so the remaining skills for this story still run. The partial
+            // warning_ids already published to staging are carried through, not dropped.
+            sw.Stop();
+            _logger.LogError(ex, "Skill {SkillId} threw on {StoryId} after {Count} warning(s) — emitting FAILED run record",
+                skill.Id, storyId, warningIds.Count);
+            await PublishRunRecordAsync(skill, storyId, messageKey, correlationId, warningIds, sw.ElapsedMilliseconds, failed: true, ct);
+            return;
         }
 
         sw.Stop();
-
-        var runPayload = BuildRunRecord(
-            skill,
-            Guid.NewGuid().ToString(),
-            storyId,
-            messageKey,
-            warningIds,
-            sw.ElapsedMilliseconds);
-
-        var runMsg = BuildEnvelope("skill.run.completed", _options.SkillRunsTopic, correlationId, runPayload);
-        await PublishAsync(_options.SkillRunsTopic, storyId, runMsg.ToJsonString(), ct);
+        await PublishRunRecordAsync(skill, storyId, messageKey, correlationId, warningIds, sw.ElapsedMilliseconds, failed: false, ct);
 
         _logger.LogInformation("Skill {SkillId}@{Version} on {StoryId}: {Count} warnings in {Ms}ms",
             skill.Id, skill.Version, storyId, warningIds.Count, sw.ElapsedMilliseconds);
+    }
+
+    /// <summary>
+    /// Publish a skill.run.completed record. On the FAILED path this is best-effort — if the
+    /// publish itself throws we are already handling a skill failure, so we log and swallow
+    /// rather than let the FAILED-reporting path take down the loop.
+    /// </summary>
+    private async Task PublishRunRecordAsync(SkillDefinition skill, string storyId, string? messageKey,
+        string? correlationId, List<string> warningIds, long latencyMs, bool failed, CancellationToken ct)
+    {
+        try
+        {
+            var runPayload = BuildRunRecord(skill, Guid.NewGuid().ToString(), storyId, messageKey, warningIds, latencyMs, failed);
+            var runMsg = BuildEnvelope("skill.run.completed", _options.SkillRunsTopic, correlationId, runPayload);
+            await PublishAsync(_options.SkillRunsTopic, storyId, runMsg.ToJsonString(), ct);
+        }
+        catch (Exception ex) when (failed)
+        {
+            _logger.LogError(ex, "Failed to publish FAILED run record for skill {SkillId} on {StoryId}", skill.Id, storyId);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -233,13 +269,17 @@ public class SkillWorker : BackgroundService
     }
 
     /// <summary>Build skill.run.completed audit record (Amendment 1, hackathon brief §8.1).</summary>
+    /// <param name="failed">When true, emit outcome FAILED with human_review_required — the
+    /// skill threw and produced nothing, which must be distinguishable on the bus from a
+    /// clean run that raised no warnings (SKIPPED).</param>
     private static JsonNode BuildRunRecord(
         SkillDefinition skill,
         string runId,
         string storyId,
         string? messageKey,
         List<string> warningIds,
-        long latencyMs)
+        long latencyMs,
+        bool failed = false)
     {
         // Payload only — message_type and timestamp live on the envelope (BuildEnvelope).
         return new JsonObject
@@ -266,8 +306,8 @@ public class SkillWorker : BackgroundService
                 ["enrichment_ids"] = new JsonArray(),
             },
             ["latency_ms"] = latencyMs,
-            ["outcome"] = warningIds.Count > 0 ? "COMPLETED" : "SKIPPED",
-            ["human_review_required"] = warningIds.Count > 0,
+            ["outcome"] = failed ? "FAILED" : warningIds.Count > 0 ? "COMPLETED" : "SKIPPED",
+            ["human_review_required"] = failed || warningIds.Count > 0,
         };
     }
 
