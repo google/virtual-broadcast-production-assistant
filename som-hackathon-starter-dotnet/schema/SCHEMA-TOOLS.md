@@ -8,6 +8,7 @@ Three scripts, three different questions. All pure Python, no dependencies excep
 | `validate.py` | Do **messages** conform to the schema? |
 | `som_lint.py` | Does the **schema** agree with itself? |
 | `som_diff.py` | What does a **proposed change** break, and for whom? |
+| `validate_sequence.py` | Is a **story over time** coherent? |
 
 ---
 
@@ -23,14 +24,14 @@ cd v0.3.2-proposed && python3 validate.py
 24 checks: three schema-validity, six must-validate (four v0.3.2 worked examples plus
 two v0.3.1 regressions), fifteen negative cases that must be **rejected**.
 
+The negative half is the point. Positive tests only prove the schema accepts good
+input — a schema that accepted everything would pass all of them. The negative cases
+prove it actually constrains.
+
 The **reference repo's** (`schema/validate.py`, repo only) covers the whole vendored
 pack plus the repo's seeds, mos-bridge fixtures and the C#↔pack version pin — run
 `python3 schema/validate.py` from `som-hackathon-starter-dotnet/`. In the repo, that
 is the one to run; the scaffold validator does not exist there.
-
-The negative half is the point. Positive tests only prove the schema accepts good
-input — a schema that accepted everything would pass all of them. The negative cases
-prove it actually constrains.
 
 Needs `jsonschema>=4.20` (Draft 2020-12).
 
@@ -116,12 +117,50 @@ time the reviewer had that week.
 
 ---
 
+## validate_sequence.py — a story over time
+
+```
+validate_sequence.py DIR                    # every *.json in DIR, sorted by name
+validate_sequence.py a.json b.json c.json   # explicit order
+validate_sequence.py DIR --strict           # warnings fail the build (CI)
+validate_sequence.py DIR --envelopes        # inputs are wire messages, not payloads
+```
+
+The other three tools all look at one thing at a time. This one looks at a *run* — several
+snapshots of the same story — and checks what holds between them.
+
+That distinction is not academic. Point it at a deliberately broken hurricane run and it
+reports **7/7 snapshots individually valid, and four errors across the run.** Every payload
+passes `validate.py`; the story is still incoherent. No single-payload check can see it.
+
+**What it checks**
+
+| Rule | Why it is there |
+|---|---|
+| `story_id` immutable | A wire feed minted a fresh id per revision, so a category upgrade arrived as a second story instead of the next snapshot. |
+| `sequence_number` strictly increasing | Owner-only and monotonic. Equal values across two writers is a collision, not a tie — which is exactly why it beats a timestamp. |
+| `updated_at` never goes backwards | Clocks step backwards; a story's history should not. |
+| Nothing dropped between snapshots | Every message is a whole snapshot. A writer that omits what it did not change **erases** it — the multi-writer hazard, made visible. |
+| `asset_id` identity stable | An id is minted once and means one thing for life. This is also what lets an ORPHAN clip keep its id when it is adopted. |
+| No return from a terminal `story_type` | KILLED / SPIKED / ARCHIVED are terminal; ORPHAN shells retire to ARCHIVED and are never deleted. |
+| Settled reviews do not silently re-open | CONFIRMED → PENDING is legal but wants an audit record. Warning, not an error. |
+| Fresh `message_id` on republish (`--envelopes`) | A republish that reuses the original id, or never re-stamps `originating_system`, attributes a correction to whoever first minted the story. |
+
+Run it against the worked example that ships in the pack:
+
+```
+python3 schema/validate_sequence.py schema/v0.3.2-proposed/examples/hurricane-run
+```
+
+---
+
 ## Suggested CI (reference repo)
 
 ```yaml
 - run: bash schema/sync-from-spec.sh --check    # repo copy has not drifted from the spec
 - run: python3 schema/validate.py               # messages conform (repo validator)
 - run: python3 schema/som_lint.py schema        # schema agrees with itself (errors gate)
+- run: python3 schema/validate_sequence.py schema/v0.3.2-proposed/examples/hurricane-run
 ```
 
 Two things deliberately NOT in that list:

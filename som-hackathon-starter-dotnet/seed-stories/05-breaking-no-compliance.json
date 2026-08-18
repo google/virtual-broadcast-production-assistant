@@ -10,6 +10,12 @@
     "slug": "MANHATTAN-MIDTOWN-EXPLOSION",
     "headline": "Explosion Reported at Midtown Manhattan Office Tower",
     "story_type": "ACTIVE",
+    "tags": [
+      {
+        "scheme": "newsroom",
+        "value": "breaking"
+      }
+    ],
     "lifecycle": {
       "phase": "BREAKING",
       "phase_entered_at": "2026-05-06T18:01:30Z",

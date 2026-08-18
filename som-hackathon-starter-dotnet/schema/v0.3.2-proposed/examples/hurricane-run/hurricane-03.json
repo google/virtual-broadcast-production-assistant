@@ -1,0 +1,76 @@
+{
+  "story_id": "hurricane-2026-0911",
+  "slug": "HURRICANE-LANDFALL",
+  "headline": "Hurricane makes Cat 3 landfall on the Gulf Coast",
+  "story_type": "ACTIVE",
+  "lifecycle": {
+    "phase": "BREAKING",
+    "phase_entered_at": "2026-09-11T14:00:00Z"
+  },
+  "sequence_number": 3,
+  "updated_at": "2026-09-11T16:24:00Z",
+  "newsroom_id": "nbcu-nyc",
+  "priority": {
+    "level": "URGENT",
+    "reason": "landfall imminent"
+  },
+  "editorial_source": [
+    {
+      "source_id": "src-fema-presser",
+      "source_type": "OFFICIAL",
+      "provider": "FEMA",
+      "credibility": "TRUSTED",
+      "received_at": "2026-09-11T16:20:00Z"
+    }
+  ],
+  "compliance": [
+    {
+      "flag_id": "flag-outage-unconfirmed",
+      "type": "EDITORIAL_REVIEW",
+      "severity": "HIGH",
+      "detail": "Outage figure unconfirmed pending authority statement",
+      "raised_by": "standards",
+      "raised_at": "2026-09-11T15:00:00Z",
+      "status": "ACTIVE"
+    },
+    {
+      "flag_id": "flag-casualty-unconfirmed",
+      "type": "EDITORIAL_REVIEW",
+      "severity": "CRITICAL",
+      "detail": "Casualty figure unconfirmed",
+      "raised_by": "standards",
+      "raised_at": "2026-09-11T15:10:00Z",
+      "status": "ACTIVE"
+    }
+  ],
+  "story_meaning": {
+    "who": "Gulf Coast residents, NHC",
+    "what": "Cat 3 hurricane makes landfall",
+    "when": "2026-09-11",
+    "where": "Gulf Coast",
+    "summary": "Cat 3 landfall on the Gulf Coast. Live feed capturing. Outage and casualty figures unconfirmed."
+  },
+  "content_refs": [
+    {
+      "uri": "https://wire.ap.org/stories/hurricane-xyz.json",
+      "content_format": "ap-som-body-json-v1",
+      "source_id": "src-fema-presser"
+    }
+  ],
+  "assets": [
+    {
+      "asset_id": "asset-presser-feed",
+      "asset_type": "VIDEO",
+      "status": "READY",
+      "evidential_position": "PRIMARY",
+      "acquisition_state": "CAPTURED",
+      "media_refs": [
+        {
+          "source": "tams://tams-gcp-store/9f2e7c1a",
+          "label": "FEMA presser feed",
+          "time_range": "[0:0_1260:0)"
+        }
+      ]
+    }
+  ]
+}

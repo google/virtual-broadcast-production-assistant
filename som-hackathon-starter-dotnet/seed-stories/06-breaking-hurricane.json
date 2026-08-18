@@ -10,6 +10,17 @@
     "slug": "HURRICANE-GULF-LANDFALL",
     "headline": "Hurricane Makes Landfall Near Gulf Coast as Category 3 Storm",
     "story_type": "ACTIVE",
+    "tags": [
+      {
+        "scheme": "newsroom",
+        "value": "weather"
+      },
+      {
+        "scheme": "iptc-mediatopic",
+        "value": "17000000",
+        "label": "weather"
+      }
+    ],
     "lifecycle": {
       "phase": "BREAKING",
       "phase_entered_at": "2026-07-18T11:58:00Z",
@@ -22,7 +33,7 @@
     },
     "priority": {
       "level": "URGENT",
-      "reason": "Landfall in progress — live feed on air path",
+      "reason": "Landfall in progress \u2014 live feed on air path",
       "escalated_by": "ncs-nbcu-nyc-01",
       "escalated_at": "2026-07-18T11:58:30Z"
     },
@@ -33,7 +44,7 @@
       "where": "Gulf Coast landfall zone; affiliate feed position at the seawall.",
       "why": "A major-hurricane landfall on a populated coastline is a rolling public-safety story with continuous new material.",
       "how": "Covered via a continuously captured affiliate live feed referenced into TAMS, cross-checked against NHC advisories.",
-      "summary": "A Category 3 hurricane is making landfall near the Gulf Coast. The landfall feed is being captured continuously — the asset is open-ended (CAPTURING) and availability rolls in segment by segment while the story is on air.",
+      "summary": "A Category 3 hurricane is making landfall near the Gulf Coast. The landfall feed is being captured continuously \u2014 the asset is open-ended (CAPTURING) and availability rolls in segment by segment while the story is on air.",
       "confidence": 0.9,
       "provenance_refs": [
         "src-nhc-advisory-24",
@@ -49,7 +60,7 @@
         "flag_id": "cf-019536a2-0006",
         "type": "EDITORIAL_REVIEW",
         "severity": "MEDIUM",
-        "detail": "Live landfall feed — delay buffer active; watch for distressing imagery during rescue phases",
+        "detail": "Live landfall feed \u2014 delay buffer active; watch for distressing imagery during rescue phases",
         "jurisdiction": "US",
         "raised_by": "standards-desk-01",
         "raised_at": "2026-07-18T11:59:00Z",

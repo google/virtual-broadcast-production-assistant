@@ -26,7 +26,7 @@ for req in \
     v0.3.2-proposed/som-v0.3.2-story-context.schema.json \
     v0.3.2-proposed/som-v0.3.2-telling-event.schema.json \
     v0.3.2-proposed/som-v0.3.2-delivery-media-available.schema.json \
-    som_lint.py som_diff.py SCHEMA-TOOLS.md; do
+    som_lint.py som_diff.py validate_sequence.py SCHEMA-TOOLS.md; do
   [ -f "$SRC/$req" ] || { echo "Spec is missing $req — nothing written. Spec folder older than this script?"; exit 1; }
 done
 
@@ -49,11 +49,11 @@ cp "$SRC"/v0.3.1-proposed/README.md          "$OUT/v0.3.1-proposed/"     2>/dev/
 # validate.py hard-requires these three files, so a missing/renamed spec folder must fail HERE,
 # not print "Vendored." over a silent no-op.
 cp "$SRC"/v0.3.2-proposed/som-v0.3.2-*.schema.json "$OUT/v0.3.2-proposed/"
-cp "$SRC"/v0.3.2-proposed/examples/*.json    "$OUT/v0.3.2-proposed/examples/" 2>/dev/null || true
+cp -R "$SRC"/v0.3.2-proposed/examples/.      "$OUT/v0.3.2-proposed/examples/" 2>/dev/null || true
 cp "$SRC"/v0.3.2-proposed/README.md          "$OUT/v0.3.2-proposed/"     2>/dev/null || true
 # Schema tools travel with the schemas they check (som_lint checks the schema against its
 # own claims; som_diff prices deltas). Existence already asserted by the pre-flight.
-cp "$SRC"/som_lint.py "$SRC"/som_diff.py "$SRC"/SCHEMA-TOOLS.md "$OUT"/
+cp "$SRC"/som_lint.py "$SRC"/som_diff.py "$SRC"/validate_sequence.py "$SRC"/SCHEMA-TOOLS.md "$OUT"/
 ls "$OUT"/v0.3.2-proposed/som-v0.3.2-*.schema.json >/dev/null
 
 if [ "$CHECK" = 1 ]; then
@@ -78,7 +78,8 @@ if [ "$CHECK" = 1 ]; then
   done < <(cd "$DST" && find . -type f \( \
       -path "./v0.3.1-proposed/*" -o -path "./v0.3.2-proposed/*" \
       -o -path "./examples/*" -o -name "som-v0.3-*.schema.json" \
-      -o -name "som_lint.py" -o -name "som_diff.py" -o -name "SCHEMA-TOOLS.md" \
+      -o -name "som_lint.py" -o -name "som_diff.py" -o -name "validate_sequence.py" \
+      -o -name "SCHEMA-TOOLS.md" \
     \) | sed 's|^\./||')
   if [ "$drift" = 1 ]; then
     echo "Repo schema/ has drifted from the spec. Run: bash schema/sync-from-spec.sh"

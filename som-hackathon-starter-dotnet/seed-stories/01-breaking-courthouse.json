@@ -10,6 +10,12 @@
     "slug": "JONES-SENTENCING-FED-CT",
     "headline": "Jones Sentencing \u2014 Federal Court Verdict Overturns Expectations",
     "story_type": "ACTIVE",
+    "tags": [
+      {
+        "scheme": "newsroom",
+        "value": "justice"
+      }
+    ],
     "lifecycle": {
       "phase": "BREAKING",
       "phase_entered_at": "2026-04-01T14:44:30Z",

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://som.spec/schema/v0.3.2-proposed/story-context",
   "title": "SOM v0.3.2 PROPOSED \u2014 story.context payload (point update)",
-  "description": "Point update of the locked v0.3.1 story-context schema (30 Jun lock + Source re-key), generated from it programmatically. v0.3.2 window; v0.3.2 is the IBC target (early Aug 2026; open items resolved in this pack). Changes: (1) asset_type gains TRANSCRIPT (locked v0.3.1 29 Jun \u2014 carried here because the 30 Jun re-cut omitted it) plus the promoted generative outputs SUMMARY/SOCIAL_POST/ARTICLE/ANALYSIS (AI-outputs refactor, principle ratified 29 Jun; registry direction \u2014 governed-but-extensible); (2) asset.provenance \u2014 authorship-general provenance object (author HUMAN/MODEL, never AI-keyed); (3) assertions[] \u2014 claims-about-content (FACT_CHECK/DETECTION/MATCH) with target on the audit target set plus STORY (audit-set convergence proposed; the assertion set is deliberately the wider of the two until it lands) and a structured review state; ai_enrichments[] is hard-rejected (narrowed to assertions[]; generative outputs are Assets \u2014 SOM-048 migration is breaking, needs the disambiguation rule); (4) story_type gains ORPHAN (Morag 5 Jul asks / John 9 Jul reply \u2014 minimal shell story holding an unmatched UGC clip; trivially filterable via the story_type predicate; ships in v0.3.2, residual debate tracks to the v0.4 review); (5) editorial_gate.blocks[] contract restored ({kind ASSET|PHASE, ref}; bare string DEPRECATED \u2014 element-level-hold reply 1 Jul). som_version carries the pack version (0.3.2) \u2014 the SOM-048 0.2.0 wire freeze was retired 12 Aug 2026.",
+  "description": "Point update of the locked v0.3.1 story-context schema (30 Jun lock + Source re-key), generated from it programmatically. v0.3.2 window; v0.3.2 is the IBC target (early Aug 2026; open items resolved in this pack). Changes: (1) asset_type gains TRANSCRIPT (locked v0.3.1 29 Jun \u2014 carried here because the 30 Jun re-cut omitted it) plus the promoted generative outputs SUMMARY/SOCIAL_POST/ARTICLE/ANALYSIS (AI-outputs refactor, principle ratified 29 Jun; registry direction \u2014 governed-but-extensible); (2) asset.provenance \u2014 authorship-general provenance object (author HUMAN/MODEL, never AI-keyed); (3) assertions[] \u2014 claims-about-content (FACT_CHECK/DETECTION/MATCH) with target on the audit target set plus STORY (audit-set convergence proposed; the assertion set is deliberately the wider of the two until it lands) and a structured review state; ai_enrichments[] is hard-rejected (narrowed to assertions[]; generative outputs are Assets \u2014 SOM-048 migration is breaking, needs the disambiguation rule); (4) story_type gains ORPHAN (Morag 5 Jul asks / John 9 Jul reply \u2014 minimal shell story holding an unmatched UGC clip; trivially filterable via the story_type predicate; ships in v0.3.2, residual debate tracks to the v0.4 review); (5) editorial_gate.blocks[] contract restored ({kind ASSET|PHASE, ref}; bare string DEPRECATED \u2014 element-level-hold reply 1 Jul). som_version carries the pack version (0.3.2) \u2014 the SOM-048 0.2.0 wire freeze was retired 12 Aug 2026. (6) tags[] \u2014 subject-matter tagging: ordered, scheme-qualified (newsroom / iptc-mediatopic / com.{vendor}.{name}), additive and optional. Added because every other axis here carries lifecycle, priority, compliance or provenance and none of them say what a story is about, so a skill trigger policy had no field to resolve on and was falling back to substring matching on headline text.",
   "type": "object",
   "required": [
     "story_id",
@@ -33,6 +33,14 @@
         "ORPHAN"
       ],
       "description": "ORPHAN (v0.3.2): a minimal shell story minted to hold a clip that arrived with no story (UGC / found media) until a proposed match is confirmed. On confirm the clip MOVES to the real story (same asset_id, original timestamps; the association change is recorded on som.system.audit against the asset \u2014 NOTE the locked action vocabulary CLEARED/SUPPRESSED/WITHHELD/OVERRIDDEN cannot yet express an association, so an ASSOCIATED action is proposed to make this record expressible; until it lands the move is recorded by convention, not by a defined action) and the shell ALWAYS retires to ARCHIVED (Morag, accepted 13 Jul) \u2014 the reason it closed (resolved onto a story, or rejected/discarded) lives in the audit trail, so the terminal story_type carries no distinction; never deleted. Consumers exclude orphans with the same single story_type predicate used for KILLED/SPIKED."
+    },
+    "tags": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "Subject-matter tags: what the story is about. Order is significant \u2014 the first entry is the primary tag, and a trigger policy whose map matches more than one entry resolves on the earliest match, so a story that is genuinely both sport and politics routes deterministically instead of ambiguously. Optional and additive; an absent array means untagged, never a default desk.",
+      "items": {
+        "$ref": "#/$defs/story_tag"
+      }
     },
     "lifecycle": {
       "$ref": "#/$defs/lifecycle"
@@ -911,6 +919,31 @@
         "broadcaster": false
       },
       "additionalProperties": false
+    },
+    "story_tag": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scheme",
+        "value"
+      ],
+      "description": "A tag qualified by the vocabulary it belongs to, so a governed standard and house desk tags sit in one array without colliding. The scheme namespace is governed; the value vocabulary belongs to whoever owns the scheme.",
+      "properties": {
+        "scheme": {
+          "type": "string",
+          "pattern": "^(newsroom|iptc-mediatopic|com\\.[a-z0-9-]+\\.[a-z0-9-]+)$",
+          "description": "Vocabulary the value belongs to. newsroom is a house-local desk tag. iptc-mediatopic is an IPTC Media Topic identifier, the broadcast-standard taxonomy. com.{vendor}.{name} carries a vendor or newsroom-system vocabulary, following the same vendor carve-out the extensions object uses. Governed-but-extensible: a new first-class scheme is a registry addition, a vendor scheme needs no registry."
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The tag itself. Lowercase for the newsroom scheme, for example sport or politics; the numeric topic identifier for iptc-mediatopic. Deliberately unconstrained beyond non-empty, because the scheme namespace is what is governed and the value vocabulary belongs to the scheme owner."
+        },
+        "label": {
+          "type": "string",
+          "description": "Optional human-readable label for an opaque identifier, since an IPTC topic number means nothing on a dashboard. Display only: never resolve a trigger policy on this."
+        }
+      }
     },
     "content_ref": {
       "type": "object",

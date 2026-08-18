@@ -10,6 +10,16 @@
     "slug": "MIDTERM-RESULTS-VA-GOV",
     "headline": "Virginia Governor Race Too Close to Call as Polls Close",
     "story_type": "ACTIVE",
+    "tags": [
+      {
+        "scheme": "newsroom",
+        "value": "politics"
+      },
+      {
+        "scheme": "newsroom",
+        "value": "elections"
+      }
+    ],
     "lifecycle": {
       "phase": "DEVELOPING",
       "phase_entered_at": "2026-06-15T20:00:00Z",

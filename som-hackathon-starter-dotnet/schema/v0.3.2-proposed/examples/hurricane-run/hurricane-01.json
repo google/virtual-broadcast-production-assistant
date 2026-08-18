@@ -1,0 +1,60 @@
+{
+  "story_id": "hurricane-2026-0911",
+  "slug": "HURRICANE-LANDFALL",
+  "headline": "Hurricane approaches Gulf Coast as Cat 3",
+  "story_type": "ACTIVE",
+  "lifecycle": {
+    "phase": "DEVELOPING",
+    "phase_entered_at": "2026-09-11T13:10:00Z"
+  },
+  "sequence_number": 1,
+  "updated_at": "2026-09-11T13:10:00Z",
+  "newsroom_id": "nbcu-nyc",
+  "priority": {
+    "level": "HIGH",
+    "reason": "storm tracking toward landfall"
+  },
+  "editorial_source": [
+    {
+      "source_id": "src-fema-presser",
+      "source_type": "OFFICIAL",
+      "provider": "FEMA",
+      "credibility": "TRUSTED",
+      "received_at": "2026-09-11T16:20:00Z"
+    }
+  ],
+  "compliance": [
+    {
+      "flag_id": "flag-outage-unconfirmed",
+      "type": "EDITORIAL_REVIEW",
+      "severity": "HIGH",
+      "detail": "Outage figure unconfirmed pending authority statement",
+      "raised_by": "standards",
+      "raised_at": "2026-09-11T15:00:00Z",
+      "status": "ACTIVE"
+    },
+    {
+      "flag_id": "flag-casualty-unconfirmed",
+      "type": "EDITORIAL_REVIEW",
+      "severity": "CRITICAL",
+      "detail": "Casualty figure unconfirmed",
+      "raised_by": "standards",
+      "raised_at": "2026-09-11T15:10:00Z",
+      "status": "ACTIVE"
+    }
+  ],
+  "story_meaning": {
+    "who": "Gulf Coast residents, NHC",
+    "what": "Cat 3 hurricane tracking toward landfall",
+    "when": "2026-09-11",
+    "where": "Gulf Coast",
+    "summary": "Cat 3 hurricane approaching the Gulf Coast. Outage and casualty figures unconfirmed."
+  },
+  "content_refs": [
+    {
+      "uri": "https://wire.ap.org/stories/hurricane-xyz.json",
+      "content_format": "ap-som-body-json-v1",
+      "source_id": "src-fema-presser"
+    }
+  ]
+}

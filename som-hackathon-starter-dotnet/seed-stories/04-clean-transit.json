@@ -10,6 +10,16 @@
     "slug": "NYC-TRANSIT-EXPANSION-APPROVED",
     "headline": "City Council Approves $2.1 Billion Public Transit Expansion Plan",
     "story_type": "ACTIVE",
+    "tags": [
+      {
+        "scheme": "newsroom",
+        "value": "transport"
+      },
+      {
+        "scheme": "newsroom",
+        "value": "politics"
+      }
+    ],
     "lifecycle": {
       "phase": "PUBLISHED",
       "phase_entered_at": "2026-05-12T10:30:00Z",
