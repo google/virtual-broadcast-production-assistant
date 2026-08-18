@@ -127,7 +127,8 @@ validate_sequence.py DIR --envelopes        # inputs are wire messages, not payl
 ```
 
 The other three tools all look at one thing at a time. This one looks at a *run* — several
-snapshots of the same story — and checks what holds between them.
+snapshots of the same story — and checks what holds between them, plus the semantics inside
+a single snapshot that no JSON Schema can reach.
 
 That distinction is not academic. Point it at a deliberately broken hurricane run and it
 reports **7/7 snapshots individually valid, and four errors across the run.** Every payload
@@ -137,6 +138,8 @@ passes `validate.py`; the story is still incoherent. No single-payload check can
 
 | Rule | Why it is there |
 |---|---|
+| `source_id` resolves, and to the *right* source | A `content_refs` entry keyed to a source the story does not carry is a dangling pointer; one keyed to a source the uri contradicts is worse, because the reference is intact and the meaning is not. Both shipped in the pack. The second warns rather than fails — it is a heuristic over provider names. |
+| No source published before its own `received_at` | Beat 01 carried a FEMA source stamped 16:20 and published it at 13:10 — three hours before it arrived. Schema-valid, causally impossible. |
 | `story_id` immutable | A wire feed minted a fresh id per revision, so a category upgrade arrived as a second story instead of the next snapshot. |
 | `sequence_number` strictly increasing | Owner-only and monotonic. Equal values across two writers is a collision, not a tie — which is exactly why it beats a timestamp. |
 | `updated_at` never goes backwards | Clocks step backwards; a story's history should not. |

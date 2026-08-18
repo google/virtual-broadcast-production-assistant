@@ -16,6 +16,13 @@
   },
   "editorial_source": [
     {
+      "source_id": "src-ap-wire",
+      "source_type": "WIRE",
+      "provider": "AP",
+      "credibility": "VERIFIED",
+      "received_at": "2026-09-11T13:04:00Z"
+    },
+    {
       "source_id": "src-fema-presser",
       "source_type": "OFFICIAL",
       "provider": "FEMA",
@@ -42,7 +49,9 @@
       "asset_id": "asset-presser-transcript",
       "asset_type": "TRANSCRIPT",
       "status": "READY",
-      "derived_from": ["asset-presser-feed"],
+      "derived_from": [
+        "asset-presser-feed"
+      ],
       "provenance": {
         "author": "MODEL",
         "model": "asr-extract",
@@ -147,7 +156,7 @@
     {
       "uri": "https://wire.ap.org/stories/hurricane-xyz.json",
       "content_format": "ap-som-body-json-v1",
-      "source_id": "src-fema-presser"
+      "source_id": "src-ap-wire"
     }
   ],
   "extensions": {

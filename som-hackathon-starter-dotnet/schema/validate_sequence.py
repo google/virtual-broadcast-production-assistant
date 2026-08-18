@@ -28,6 +28,7 @@ Needs jsonschema>=4.20.
 
 import glob
 import json
+import re
 import os
 import sys
 
@@ -85,6 +86,61 @@ def load_inputs(args, envelopes):
 
 
 # ------------------------------------------------------------------ the rules
+
+def check_snapshot(name, p):
+    """Semantics inside ONE snapshot that no JSON Schema can express.
+
+    Both of these shipped in the pack and passed every schema check on the way out
+    (Janet, 17 Aug): a content_refs entry keyed to a source the story does not carry,
+    and a source published three hours before its own received_at.
+    """
+    # --- referential integrity: every source_id must resolve to a declared source
+    declared = {s.get("source_id") for s in (p.get("editorial_source") or [])
+                if isinstance(s, dict)}
+    for i, ref in enumerate(p.get("content_refs") or []):
+        if not isinstance(ref, dict):
+            continue
+        sid = ref.get("source_id")
+        if sid and sid not in declared:
+            err(name, f"content_refs[{i}].source_id does not resolve",
+                f"{sid!r} is not in editorial_source ({sorted(declared) or 'none declared'})")
+        elif sid:
+            # Resolving is not the same as resolving to the RIGHT entry. The shipped bug
+            # was an AP uri keyed to the FEMA source: the reference was intact, the meaning
+            # was not. Heuristic, so it warns rather than fails — compare the provider
+            # names against the tokens of the uri and the content_format.
+            tokens = set()
+            for txt in (ref.get("uri", ""), ref.get("content_format", "")):
+                tokens |= {t for t in re.split(r"[^A-Za-z0-9]+", str(txt).lower()) if t}
+            def hits(src):
+                pv = re.split(r"[^A-Za-z0-9]+", str(src.get("provider", "")).lower())
+                return {t for t in pv if t and t in tokens}
+            named = next((x for x in (p.get("editorial_source") or [])
+                          if isinstance(x, dict) and x.get("source_id") == sid), {})
+            if not hits(named):
+                others = [(x.get("source_id"), sorted(hits(x)))
+                          for x in (p.get("editorial_source") or [])
+                          if isinstance(x, dict) and x.get("source_id") != sid and hits(x)]
+                if others:
+                    oid, why = others[0]
+                    warn(name, f"content_refs[{i}] may point at the wrong source",
+                         f"keyed to {sid} ({named.get('provider','?')}) but the reference "
+                         f"names {why} — which matches {oid}")
+                elif named:
+                    warn(name, f"content_refs[{i}] does not mention its own source",
+                         f"keyed to {sid} ({named.get('provider','?')}) but neither the uri "
+                         f"nor the content_format names it — check the key is right")
+
+    # --- causality: a source cannot be published before it arrived
+    upd = p.get("updated_at")
+    for s in (p.get("editorial_source") or []):
+        if not isinstance(s, dict):
+            continue
+        rec = s.get("received_at")
+        if upd and rec and rec > upd:
+            err(name, "source published before it was received",
+                f"{s.get('source_id')} received_at {rec} > snapshot updated_at {upd}")
+
 
 def check_sequence(run):
     """Every rule here needs at least two snapshots to mean anything."""
@@ -229,6 +285,7 @@ def main():
         else:
             sn = p.get("sequence_number")
             print(f"  [ok]   {name}   seq {sn}")
+        check_snapshot(name, p)
 
     print("\nAcross the run:")
     check_sequence(run)
