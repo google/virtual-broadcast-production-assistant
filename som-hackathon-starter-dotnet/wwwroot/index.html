@@ -3,21 +3,26 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>SOM Skill Bus — Live Dashboard</title>
+<title>SOM — Story Object Model · Live Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3ClinearGradient id='r' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2317c2b8'/%3E%3Cstop offset='.5' stop-color='%232f8fe0'/%3E%3Cstop offset='1' stop-color='%237d5bd0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='40' height='40' rx='9' fill='%23080b14'/%3E%3Ccircle cx='20' cy='20' r='12.5' fill='none' stroke='url(%23r)' stroke-width='3.2' stroke-dasharray='15 4.6' stroke-dashoffset='2' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='6' r='2.3' fill='%2317c2b8'/%3E%3Ccircle cx='34' cy='20' r='2.3' fill='%237d5bd0'/%3E%3Ccircle cx='20' cy='34' r='2.3' fill='%232f8fe0'/%3E%3Ccircle cx='6' cy='20' r='2.3' fill='%232f8fe0'/%3E%3Cg fill='none' stroke='%23e4e8f1' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M15 13.5h5.5l3.5 3.5v9.5h-9z'/%3E%3Cpath d='M20.5 13.5v4h3.5'/%3E%3C/g%3E%3C/svg%3E"/>
 <style>
+/* Accents follow the SOM logo ring, teal-forward: --accent is the ring TEAL (the signature
+   SOM color, dominant across buttons/links/focus/active states), --accent3 the ring blue,
+   --accent2 the ring purple. Brand gradients run teal → blue → purple to echo the ring.
+   Status colors (good/warn/bad/coral) keep their semantics — danger stays red. */
 [data-theme="dark"] {
   --bg: #080b14; --bg-surface: #0e1220; --bg-surface2: #141a2e; --bg-input: #0a0e1a;
   --border: #1e2740; --border-hover: #2e3a5a;
   --text: #e4e8f1; --text-secondary: #a0a8c0; --text-muted: #6b7694;
-  --accent: #5b8cff; --accent2: #8b5cf6; --coral: #f96167; --ice: #cadcfc;
+  --accent: #16c0b6; --accent2: #7d5bd0; --accent3: #2f8fe0; --coral: #f96167; --ice: #cadcfc;
   --good: #34d399; --warn: #fbbf24; --bad: #f87171;
   --chip-bg: #1a2236; --code-bg: #0a0d14;
 }
 [data-theme="light"] {
   --bg: #f4f6f9; --bg-surface: #ffffff; --bg-surface2: #f0f2f5; --bg-input: #ffffff;
   --border: #d1d5db; --border-hover: #9ca3af;
-  --text: #111827; --text-secondary: #4b5563; --text-muted: #6b7280;
-  --accent: #2563eb; --accent2: #7c3aed; --coral: #dc2626; --ice: #1e3a5f;
+  --text: #0b1a33; --text-secondary: #4b5563; --text-muted: #6b7280;
+  --accent: #0a8f88; --accent2: #52329d; --accent3: #0a68c0; --coral: #dc2626; --ice: #1e3a5f;
   --good: #059669; --warn: #d97706; --bad: #dc2626;
   --chip-bg: #e5e7eb; --code-bg: #f3f4f6;
 }
@@ -46,9 +51,15 @@ button { font: inherit; cursor: pointer; }
   background: var(--bg-surface); border-bottom: 1px solid var(--border);
   display: flex; align-items: center; padding: 0 20px; gap: 14px;
 }
-.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14px; }
-.brand-dot { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(135deg, var(--coral), var(--accent2)); }
-.brand small { color: var(--text-muted); font-weight: 500; font-size: 10px; display: block; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14px; letter-spacing: 0.02em; }
+.brand-mark { width: 30px; height: 30px; flex: none; }
+.brand small { color: var(--text-muted); font-weight: 500; font-size: 10px; display: block; letter-spacing: 0; }
+.ver-badge {
+  align-self: center; font-size: 10px; font-weight: 700; letter-spacing: 0.03em;
+  padding: 2px 8px; border-radius: 99px; white-space: nowrap;
+  color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
 .scenario-bar { display: flex; gap: 6px; margin-left: 16px; flex-wrap: wrap; }
 .scenario-bar button {
   padding: 5px 10px; border-radius: 7px; border: 1px solid var(--border);
@@ -141,6 +152,7 @@ button { font: inherit; cursor: pointer; }
 .tag.hold { background: #3a1818; color: #fca5a5; }
 .tag.completed { background: #12302a; color: #6ee7b7; }
 .tag.skipped { background: #1a2236; color: var(--text-muted); }
+.tag.failed { background: #3a1818; color: #fca5a5; }
 .tag.approved { background: #12302a; color: #6ee7b7; }
 .tag.rejected { background: #3a1818; color: #fca5a5; }
 .tag.warning { background: #28291a; color: #e8d580; }
@@ -158,6 +170,7 @@ button { font: inherit; cursor: pointer; }
 [data-theme="light"] .tag.hold { background: #fee2e2; color: #991b1b; }
 [data-theme="light"] .tag.completed { background: #d1fae5; color: #065f46; }
 [data-theme="light"] .tag.skipped { background: #e5e7eb; color: #374151; }
+[data-theme="light"] .tag.failed { background: #fee2e2; color: #991b1b; }
 [data-theme="light"] .tag.approved { background: #d1fae5; color: #065f46; }
 [data-theme="light"] .tag.rejected { background: #fee2e2; color: #991b1b; }
 [data-theme="light"] .tag.warning { background: #fef3c7; color: #92400e; }
@@ -168,7 +181,7 @@ button { font: inherit; cursor: pointer; }
 .stepper { display: flex; gap: 2px; margin: 8px 0 4px; }
 .seg { flex: 1; height: 4px; border-radius: 2px; background: var(--border); }
 .seg.passed { background: var(--text-muted); opacity: 0.5; }
-.seg.current.normal   { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+.seg.current.normal   { background: linear-gradient(90deg, var(--accent), var(--accent3), var(--accent2)); }
 .seg.current.breaking { background: var(--coral); }
 .seg.current.developing { background: var(--warn); }
 .seg.current.published { background: var(--good); }
@@ -269,7 +282,7 @@ button { font: inherit; cursor: pointer; }
 }
 .sp-actions button:hover { border-color: var(--accent); color: var(--accent); }
 .sp-actions button:disabled { opacity: 0.45; cursor: not-allowed; border-color: var(--border); color: var(--text-muted); }
-.sp-actions button.primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border: none; }
+.sp-actions button.primary { background: linear-gradient(135deg, var(--accent), var(--accent3), var(--accent2)); color: #fff; border: none; }
 .sp-hint { font-size: 10px; color: var(--text-muted); margin-top: 8px; line-height: 1.4; }
 
 .sp-timeline { overflow-y: auto; padding-right: 4px; flex: 1; min-height: 0; }
@@ -303,7 +316,7 @@ button { font: inherit; cursor: pointer; }
 .skill-tab:hover { border-color: var(--border-hover); }
 .skill-tab strong { font-size: 12px; font-weight: 700; color: var(--text); }
 .skill-tab small { font-size: 9px; color: var(--text-muted); }
-.skill-tab.active { border-color: var(--accent); background: linear-gradient(135deg, rgba(91,140,255,0.18), rgba(139,92,246,0.18)); }
+.skill-tab.active { border-color: var(--accent); background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 20%, transparent), color-mix(in srgb, var(--accent2) 20%, transparent)); }
 .skill-tab.active strong { color: var(--accent); }
 .skill-tab.add { color: var(--accent); border-style: dashed; min-width: auto; align-items: center; justify-content: center; }
 
@@ -328,7 +341,7 @@ button { font: inherit; cursor: pointer; }
 #skill-form textarea, #rule-form textarea { min-height: 60px; resize: vertical; }
 .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
 .btn.sm { padding: 3px 8px; font-size: 11px; flex: 0 0 auto; }
-.btn.primary-btn { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border: none; }
+.btn.primary-btn { background: linear-gradient(135deg, var(--accent), var(--accent3), var(--accent2)); color: #fff; border: none; }
 
 .seq-badge {
   display: inline-block; margin-left: 4px; padding: 1px 6px;
@@ -480,8 +493,30 @@ button { font: inherit; cursor: pointer; }
   <!-- Header -->
   <div class="header">
     <div class="brand">
-      <div class="brand-dot"></div>
-      <span>SOM Skill Bus<small>Live Dashboard</small></span>
+      <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+        <defs>
+          <linearGradient id="som-ring" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="var(--accent)"/>
+            <stop offset="0.5" stop-color="var(--accent3)"/>
+            <stop offset="1" stop-color="var(--accent2)"/>
+          </linearGradient>
+        </defs>
+        <circle cx="20" cy="20" r="12.5" fill="none" stroke="url(#som-ring)" stroke-width="3.2"
+                stroke-dasharray="15 4.6" stroke-dashoffset="2" stroke-linecap="round"/>
+        <circle cx="20" cy="6"  r="2.3" fill="var(--accent)"/>
+        <circle cx="34" cy="20" r="2.3" fill="var(--accent2)"/>
+        <circle cx="20" cy="34" r="2.3" fill="var(--accent3)"/>
+        <circle cx="6"  cy="20" r="2.3" fill="var(--accent3)"/>
+        <g fill="none" stroke="var(--text)" stroke-width="1.8" stroke-linejoin="round">
+          <path d="M15 13.5h5.5l3.5 3.5v9.5h-9z"/>
+          <path d="M20.5 13.5v4h3.5"/>
+        </g>
+        <g stroke="var(--accent)" stroke-width="1.4" stroke-linecap="round">
+          <path d="M16.6 20h6"/><path d="M16.6 22.4h6"/><path d="M16.6 24.8h3.4"/>
+        </g>
+      </svg>
+      <span>SOM<small>Story Object Model — Live Dashboard</small></span>
+      <span class="ver-badge" id="ver-badge" title="SOM schema pack version this build targets — the som_version stamped on every envelope on the wire">schema&nbsp;·&nbsp;—</span>
     </div>
     <div class="scenario-bar">
       <span style="align-self:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-right:2px;" title="One click = one story.context seed published to the bus. For timed multi-step storylines, use the Simulator.">Seed stories</span>
@@ -620,6 +655,13 @@ const savedTheme = localStorage.getItem('theme');
 if (savedTheme) document.documentElement.dataset.theme = savedTheme;
 document.addEventListener('DOMContentLoaded', setThemeIcon);
 
+// Stamp the header badge with the SOM schema version this build targets (from /api/version,
+// which reads SomEnvelope.Version — the same value on every envelope's som_version).
+fetch('/api/version').then(r => r.json()).then(v => {
+  const el = document.getElementById('ver-badge');
+  if (el && v?.som_version) el.textContent = `schema · v${v.som_version}`;
+}).catch(() => {});
+
 // ── State ──────────────────────────────────────────────
 const stories = new Map();    // story_id → payload
 const runs = [];              // skill.run.completed records
@@ -639,14 +681,34 @@ const SCENARIO_LABELS = {
 
 // Tabler icon shortcut for use inside template literals.
 // ic('robot') → '<svg class="icon"><use href="#i-robot"/></svg>'
+// name is constrained to [a-z0-9-] so a bad caller can't inject markup via the href.
 function ic(name, sizeClass) {
+  const safeName = String(name).replace(/[^a-z0-9-]/g, '');
   const cls = sizeClass ? `icon ${sizeClass}` : 'icon';
-  return `<svg class="${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+  return `<svg class="${cls}" aria-hidden="true"><use href="#i-${safeName}"/></svg>`;
 }
 
 function escapeHtml(s) {
   if (s === undefined || s === null) return '';
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Safe interpolation of a dynamic value as a JS-string argument inside an inline
+// HTML handler, e.g. onclick="fn(${jsArg(id)})". escapeHtml alone is WRONG here:
+// the HTML parser decodes &#39; back to ' before the JS parser runs, so a quote in
+// the value still breaks out of the string. JSON.stringify quotes+escapes for the JS
+// context; escapeHtml then guards the surrounding HTML attribute. Note: the handler
+// must use ${jsArg(x)} with NO surrounding quotes — jsArg supplies them.
+function jsArg(v) {
+  return escapeHtml(JSON.stringify(v === undefined ? null : v));
+}
+
+// Sanitize a dynamic value used as (part of) an HTML class attribute — bus/API
+// strings like lifecycle.phase or severity land in class="tag ${...}", where a "
+// would let an attacker open a new attribute (onmouseover=...). Reduce to the
+// CSS-identifier charset.
+function safeCls(v) {
+  return String(v ?? '').toLowerCase().replace(/[^a-z0-9_-]/g, '');
 }
 
 function shortId(id) {
@@ -791,7 +853,7 @@ function renderStories() {
     div.innerHTML = `
       <div class="card-top">
         <span class="card-id">${escapeHtml(id)}${seq != null ? ` <span class="seq-badge" title="sequence_number">v${escapeHtml(String(seq))}</span>` : ''}</span>
-        <span class="tag ${phase.toLowerCase()}">${escapeHtml(phase)}</span>
+        <span class="tag ${safeCls(phase)}">${escapeHtml(phase)}</span>
       </div>
       <div class="card-title">${escapeHtml(headline)}</div>
       <div class="card-meta">
@@ -848,12 +910,12 @@ function renderRuns() {
     div.innerHTML = `
       <div class="card-top">
         <span class="card-id">${escapeHtml(shortId(r.run_id))}</span>
-        <span class="tag ${(r.outcome||'').toLowerCase()}">${escapeHtml(r.outcome || '—')}</span>
+        <span class="tag ${safeCls(r.outcome)}">${escapeHtml(r.outcome || '—')}</span>
       </div>
       <div class="card-title">${escapeHtml(r.skill_id)}@${escapeHtml(r.skill_version)}</div>
       <div class="card-meta">
         <span><b>story</b> ${escapeHtml(shortId(r.story_id))}</span>
-        <span><b>${r.latency_ms} ms</b></span>
+        <span><b>${Number(r.latency_ms) || 0} ms</b></span>
         <span>w:${warnings} s:${sugg} e:${enrich}</span>
       </div>`;
     lane.appendChild(div);
@@ -915,14 +977,14 @@ function renderPending() {
       </div>
       <div class="card-title">${escapeHtml(o.rule_id || o.content_type || o.representation_type || kind)}</div>
       <div class="card-meta">
-        ${severity ? `<span class="tag ${severity}">${escapeHtml(severity.toUpperCase())}</span>` : ''}
+        ${severity ? `<span class="tag ${safeCls(severity)}">${escapeHtml(severity.toUpperCase())}</span>` : ''}
         ${o.story_id ? `<span><b>story</b> ${escapeHtml(shortId(o.story_id))}</span>` : ''}
         ${(o.affected_fields || []).length ? `<span><b>fields</b> ${escapeHtml((o.affected_fields||[]).join(','))}</span>` : ''}
       </div>
       ${o.detail ? `<div class="card-meta" style="margin-top:6px;color:var(--text-secondary);white-space:normal;line-height:1.4;">${escapeHtml(o.detail)}</div>` : ''}
       <div class="actions">
-        <button class="btn approve" onclick="event.stopPropagation();decide('${id}','approve')">${ic('check')} Approve</button>
-        <button class="btn reject" onclick="event.stopPropagation();decide('${id}','reject')">${ic('x')} Reject</button>
+        <button class="btn approve" onclick="event.stopPropagation();decide(${jsArg(id)},'approve')">${ic('check')} Approve</button>
+        <button class="btn reject" onclick="event.stopPropagation();decide(${jsArg(id)},'reject')">${ic('x')} Reject</button>
       </div>`;
     div.addEventListener('click', () => openModal(`Pending — ${id}`, raw));
     lane.appendChild(div);
@@ -1160,7 +1222,7 @@ function eventSummary(e) {
     const story = p?.payload || p;
     const phase = story?.lifecycle?.phase || '—';
     const seq = story?.sequence_number;
-    return `<b>story.context</b> · phase=${escapeHtml(phase)}${seq != null ? ` · v${seq}` : ''}`;
+    return `<b>story.context</b> · phase=${escapeHtml(phase)}${seq != null ? ` · v${escapeHtml(seq)}` : ''}`;
   }
   if (suffix === 'staging') {
     return `<b>STAGED</b> ${escapeHtml(p.rule_id || outputKind(p))} <span style="color:var(--text-muted)">[${escapeHtml(p.severity||'')}]</span> — ${escapeHtml((p.detail||'').slice(0,80))}`;
@@ -1173,11 +1235,15 @@ function eventSummary(e) {
   }
   if (suffix === 'runs') {
     const w = p?.outputs?.warning_ids?.length || 0;
-    return `<b>${escapeHtml(p.outcome || 'RAN')}</b> · skill ${escapeHtml(p.skill_id || '?')} · ${p.latency_ms}ms · ${w} warning${w===1?'':'s'}`;
+    return `<b>${escapeHtml(p.outcome || 'RAN')}</b> · skill ${escapeHtml(p.skill_id || '?')} · ${Number(p.latency_ms) || 0}ms · ${w} warning${w===1?'':'s'}`;
   }
   return `<code>${escapeHtml(topic)}</code>`;
 }
 
+// Backing buffer for the story-panel timeline: openSpEvent indexes into this instead
+// of the payload being serialized into an onclick attribute. Declared before its
+// writer (renderStoryPanel) and reader (openSpEvent).
+let _spTimelineEvents = [];
 function renderStoryPanel() {
   if (!_openStoryId) return;
   const storyId = _openStoryId;
@@ -1196,7 +1262,7 @@ function renderStoryPanel() {
     const compliance = (story.compliance || []).length;
     const gates = (story.editorial_gates || []).length;
     meta.innerHTML = `
-      <span class="tag ${escapeHtml(phase.toLowerCase())}">${escapeHtml(phase)}</span>
+      <span class="tag ${safeCls(phase)}">${escapeHtml(phase)}</span>
       ${seq != null ? `<span class="tag">v${escapeHtml(String(seq))}</span>` : ''}
       ${priority ? `<span class="tag">priority ${escapeHtml(priority)}</span>` : ''}
       ${compliance ? `<span class="tag">${compliance} compliance</span>` : ''}
@@ -1210,10 +1276,10 @@ function renderStoryPanel() {
   const phase = story?.lifecycle?.phase;
   const nextPhase = phase ? PHASE_NEXT_MAP[phase] : null;
   actions.innerHTML = `
-    <button onclick="advancePhase('${escapeHtml(storyId)}')" ${nextPhase ? '' : 'disabled'} title="${nextPhase ? `${escapeHtml(phase)} → ${escapeHtml(nextPhase)}` : 'Story is at terminal phase'}">${ic('chevron-right')} ${nextPhase ? 'Advance to ' + escapeHtml(nextPhase) : 'No next phase'}</button>
-    <button onclick="addCompliance('${escapeHtml(storyId)}')">${ic('shield')} Add compliance flag</button>
-    <button onclick="rerunSkill('${escapeHtml(storyId)}')">${ic('refresh')} Re-run skill</button>
-    <button onclick="openModal('story.context — ${escapeHtml(storyId)}', stories.get('${escapeHtml(storyId)}'))" class="primary">${ic('braces')} View JSON</button>`;
+    <button onclick="advancePhase(${jsArg(storyId)})" ${nextPhase ? '' : 'disabled'} title="${nextPhase ? `${escapeHtml(phase)} → ${escapeHtml(nextPhase)}` : 'Story is at terminal phase'}">${ic('chevron-right')} ${nextPhase ? 'Advance to ' + escapeHtml(nextPhase) : 'No next phase'}</button>
+    <button onclick="addCompliance(${jsArg(storyId)})">${ic('shield')} Add compliance flag</button>
+    <button onclick="rerunSkill(${jsArg(storyId)})">${ic('refresh')} Re-run skill</button>
+    <button onclick="openModal(${jsArg('story.context — ' + storyId)}, stories.get(${jsArg(storyId)}))" class="primary">${ic('braces')} View JSON</button>`;
 
   // Timeline
   const timeline = document.getElementById('sp-timeline');
@@ -1226,11 +1292,14 @@ function renderStoryPanel() {
     timeline.innerHTML = '<div class="empty" style="padding:18px;">No events yet for this story.</div>';
     return;
   }
-  timeline.innerHTML = items.map(({e}) => {
+  // Hold the rendered events so the click handler indexes into them instead of
+  // serializing the whole payload into an HTML attribute (JSON.stringify does not
+  // escape ' or <, so any payload string could break out of the onclick).
+  _spTimelineEvents = items.map(({e}) => e);
+  timeline.innerHTML = items.map(({e}, i) => {
     const suffix = eventTopicSuffix(e.topic);
-    const u = unwrapSom(e.payload);
     return `
-      <div class="sp-event ${escapeHtml(suffix)}" onclick='openModal(${JSON.stringify(e.topic + " — " + (u.warning_id || u.run_id || u.story_id || ""))}, ${JSON.stringify(e.payload)})'>
+      <div class="sp-event ${safeCls(suffix)}" onclick="openSpEvent(${i})">
         <div class="sp-event-dot"></div>
         <div>
           <div class="sp-event-time">${escapeHtml(fmtTime(e.received_at))} · <code>${escapeHtml(e.topic)}</code></div>
@@ -1238,6 +1307,14 @@ function renderStoryPanel() {
         </div>
       </div>`;
   }).join('');
+}
+
+// Open the modal for a story-panel timeline event by index into the last render.
+function openSpEvent(i) {
+  const e = _spTimelineEvents[i];
+  if (!e) return;
+  const u = unwrapSom(e.payload);
+  openModal(e.topic + ' — ' + (u.warning_id || u.run_id || u.story_id || ''), e.payload);
 }
 
 // ── Lifecycle simulator actions ──
@@ -1291,8 +1368,8 @@ async function rerunSkill(storyId) {
 async function publish(scenario) {
   try {
     const res = await fetch(`/api/publish/${encodeURIComponent(scenario)}`, { method: 'POST' });
-    if (!res.ok) console.error('publish failed', await res.text());
-  } catch (err) { console.error(err); }
+    if (!res.ok) { const t = await res.text(); console.error('publish failed', t); showToast(`Publish failed: ${t}`, 'danger'); }
+  } catch (err) { console.error(err); showToast('Publish failed: ' + err.message, 'danger'); }
 }
 
 async function decide(id, decision) {
@@ -1302,8 +1379,8 @@ async function decide(id, decision) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ decision, reviewer: 'dashboard-user' }),
     });
-    if (!res.ok) console.error('decision failed', await res.text());
-  } catch (err) { console.error(err); }
+    if (!res.ok) { const t = await res.text(); console.error('decision failed', t); showToast(`Decision failed: ${t}`, 'danger'); }
+  } catch (err) { console.error(err); showToast('Decision failed: ' + err.message, 'danger'); }
 }
 
 function clearTimeline() {
@@ -1643,7 +1720,7 @@ function openHelp(tab) {
 async function renderHelp() {
   const body = document.getElementById('modal-body');
   const tabBtn = (id, label) => `
-    <button onclick="openHelp('${id}')" style="padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;border:1px solid ${helpTab === id ? 'var(--border)' : 'transparent'};border-bottom:none;background:${helpTab === id ? 'var(--bg-surface2)' : 'transparent'};color:${helpTab === id ? 'var(--text)' : 'var(--text-muted)'};">${label}</button>`;
+    <button onclick="openHelp(${jsArg(id)})" style="padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;border:1px solid ${helpTab === id ? 'var(--border)' : 'transparent'};border-bottom:none;background:${helpTab === id ? 'var(--bg-surface2)' : 'transparent'};color:${helpTab === id ? 'var(--text)' : 'var(--text-muted)'};">${label}</button>`;
   const bar = `<div style="display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:12px;">${tabBtn('quick', 'Quick reference')}${tabBtn('guide', 'User guide')}</div>`;
 
   if (helpTab === 'guide') {
@@ -1731,6 +1808,9 @@ function quickReferenceHtml() {
       <div style="color:var(--text-secondary);">${desc}</div>
     </div>`;
   return `
+    <div style="display:flex;justify-content:center;padding:8px 0 16px;">
+      <img src="assets/som-logo.png" alt="SOM — Story Object Model" style="max-width:280px;width:60%;height:auto;padding:14px 20px;background:#ffffff;border-radius:12px;"/>
+    </div>
     <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">
       This dashboard is a window onto a Kafka bus carrying <b>SOM</b> (Story Object Model) messages. Stories arrive,
       skills run against them, their outputs wait for a human decision, and every decision goes back onto the bus.
@@ -1801,7 +1881,7 @@ async function renderSimulator() {
           : `<button class="btn approve sm" onclick="startAutoStream()">${ic('player-play','icon-sm')} Start</button>`}
       </div>
       <div class="card-meta" style="margin-top:6px;color:var(--text-secondary);line-height:1.4;">
-        Publish a random seed scenario every <input type="number" id="auto-interval" value="${status.autoIntervalSeconds}" min="3" max="600" style="width:60px;padding:2px 4px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;color:var(--text);"> seconds.
+        Publish a random seed scenario every <input type="number" id="auto-interval" value="${Number(status.autoIntervalSeconds) || 30}" min="3" max="600" style="width:60px;padding:2px 4px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;color:var(--text);"> seconds.
         Useful for keeping the dashboard alive during demos and giving vendor skills a steady test load.
       </div>
     </div>`;
@@ -1810,14 +1890,14 @@ async function renderSimulator() {
     <div class="card" style="cursor:default;border-left:3px solid var(--accent2);">
       <div class="card-top">
         <span class="card-id" style="color:var(--ice);">${escapeHtml(s.id)}</span>
-        <span class="tag">${s.duration_seconds}s · ${s.step_count} steps</span>
+        <span class="tag">${Number(s.duration_seconds) || 0}s · ${Number(s.step_count) || 0} steps</span>
       </div>
       <div class="card-title">${escapeHtml(s.name)}</div>
       <div class="card-meta" style="white-space:normal;color:var(--text-secondary);line-height:1.5;margin-top:6px;">
         ${escapeHtml(s.description)}
       </div>
       <div class="actions" style="margin-top:10px;">
-        <button class="btn approve" onclick="runSimulatorScenario('${escapeHtml(s.id)}')" ${running ? 'disabled' : ''}>${ic('player-play','icon-sm')} Run scenario</button>
+        <button class="btn approve" onclick="runSimulatorScenario(${jsArg(s.id)})" ${running ? 'disabled' : ''}>${ic('player-play','icon-sm')} Run scenario</button>
       </div>
     </div>`).join('');
 
@@ -1829,20 +1909,20 @@ async function renderSimulator() {
     <div class="card" style="cursor:default;border-left:3px solid var(--ice);">
       <div class="card-top">
         <span class="card-id" style="color:var(--ice);">${escapeHtml(m.sourceId)}</span>
-        <span class="tag">${m.durationSeconds}s · asset ${escapeHtml(m.assetId)}</span>
+        <span class="tag">${Number(m.durationSeconds) || 0}s · asset ${escapeHtml(m.assetId)}</span>
       </div>
       <div class="card-title">${escapeHtml(m.label)}</div>
       <div class="card-meta" style="white-space:normal;color:var(--text-secondary);line-height:1.5;margin-top:6px;">
         ${escapeHtml(m.notes || '')}
       </div>
       <div class="actions" style="margin-top:10px;">
-        <button class="btn approve" onclick="emitMam('${escapeHtml(m.sourceId)}')">${ic('player-play','icon-sm')} Emit media_available</button>
-        <button class="btn" onclick="emitMam('${escapeHtml(m.sourceId)}', true)" title="Adds extensions['com.ibc-poc.capture_complete'] — the media coordinator flips the asset to CAPTURED and skills re-run">${ic('check','icon-sm')} Emit final (capture complete)</button>
+        <button class="btn approve" onclick="emitMam(${jsArg(m.sourceId)})">${ic('player-play','icon-sm')} Emit media_available</button>
+        <button class="btn" onclick="emitMam(${jsArg(m.sourceId)}, true)" title="Adds extensions['com.ibc-poc.capture_complete'] — the media coordinator flips the asset to CAPTURED and skills re-run">${ic('check','icon-sm')} Emit final (capture complete)</button>
       </div>
     </div>`).join('');
 
   const tabBtn = (id, label, live) => `
-    <button onclick="setSimTab('${id}')" style="padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;border:1px solid ${simTab === id ? 'var(--border)' : 'transparent'};border-bottom:none;background:${simTab === id ? 'var(--bg-surface2)' : 'transparent'};color:${simTab === id ? 'var(--text)' : 'var(--text-muted)'};">
+    <button onclick="setSimTab(${jsArg(id)})" style="padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;border:1px solid ${simTab === id ? 'var(--border)' : 'transparent'};border-bottom:none;background:${simTab === id ? 'var(--bg-surface2)' : 'transparent'};color:${simTab === id ? 'var(--text)' : 'var(--text-muted)'};">
       ${label}${live ? ' <span style="color:#6ee7b7;">●</span>' : ''}
     </button>`;
 
@@ -1982,6 +2062,7 @@ function computeStatsForSkill(skillId) {
   const total = filteredRuns.length;
   const completed = filteredRuns.filter(r => r.outcome === 'COMPLETED').length;
   const skipped = filteredRuns.filter(r => r.outcome === 'SKIPPED').length;
+  const failed = filteredRuns.filter(r => r.outcome === 'FAILED').length;
   const avgLatency = total === 0 ? 0
     : Math.round(filteredRuns.reduce((s, r) => s + (r.latency_ms || 0), 0) / total);
   const totalWarnings = filteredRuns.reduce((s, r) => s + (r.outputs?.warning_ids?.length || 0), 0);
@@ -1995,7 +2076,7 @@ function computeStatsForSkill(skillId) {
     : pending.size;
   const decided = approved + rejected;
   const approvalRate = decided === 0 ? null : Math.round((approved / decided) * 100);
-  return { total, completed, skipped, avgLatency, totalWarnings,
+  return { total, completed, skipped, failed, avgLatency, totalWarnings,
            approved, rejected, pendingNow, approvalRate };
 }
 
@@ -2039,7 +2120,7 @@ async function renderSkillList(selectedId) {
     : skills[0];
 
   const tabs = skills.map(s => `
-    <button class="skill-tab ${s.id === current.id ? 'active' : ''}" onclick="renderSkillList('${escapeHtml(s.id)}')">
+    <button class="skill-tab ${s.id === current.id ? 'active' : ''}" onclick="renderSkillList(${jsArg(s.id)})">
       <strong>${escapeHtml(s.name || s.id)}</strong>
       <small>${escapeHtml(s.id)} · ${(s.rules||[]).length} rule${(s.rules||[]).length===1?'':'s'}</small>
     </button>`).join('');
@@ -2064,7 +2145,7 @@ function renderSkillDetail(skill) {
     <div class="card" style="cursor:default;border-left:3px solid var(--accent);">
       <div class="card-top">
         <span class="card-id" style="font-size:11px;color:var(--ice);">${escapeHtml(rule.rule_id)}</span>
-        <span class="tag ${escapeHtml((rule.default_severity||'').toLowerCase())}">${escapeHtml((rule.default_severity||'').toUpperCase())}</span>
+        <span class="tag ${safeCls(rule.default_severity)}">${escapeHtml((rule.default_severity||'').toUpperCase())}</span>
       </div>
       <div class="card-title">${escapeHtml(rule.name || rule.rule_id)}</div>
       <div class="card-meta" style="white-space:normal;color:var(--text-secondary);line-height:1.5;margin-top:6px;">
@@ -2080,8 +2161,8 @@ function renderSkillDetail(skill) {
         <div class="code-block" style="padding:8px 10px;font-size:11px;">${escapeHtml(JSON.stringify(rule.config, null, 2))}</div>
       </div>
       <div class="actions" style="margin-top:10px;">
-        <button class="btn" onclick="openRuleEditor('${escapeHtml(skill.id)}', ${idx})">${ic('pencil','icon-sm')} Edit rule</button>
-        <button class="btn reject" onclick="deleteRule('${escapeHtml(skill.id)}', ${idx})">${ic('trash','icon-sm')} Delete</button>
+        <button class="btn" onclick="openRuleEditor(${jsArg(skill.id)}, ${idx})">${ic('pencil','icon-sm')} Edit rule</button>
+        <button class="btn reject" onclick="deleteRule(${jsArg(skill.id)}, ${idx})">${ic('trash','icon-sm')} Delete</button>
       </div>
     </div>`).join('');
 
@@ -2099,10 +2180,10 @@ function renderSkillDetail(skill) {
           <span class="card-id" style="font-size:12px;color:var(--ice);">${escapeHtml(skill.id)} @ ${escapeHtml(skill.version)}</span>
           <div style="display:flex;gap:6px;">
             <span class="tag suggestion">${escapeHtml((skill.skill_type||'').toUpperCase())}</span>
-            <button class="btn sm" onclick="dryRunSkill('${escapeHtml(skill.id)}')" title="Evaluate this skill against all 6 seed stories">${ic('flask','icon-sm')} Dry-run</button>
-            <button class="btn sm" onclick="aiReviewSkill('${escapeHtml(skill.id)}')" title="AI-powered editorial review">${ic('robot','icon-sm')} AI review</button>
-            <button class="btn sm" onclick="openSkillEditor('${escapeHtml(skill.id)}')">${ic('pencil','icon-sm')} Edit</button>
-            <button class="btn sm reject" onclick="deleteSkill('${escapeHtml(skill.id)}')">${ic('trash','icon-sm')}</button>
+            <button class="btn sm" onclick="dryRunSkill(${jsArg(skill.id)})" title="Evaluate this skill against all 6 seed stories">${ic('flask','icon-sm')} Dry-run</button>
+            <button class="btn sm" onclick="aiReviewSkill(${jsArg(skill.id)})" title="AI-powered editorial review">${ic('robot','icon-sm')} AI review</button>
+            <button class="btn sm" onclick="openSkillEditor(${jsArg(skill.id)})">${ic('pencil','icon-sm')} Edit</button>
+            <button class="btn sm reject" onclick="deleteSkill(${jsArg(skill.id)})">${ic('trash','icon-sm')}</button>
           </div>
         </div>
         <div class="card-title" style="font-size:15px;">${escapeHtml(skill.name)}</div>
@@ -2120,7 +2201,7 @@ function renderSkillDetail(skill) {
       <div>
         <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Live runtime stats — ${escapeHtml(skill.id)} (this session)</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;">
-          ${statBox('Runs', stats.total, `${stats.completed} done · ${stats.skipped} skipped`)}
+          ${statBox('Runs', stats.total, `${stats.completed} done · ${stats.skipped} skipped${stats.failed ? ` · ${stats.failed} failed` : ''}`)}
           ${statBox('Avg latency', stats.avgLatency + ' ms', '')}
           ${statBox('Warnings', stats.totalWarnings, '')}
           ${statBox('Pending', stats.pendingNow, 'awaiting decision')}
@@ -2132,7 +2213,7 @@ function renderSkillDetail(skill) {
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Rules (${(skill.rules||[]).length})</div>
-          <button class="btn sm" onclick="openRuleEditor('${escapeHtml(skill.id)}')">${ic('plus','icon-sm')} Add rule</button>
+          <button class="btn sm" onclick="openRuleEditor(${jsArg(skill.id)})">${ic('plus','icon-sm')} Add rule</button>
         </div>
         <div style="display:grid;gap:8px;">${rulesHtml || '<div class="empty" style="padding:20px;">No rules yet — click "Add rule" above.</div>'}</div>
       </div>
@@ -2157,7 +2238,7 @@ async function openSkillEditor(skillId) {
   const body = document.getElementById('modal-body');
   document.getElementById('modal-title').textContent = isEdit ? `Edit skill — ${initial.id}` : 'Add skill';
   body.innerHTML = `
-    <form id="skill-form" onsubmit="event.preventDefault();saveSkill(${isEdit ? `'${escapeHtml(skillId)}'` : 'null'});">
+    <form id="skill-form" onsubmit="event.preventDefault();saveSkill(${isEdit ? `${jsArg(skillId)}` : 'null'});">
       <div class="form-grid">
         <label>Skill id <small>(e.g. "vendor/skill-name")</small>
           <input name="id" value="${escapeHtml(initial.id)}" ${isEdit ? '' : 'required'} placeholder="acme/style-validator"/></label>
@@ -2187,7 +2268,7 @@ async function openSkillEditor(skillId) {
       <label>Produces <small>(comma-separated message_types)</small>
         <input name="produces" value="${escapeHtml((initial.produces || []).join(', '))}"/></label>
       <div class="form-actions">
-        <button type="button" class="btn" onclick="renderSkillList('${escapeHtml(initial.id)}')">Cancel</button>
+        <button type="button" class="btn" onclick="renderSkillList(${jsArg(initial.id)})">Cancel</button>
         <button type="submit" class="btn approve">${isEdit ? 'Save changes' : 'Create skill'}</button>
       </div>
     </form>
@@ -2247,7 +2328,7 @@ function renderDryRunResult(result, skillId) {
       ? `<div style="color:var(--text-muted);font-size:11px;">${escapeHtml(s.note || 'no matches')}</div>`
       : s.matches.map(m => `
           <div style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px;">
-            <div><span class="tag ${escapeHtml(m.severity)}">${escapeHtml(m.severity.toUpperCase())}</span> <code style="font-size:10px;color:var(--ice);">${escapeHtml(m.ruleId)}</code></div>
+            <div><span class="tag ${safeCls(m.severity)}">${escapeHtml(m.severity.toUpperCase())}</span> <code style="font-size:10px;color:var(--ice);">${escapeHtml(m.ruleId)}</code></div>
             <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;line-height:1.4;">${escapeHtml(m.detail)}</div>
           </div>`).join('');
     return `
@@ -2266,8 +2347,8 @@ function renderDryRunResult(result, skillId) {
     </div>
     <div style="display:grid;gap:8px;">${cards}</div>
     <div class="form-actions">
-      <button class="btn" onclick="renderSkillList('${escapeHtml(skillId)}')">← Back to skill</button>
-      <button class="btn primary-btn" onclick="aiReviewSkill('${escapeHtml(skillId)}')">${ic('robot','icon-sm')} Run AI review</button>
+      <button class="btn" onclick="renderSkillList(${jsArg(skillId)})">← Back to skill</button>
+      <button class="btn primary-btn" onclick="aiReviewSkill(${jsArg(skillId)})">${ic('robot','icon-sm')} Run AI review</button>
     </div>`;
 }
 
@@ -2300,7 +2381,7 @@ function renderAiReviewResult(result, skillId) {
         </div>
       </div>
       <div class="form-actions">
-        <button class="btn" onclick="renderSkillList('${escapeHtml(skillId)}')">← Back</button>
+        <button class="btn" onclick="renderSkillList(${jsArg(skillId)})">← Back</button>
       </div>`;
   }
 
@@ -2312,7 +2393,7 @@ function renderAiReviewResult(result, skillId) {
         <div style="margin-top:8px;font-size:12px;color:var(--text-secondary);">${escapeHtml(result.error)}</div>
       </div>
       <div class="form-actions">
-        <button class="btn" onclick="renderSkillList('${escapeHtml(skillId)}')">← Back</button>
+        <button class="btn" onclick="renderSkillList(${jsArg(skillId)})">← Back</button>
       </div>`;
   }
 
@@ -2336,8 +2417,8 @@ function renderAiReviewResult(result, skillId) {
     <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin:14px 0 6px;">Findings (${(result.findings||[]).length})</div>
     <div style="display:grid;gap:8px;">${findings || '<div class="empty" style="padding:18px;">No findings returned.</div>'}</div>
     <div class="form-actions">
-      <button class="btn" onclick="renderSkillList('${escapeHtml(skillId)}')">← Back to skill</button>
-      <button class="btn" onclick="dryRunSkill('${escapeHtml(skillId)}')">${ic('flask','icon-sm')} Dry-run again</button>
+      <button class="btn" onclick="renderSkillList(${jsArg(skillId)})">← Back to skill</button>
+      <button class="btn" onclick="dryRunSkill(${jsArg(skillId)})">${ic('flask','icon-sm')} Dry-run again</button>
     </div>`;
 }
 
@@ -2434,7 +2515,7 @@ async function openRuleEditor(skillId, ruleIdx) {
     : `Add rule to ${skill.id}`;
 
   body.innerHTML = `
-    <form id="rule-form" onsubmit="event.preventDefault();saveRule('${escapeHtml(skillId)}', ${ruleIdx ?? 'null'});">
+    <form id="rule-form" onsubmit="event.preventDefault();saveRule(${jsArg(skillId)}, ${ruleIdx ?? 'null'});">
       <div class="form-grid">
         <label>Rule id <input name="rule_id" value="${escapeHtml(r.rule_id)}" required placeholder="my-skill-style-001"/></label>
         <label>Default severity
@@ -2462,7 +2543,7 @@ async function openRuleEditor(skillId, ruleIdx) {
       <label>Detail template <small>(supports placeholders like {term}, {field}, {value}, {phase})</small>
         <input name="detail_template" value="${escapeHtml(r.detail_template || '')}"/></label>
       <div class="form-actions">
-        <button type="button" class="btn" onclick="renderSkillList('${escapeHtml(skillId)}')">Cancel</button>
+        <button type="button" class="btn" onclick="renderSkillList(${jsArg(skillId)})">Cancel</button>
         <button type="submit" class="btn approve">${isEdit ? 'Save rule' : 'Add rule'}</button>
       </div>
     </form>`;
@@ -2561,7 +2642,7 @@ async function openSeedLibrary() {
 async function loadSeedJson(scenario, activeBtn) {
   const tabs = document.getElementById('seed-tabs');
   if (tabs) tabs.querySelectorAll('button').forEach(b => b.style.background = '');
-  if (activeBtn) activeBtn.style.background = 'linear-gradient(135deg,var(--accent),var(--accent2))';
+  if (activeBtn) activeBtn.style.background = 'linear-gradient(135deg,var(--accent),var(--accent3),var(--accent2))';
   if (activeBtn) activeBtn.style.color = '#fff';
 
   const pre = document.getElementById('seed-json');
