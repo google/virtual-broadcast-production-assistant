@@ -157,6 +157,29 @@ python3 schema/validate_sequence.py schema/v0.3.2-proposed/examples/hurricane-ru
 
 ---
 
+## sync-from-spec.sh — is the repo the same as the spec?
+
+```
+bash schema/sync-from-spec.sh             # vendor spec -> repo, then stamp the ledger
+bash schema/sync-from-spec.sh --check     # gate: exit 1 on any drift. Writes nothing.
+bash schema/sync-from-spec.sh --status    # report the computed state. Writes nothing, always exit 0.
+```
+
+`--check` is the gate; `--status` is the answer to "where are we". Everything `--status`
+prints is **computed at the moment you ask** — byte-comparison against the spec, the newest
+spec file's timestamp, which pack is current, and whether HEAD is on `origin/main` (after a
+fetch in the same command; if the fetch fails it says the merge state is unknown rather than
+reading a stale remote ref).
+
+That distinction is the point. `SYNC-STATE.md` also carries a "last vendored" line, but a
+recorded state goes stale silently — it did twice in August: a spec session changed
+`schema/` without updating the line, and the line went on claiming work sat unmerged after
+it had merged twice over. So `--status` prints the ledger's claim next to the computed
+truth and labels it a claim. The ledger's real job is the half that cannot be computed:
+what changed and why.
+
+---
+
 ## Suggested CI (reference repo)
 
 ```yaml

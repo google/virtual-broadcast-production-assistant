@@ -2,6 +2,7 @@
 # Re-vendor the SOM JSON Schemas from the spec folder (source of truth) into this repo.
 # Usage:  bash schema/sync-from-spec.sh            # uses default SOM_SPEC_DIR below
 #         bash schema/sync-from-spec.sh --check    # no writes: exit 1 if repo drifted from spec
+#         bash schema/sync-from-spec.sh --status   # no writes: report the computed state, always exit 0
 #         SOM_SPEC_DIR=/path/to/SOM bash schema/sync-from-spec.sh
 set -euo pipefail
 
@@ -10,13 +11,16 @@ SRC="$SOM_SPEC_DIR/schema"
 DST="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 CHECK=0
+STATUS=0
 if [ $# -gt 0 ]; then
   case "$1" in
-    --check) CHECK=1 ;;
-    *) echo "Unknown argument: $1 (only --check is supported)"; exit 2 ;;
+    --check)  CHECK=1 ;;
+    --status) STATUS=1 ;;
+    *) echo "Unknown argument: $1 (supported: --check, --status)"; exit 2 ;;
   esac
-  [ $# -gt 1 ] && { echo "Too many arguments (only --check is supported)"; exit 2; }
+  [ $# -gt 1 ] && { echo "Too many arguments (supported: --check, --status)"; exit 2; }
 fi
+NOWRITE=$(( CHECK + STATUS ))
 
 [ -d "$SRC" ] || { echo "Spec schema folder not found: $SRC"; echo "Set SOM_SPEC_DIR to your SOM spec folder."; exit 1; }
 
@@ -31,12 +35,12 @@ for req in \
 done
 
 OUT="$DST"
-if [ "$CHECK" = 1 ]; then
+if [ "$NOWRITE" != 0 ]; then
   OUT="$(mktemp -d)"
   trap 'rm -rf "$OUT"' EXIT
 fi
 
-echo "Vendoring from: $SRC"
+[ "$STATUS" = 1 ] || echo "Vendoring from: $SRC"
 mkdir -p "$OUT/examples" "$OUT/v0.3.1-proposed/examples" "$OUT/v0.3.2-proposed/examples"
 cp "$SRC"/som-v0.3-*.schema.json            "$OUT"/
 cp "$SRC"/examples/*.json                    "$OUT/examples/"            2>/dev/null || true
@@ -55,6 +59,81 @@ cp "$SRC"/v0.3.2-proposed/README.md          "$OUT/v0.3.2-proposed/"     2>/dev/
 # own claims; som_diff prices deltas). Existence already asserted by the pre-flight.
 cp "$SRC"/som_lint.py "$SRC"/som_diff.py "$SRC"/validate_sequence.py "$SRC"/SCHEMA-TOOLS.md "$OUT"/
 ls "$OUT"/v0.3.2-proposed/som-v0.3.2-*.schema.json >/dev/null
+
+# ---- shared comparison: fills DRIFT_LIST, used by both --check and --status
+compare_trees() {
+  DRIFT_LIST=""
+  while IFS= read -r f; do
+    cmp -s "$OUT/$f" "$DST/$f" || DRIFT_LIST="${DRIFT_LIST}DRIFT: $f
+"
+  done < <(cd "$OUT" && find . -type f | sed 's|^\./||')
+  while IFS= read -r f; do
+    [ -f "$OUT/$f" ] || DRIFT_LIST="${DRIFT_LIST}ORPHANED (spec no longer provides): $f
+"
+  done < <(cd "$DST" && find . -type f \( \
+      -path "./v0.3.1-proposed/*" -o -path "./v0.3.2-proposed/*" \
+      -o -path "./examples/*" -o -name "som-v0.3-*.schema.json" \
+      -o -name "som_lint.py" -o -name "som_diff.py" -o -name "validate_sequence.py" \
+      -o -name "SCHEMA-TOOLS.md" \
+    \) | sed 's|^\./||')
+}
+
+if [ "$STATUS" = 1 ]; then
+  # Everything here is COMPUTED. The ledger records intent, which cannot be computed;
+  # it does not record state, which can — and a recorded state goes stale silently
+  # (it has twice), whereas a computed one cannot.
+  compare_trees
+  n_drift=$(printf '%s' "$DRIFT_LIST" | grep -c . || true)
+
+  echo "SOM spec <-> repo status                                  (nothing written)"
+  echo
+  echo "  spec  $SRC"
+  echo "  repo  $DST"
+  echo
+
+  if [ "$n_drift" = 0 ]; then
+    echo "SYNC     in sync — repo matches the spec folder byte for byte"
+  else
+    echo "SYNC     $n_drift file(s) differ — run: bash schema/sync-from-spec.sh"
+    printf '%s' "$DRIFT_LIST" | sed 's/^/           /'
+  fi
+
+  # "when did the spec CONTENT last move" — the ledger is bookkeeping, not content, so
+  # excluding it stops the file answering a question about itself.
+  newest=$(cd "$SRC" && find . -type f \( -name "*.json" -o -name "*.py" -o -name "*.md" \) \
+            -not -path "./_superseded/*" -not -name "SYNC-STATE.md" \
+            -exec stat -f '%m %N' {} + 2>/dev/null | sort -rn | head -1)
+  if [ -n "$newest" ]; then
+    echo "SPEC     newest file $(date -r "${newest%% *}" '+%Y-%m-%d %H:%M') — ${newest#* }"
+  fi
+  ledger_date=$(grep -m1 '^LAST REPO VENDOR:' "$SRC/SYNC-STATE.md" 2>/dev/null | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
+  [ -n "$ledger_date" ] && echo "           ledger claims last vendored $ledger_date (claim, not proof — SYNC above is the proof)"
+
+  zip=$(cd "$SRC" && ls -t SOM-v0.3.2-schema-pack-*.zip 2>/dev/null | head -1)
+  nsup=$(ls "$SRC/_superseded"/*.zip 2>/dev/null | wc -l | tr -d ' ')
+  [ -n "$zip" ] && echo "PACK     current $zip${nsup:+   ($nsup superseded)}"
+
+  if git -C "$DST" rev-parse --git-dir >/dev/null 2>&1; then
+    br=$(git -C "$DST" rev-parse --abbrev-ref HEAD 2>/dev/null)
+    sha=$(git -C "$DST" rev-parse --short HEAD 2>/dev/null)
+    if git -C "$DST" fetch --quiet --prune origin >/dev/null 2>&1; then
+      if git -C "$DST" merge-base --is-ancestor HEAD origin/main 2>/dev/null; then
+        echo "GIT      $br @ $sha — on origin/main (fetched just now)"
+      else
+        ahead=$(git -C "$DST" rev-list --count origin/main..HEAD 2>/dev/null || echo "?")
+        echo "GIT      $br @ $sha — NOT on origin/main, $ahead commit(s) unmerged (fetched just now)"
+      fi
+    else
+      echo "GIT      $br @ $sha — fetch failed, merge state unknown (never read from a stale remote ref)"
+    fi
+  fi
+
+  echo
+  echo "LEDGER   the un-computable half — what changed and why:"
+  grep -E '^(LAST SPEC CHANGE|MERGE NOTE):' "$SRC/SYNC-STATE.md" 2>/dev/null \
+    | cut -c1-150 | sed 's/^/           /'
+  exit 0
+fi
 
 if [ "$CHECK" = 1 ]; then
   # Compare exactly the vendored file set against the repo copy. Anything different or
