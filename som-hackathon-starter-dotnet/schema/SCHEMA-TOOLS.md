@@ -159,6 +159,11 @@ python3 schema/validate_sequence.py schema/v0.3.2-proposed/examples/hurricane-ru
 
 ## sync-from-spec.sh — is the repo the same as the spec?
 
+**Reference repo only — this script is not in the pack.** It vendors *from* the spec
+folder into the repo, so it has nothing to do outside that repo. Listed here because
+the CI block below calls it, and because the reasoning about computed-vs-recorded
+state applies to anyone keeping a copy of these schemas in sync with their own tree.
+
 ```
 bash schema/sync-from-spec.sh             # vendor spec -> repo, then stamp the ledger
 bash schema/sync-from-spec.sh --check     # gate: exit 1 on any drift. Writes nothing.
