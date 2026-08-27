@@ -3,14 +3,14 @@
   "version": "0.2.0",
   "name": "HyperContent Reshape Per Path",
   "description": "Dashboard registration for HyperContent's reshape-per-path skill. The production skill consumes story.context, and for each planned outlet/path (article, brief, explainer, reel, ...) recombines the story's OWN elements (headline + story_meaning) into a distinct Telling — never inventing facts — then publishes flat skill.suggestion.created outputs to som.skills.staging plus skill.run.completed audit records to som.skills.runs. This JSON keeps the skill visible and governable in the dashboard; real processing runs in HyperContent's own executor (external Kafka consumer/publisher).",
-  "skill_type": "vendor",
+  "skill_type": "VENDOR",
   "disclosure_level": "L1",
-  "migration_policy": "cold",
+  "migration_policy": "COLD",
   "reads": [
     "story_id",
     "headline",
     "story_meaning",
-    "planning.paths",
+    "extensions.com.hypercontent.paths",
     "content_refs[].uri",
     "content_refs[].content_format"
   ],
@@ -23,7 +23,7 @@
     "operates_on": ["story.context"],
     "produces": ["skill.suggestion.created", "skill.run.completed"],
     "target_system_types": ["content_composition", "automation"],
-    "fires_on": ["headline", "story_meaning", "planning"]
+    "fires_on": ["headline", "story_meaning", "extensions.com.hypercontent.paths"]
   },
   "runtime": {
     "owner": "HyperContent",
@@ -82,7 +82,7 @@
       },
       "default_severity": "inform",
       "output_message_type": "skill.warning.raised",
-      "affected_fields": ["headline", "story_meaning", "planning.paths"],
+      "affected_fields": ["headline", "story_meaning", "extensions.com.hypercontent.paths"],
       "detail_template": "HyperContent Reshape Per Path registration sentinel fired. Real processing should be performed by HyperContent's external skill worker.",
       "rationale": "This file registers HyperContent's real external skill with the dashboard. The sentinel should not fire on normal SOM stories."
     }

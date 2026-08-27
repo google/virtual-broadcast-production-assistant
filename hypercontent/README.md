@@ -10,10 +10,11 @@ Two skills authored in the reference rule-engine format live in
 the starter with no code:
 
 - **`hypercontent-gate-treatment-by-sensitivity.json`** — a safety gate. When a story's subject is
-  sensitive, it raises `skill.warning.raised` (`severity: hold`) so a children's edition or a
-  gamified/"exciting" reel of a grave story is held for standards review. It gates on the
-  *audience × treatment*, never the story: a serious subject is fully reportable for a general
-  audience.
+  sensitive, it raises `skill.warning.raised` (`severity: hold`) that routes a children's edition or
+  a gamified/"exciting" reel of a grave story to standards review before it is composed. The `hold`
+  is a label the bus carries, not automatic suppression: the human approval gate holds the telling
+  and the executor withholds it on that decision. It gates on the *audience × treatment*, never the
+  story: a serious subject is fully reportable for a general audience.
 - **`hypercontent-flag-on-omission.json`** — raises `skill.warning.raised` (`severity: flag`) when a
   figure or claim risks losing its required caveat/attribution as it is reshaped into a smaller
   format.

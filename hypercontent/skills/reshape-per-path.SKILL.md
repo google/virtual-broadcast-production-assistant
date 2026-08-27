@@ -12,20 +12,18 @@ owners:
   editorial: standards@hypercontent.ai
   engineering: som-eng@hypercontent.ai
 version: 0.2.0
-som_schema_version: "0.3"
+som_schema_version: "0.3.2"
 skill_priority: standard
 som:
   subscribes:
-    - story.lifecycle.changed
-    - story.editorial.updated
-    - story.assets.updated
+    - story.context
   publishes:
     - skill.suggestion.created
   reads:
     - premise
-    - sources
+    - editorial_source
     - editorial_gates
-    - planning
+    - extensions
     - assets
     - content_refs
   writes:

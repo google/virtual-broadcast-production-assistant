@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "name": "Flag on Omission",
   "description": "Authored by HyperContent. A reshaped format is a smaller surface than the original, so the risk is that a required element is lost in the reshaping — a figure without its caveat, a claim without its attribution. This skill flags stories carrying an unqualified figure or a claim with no provenance, so the executor keeps the required companion travelling with the element in every derived telling. Flag, never rewrite: a human makes the call.",
-  "skill_type": "NEWSROOM",
+  "skill_type": "VENDOR",
   "disclosure_level": "L2",
   "migration_policy": "COLD",
   "reads": [

@@ -3,9 +3,9 @@
   "version": "0.2.0",
   "name": "HyperContent Atomise and Bond",
   "description": "Dashboard registration for HyperContent's atomise-and-bond skill. The production skill consumes story.context, breaks the story into atoms (facts + source attribution) and derives must-travel-with bonds between them (e.g. an unverified casualty figure bonded to its 'not independently verified' caveat), then publishes the fact-graph as flat skill.suggestion.created outputs to som.skills.staging plus skill.run.completed audit records to som.skills.runs. A bonded caveat cannot be dropped from any derived telling. This JSON keeps the skill visible and governable in the dashboard; real processing runs in HyperContent's own executor (external Kafka consumer/publisher).",
-  "skill_type": "vendor",
+  "skill_type": "VENDOR",
   "disclosure_level": "L1",
-  "migration_policy": "cold",
+  "migration_policy": "COLD",
   "reads": [
     "story_id",
     "headline",
