@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic Video Broadcast Studio - Front of House Terminal</title>
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-background-glow"></div>
+    
+    <header class="studio-header">
+        <div class="header-logo-group">
+            <div class="glowing-beacon connected" id="connection-beacon"></div>
+            <h1>AGENTIC VIDEOPODCAST <span class="accent-text">BOOTH</span></h1>
+        </div>
+        <div class="system-status-badge" id="system-status-badge">STANDBY</div>
+    </header>
+
+    <main class="studio-grid">
+        <!-- LEFT COLUMN: Voice-First Portal -->
+        <section class="panel voice-portal-panel" aria-label="FOH Voice Portal">
+            <div class="voice-card">
+                <div class="card-header">
+                    <h2>FRONT OF HOUSE <span class="accent-text">HOST</span></h2>
+                    <div class="interactive-icons">
+                        <button class="icon-btn" id="toggle-chat-btn" title="Toggle Text Chat" aria-label="Toggle text chat panel">
+                            <!-- Elegant Keyboard Icon -->
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+                                <line x1="6" y1="8" x2="6" y2="8"></line>
+                                <line x1="10" y1="8" x2="10" y2="8"></line>
+                                <line x1="14" y1="8" x2="14" y2="8"></line>
+                                <line x1="18" y1="8" x2="18" y2="8"></line>
+                                <line x1="6" y1="12" x2="6" y2="12"></line>
+                                <line x1="10" y1="12" x2="10" y2="12"></line>
+                                <line x1="14" y1="12" x2="14" y2="12"></line>
+                                <line x1="18" y1="12" x2="18" y2="12"></line>
+                                <line x1="7" y1="16" x2="17" y2="16"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="visualizer-container">
+                    <!-- Audio concentric animation rings -->
+                    <div class="pulse-ring ring-1" id="ring-1"></div>
+                    <div class="pulse-ring ring-2" id="ring-2"></div>
+                    
+                    <!-- Real-time overlapping canvas visualizer waves -->
+                    <canvas id="visualizer-canvas" class="visualizer-canvas"></canvas>
+
+                    <!-- Large glowing central mic button -->
+                    <button class="glowing-mic-btn idle" id="mic-btn" aria-label="Toggle Microphone Input">
+                        <svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v1a7 7 0 0 1-14 0v-1"></path>
+                            <line x1="12" y1="19" x2="12" y2="23"></line>
+                            <line x1="8" y1="23" x2="16" y2="23"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="voice-status-section">
+                    <div class="status-badge-container">
+                        <span class="status-badge badge-idle active" id="badge-idle">IDLE</span>
+                        <span class="status-badge badge-listening" id="badge-listening">LISTENING</span>
+                        <span class="status-badge badge-thinking" id="badge-thinking">THINKING</span>
+                        <span class="status-badge badge-speaking" id="badge-speaking">SPEAKING</span>
+                    </div>
+                    <div class="subtitle-container">
+                        <p id="transcript-subtitles" class="subtitles-text">Click the microphone button to talk to the Front of House assistant.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLLAPSIBLE CHAT DRAWER: Slides open elegant-like -->
+            <div class="chat-drawer collapsed" id="chat-drawer">
+                <div class="drawer-header">
+                    <h3>CONVERSATION HISTORY</h3>
+                    <div class="drawer-controls">
+                        <!-- Mute / Unmute TTS Toggle -->
+                        <button class="icon-btn text-control-btn" id="toggle-mute-btn" title="Toggle Sound Feedback" aria-label="Toggle sound feedback">
+                            <svg id="sound-on-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                            </svg>
+                            <svg id="sound-off-icon" class="hidden" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <line x1="23" y1="9" x2="17" y2="15"></line>
+                                <line x1="17" y1="9" x2="23" y2="15"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="chat-history" id="chat-history-container">
+                    <div class="chat-bubble assistant">
+                        Hello! Welcome to the Agentic Video Podcast Booth. How can I help you today?
+                    </div>
+                </div>
+                <form class="chat-input-area" id="chat-input-form" onsubmit="return false;">
+                    <input type="text" id="chat-text-input" placeholder="Type a message to FOH..." autocomplete="off" aria-label="Message input">
+                    <button type="submit" class="send-btn" id="chat-send-btn" aria-label="Send message">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- RIGHT COLUMN: Telemetry Control Room Dashboard -->
+        <section class="panel control-room-panel" aria-label="Control Room Telemetry Dashboard">
+            <!-- LIVE FEED MONITOR CARD -->
+            <div class="dashboard-card live-feed-card">
+                <div class="card-header">
+                    <h3>LIVE FEED MONITOR</h3>
+                    <div class="on-air-indicator active" id="on-air-indicator">ON AIR</div>
+                </div>
+                <div class="feed-viewport">
+                    <div class="mock-video-canvas">
+                        <div class="video-grid-overlay"></div>
+                        <div class="viewport-title" id="on-air-camera-title">CAM 1 - WIDE STUDIO</div>
+                        <div class="viewport-frame-desc" id="on-air-frame-desc">A podcast studio wide shot. Speaker A (Host) is gesturing happily. Speaker B (Guest) is nodding and smiling.</div>
+                    </div>
+                    <div class="ptz-overlay-telemetry">
+                        <span class="telemetry-badge">PAN: <span id="telemetry-pan">0.0°</span></span>
+                        <span class="telemetry-badge">TILT: <span id="telemetry-tilt">0.0°</span></span>
+                        <span class="telemetry-badge">ZOOM: <span id="telemetry-zoom">1.0x</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AUDIO DESK AND OVERRIDES -->
+            <div class="dashboard-row">
+                <!-- AUDIO VU PANEL -->
+                <div class="dashboard-card audio-desk-card">
+                    <div class="card-header">
+                        <h3>AUDIO DESK</h3>
+                    </div>
+                    <div class="vu-meters-container">
+                        <div class="vu-meter-group">
+                            <label for="vu-host-bar" class="vu-label">HOST MIC</label>
+                            <div class="vu-bar-wrapper">
+                                <div class="vu-level-fill" id="vu-host-bar" style="height: 15%;"></div>
+                            </div>
+                            <span class="vu-db-value" id="vu-host-db">-40.0 dB</span>
+                        </div>
+                        <div class="vu-meter-group">
+                            <label for="vu-guest-bar" class="vu-label">GUEST MIC</label>
+                            <div class="vu-bar-wrapper">
+                                <div class="vu-level-fill" id="vu-guest-bar" style="height: 5%;"></div>
+                            </div>
+                            <span class="vu-db-value" id="vu-guest-db">-60.0 dB</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QUICK RUNTIME LIFECYCLE CONTROLS -->
+                <div class="dashboard-card quick-controls-card">
+                    <div class="card-header">
+                        <h3>BOOTH LIFECYCLE</h3>
+                    </div>
+                    <div class="booth-controls-wrapper">
+                        <button class="glowing-action-btn start-show-btn" id="start-show-btn">
+                            <span class="btn-text">START SHOW</span>
+                            <span class="btn-subtext">Activate Director</span>
+                        </button>
+                        <button class="glowing-action-btn stop-show-btn" id="stop-show-btn">
+                            <span class="btn-text">STOP SHOW</span>
+                            <span class="btn-subtext">Deactivate Director</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SHOW RUNDOWN AND DIRECTOR ACTIONS LOG -->
+            <div class="dashboard-row">
+                <!-- SHOW RUNDOWN -->
+                <div class="dashboard-card rundown-card">
+                    <div class="card-header">
+                        <h3>SHOW RUNDOWN</h3>
+                    </div>
+                    <ul class="rundown-list" id="rundown-list-container">
+                        <li class="rundown-item active">
+                            <span class="seg-bullet"></span>
+                            <div class="seg-details">
+                                <div class="seg-title">Intro Bumper</div>
+                                <div class="seg-notes">FOH starts, play intro package.</div>
+                            </div>
+                            <span class="seg-duration">30s</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- DIRECTOR'S LOG CONSOLE -->
+                <div class="dashboard-row director-log-card-row">
+                    <div class="dashboard-card director-log-card" style="width: 100%;">
+                        <div class="card-header">
+                            <h3>DIRECTOR DECISION LOG</h3>
+                        </div>
+                        <div class="console-wrapper">
+                            <pre class="console-log" id="director-console-log">[System] Studio systems operational. Awaiting Show Start.</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <div>Platform: <span class="system-font">Google Cloud Agentic Developer Kit (ADK)</span></div>
+        <div>Model: <span class="system-font">gemini-3.1-flash-live</span></div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
