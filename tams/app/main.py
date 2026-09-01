@@ -298,7 +298,7 @@ def create_flow_segments(flowId: str, segments: Union[FlowSegmentPost, List[Flow
     return {"message": "Segments created successfully"}
 
 @app.get("/flows/{flowId}/segments", response_model=List[FlowSegmentPost], response_model_exclude_none=True)
-def get_flow_segments(flowId: str, timerange: Optional[str] = None, limit: Optional[int] = 100, presigned: bool = False):
+def get_flow_segments(flowId: str, timerange: Optional[str] = None, limit: Optional[int] = 100, presigned: bool = False, reverse_order: bool = False):
     query = db.collection("segments").where("flow_id", "==", flowId)
     
     segments = []
@@ -322,6 +322,11 @@ def get_flow_segments(flowId: str, timerange: Optional[str] = None, limit: Optio
         docs = query.limit(limit).get()
         for doc in docs:
             segments.append(doc.to_dict())
+
+    if reverse_order:
+        segments.sort(key=lambda seg: seg.get("timerange_start", 0), reverse=True)
+    else:
+        segments.sort(key=lambda seg: seg.get("timerange_start", 0))
             
     segments = segments[:limit]
     
