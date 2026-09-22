@@ -37,6 +37,8 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<DashboardService>(
 builder.Services.AddHostedService<SkillWorker>();
 builder.Services.AddSingleton<SimulatorService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SimulatorService>());
+builder.Services.AddSingleton<MockMamService>();
+builder.Services.AddHostedService<MediaCoordinatorService>();
 
 // Bind to localhost:5050 only when ASPNETCORE_URLS is unset (i.e. local `dotnet run`).
 // In containers the Dockerfile sets ASPNETCORE_URLS=http://+:5050 so Kestrel binds to
@@ -157,6 +159,23 @@ app.MapGet("/api/seed-stories/{scenario}", async (string scenario) =>
         : Results.Content(json, "application/json");
 });
 
+// Serves docs/USER-GUIDE.md so the dashboard's Help modal can render it in-app.
+// Same dual path resolution as content/: next to the DLL in a container, three
+// levels up under `dotnet run`.
+app.MapGet("/api/docs/user-guide", async () =>
+{
+    var candidates = new[]
+    {
+        Path.Combine(AppContext.BaseDirectory, "docs", "USER-GUIDE.md"),
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "docs", "USER-GUIDE.md"),
+        Path.Combine("docs", "USER-GUIDE.md"),
+    };
+    var path = candidates.FirstOrDefault(File.Exists);
+    return path is null
+        ? Results.NotFound(new { error = "USER-GUIDE.md not shipped in this deployment — read it in the repo" })
+        : Results.Content(await File.ReadAllTextAsync(path), "text/markdown; charset=utf-8");
+});
+
 // ── Content endpoint (story body behind content_ref) ──
 // Resolution order differs from TestProducer.ResolveSeedPath because the published
 // container has content/ next to the DLL (BaseDirectory) per the Dockerfile, while
@@ -193,6 +212,17 @@ app.MapPost("/api/decision/{id}", async (
         : Results.BadRequest(new { error = result.Status });
 });
 
+// ── Story directory (read-only) ────────────────────────
+// The ingest-journey entry point: list the live story set so a joining participant can
+// find a story_id to reference. A cache of the bus, never the truth — the bus stays the
+// source of record, and any participant could serve this same directory role.
+app.MapGet("/api/stories", (DashboardService dash) => Results.Ok(dash.SnapshotStories()));
+
+// The SOM schema pack version this build targets — the same value stamped on every
+// envelope's som_version. Sourced from SomEnvelope.Version so the UI badge can never
+// drift from the wire.
+app.MapGet("/api/version", () => Results.Ok(new { som_version = SomEnvelope.Version }));
+
 app.MapPost("/api/stories/{storyId}/rerun", async (
     string storyId, DashboardService dash, CancellationToken ct) =>
 {
@@ -223,6 +253,25 @@ app.MapPost("/api/stories/{storyId}/add-compliance", async (
     return r.Ok
         ? Results.Ok(new { r.Status, cleared_pending = r.ClearedPending })
         : Results.NotFound(new { error = r.Status });
+});
+
+// ── Mock MAM (TAMS stand-in — no MAM participant in the IBC PoC) ──
+// Write-only on the bus: emits som.delivery.media_available for catalogued Sources.
+// These endpoints drive the mock from the dashboard/simulator; they are NOT a MAM
+// query API for other bus participants (nothing like that is ratified).
+app.MapGet("/api/mam/catalog", (MockMamService mam) => Results.Ok(mam.Catalog));
+
+app.MapPost("/api/mam/emit/{sourceId}", async (
+    string sourceId, MamEmitRequest? body, MockMamService mam, CancellationToken ct) =>
+{
+    var result = await mam.EmitAsync(sourceId, body?.TimeRange, body?.AssetId, body?.CaptureComplete ?? false, ct);
+    return result.Status switch
+    {
+        MamEmitStatus.Emitted => Results.Ok(result.Envelope),
+        // Infra failure (broker/SASL/topic) is not the caller's fault → 502, not 400.
+        MamEmitStatus.PublishFailed => Results.Problem(detail: result.Error, statusCode: 502),
+        _ => Results.BadRequest(new { error = result.Status.ToString(), detail = result.Error, source_id = sourceId }),
+    };
 });
 
 // ── Simulator (local-dev fallback for AP ENPS) ─────────
@@ -269,10 +318,18 @@ app.MapPost("/api/reset", async (DashboardService dash, CancellationToken ct) =>
 
 app.MapPost("/api/publish/{scenario}", async (string scenario, IOptions<KafkaOptions> kafka) =>
 {
+    // Reject unknown scenarios up front — RunAsync would otherwise log to stdout and
+    // return, leaving the caller a misleading 200 {"published": "<anything>"}.
+    if (!TestProducer.HasScenario(scenario))
+        return Results.NotFound(new { error = $"unknown scenario '{scenario}'", valid_scenarios = TestProducer.Scenarios });
     try
     {
-        await TestProducer.RunAsync(kafka.Value, scenario);
-        return Results.Ok(new { published = scenario });
+        var count = await TestProducer.RunAsync(kafka.Value, scenario);
+        // A known scenario that published nothing means its seed file was missing or
+        // unparseable — surface it as a 500 instead of a misleading {"published": ...}.
+        return count > 0
+            ? Results.Ok(new { published = scenario })
+            : Results.Problem($"scenario '{scenario}' is known but nothing was published — seed file missing or unreadable");
     }
     catch (Exception ex)
     {
@@ -295,5 +352,6 @@ app.Map("/ws", async (HttpContext ctx, DashboardService dash) =>
 app.Run();
 
 internal sealed record DecisionRequest(string Decision, string? Reviewer);
+internal sealed record MamEmitRequest(string? TimeRange, string? AssetId, bool? CaptureComplete);
 internal sealed record AddComplianceRequest(string? Type, string? Severity, string? Detail);
 internal sealed record AutoStartRequest(int? IntervalSeconds);

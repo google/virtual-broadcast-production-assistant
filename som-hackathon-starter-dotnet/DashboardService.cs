@@ -45,6 +45,9 @@ public sealed class DashboardService : BackgroundService
             BootstrapServers = _options.BootstrapServers,
             Acks = Acks.All,
             EnableIdempotence = true,
+            // Bounded: with librdkafka's 5-min default, a broker outage hangs an
+            // approve/reject click for minutes before failing.
+            MessageTimeoutMs = 10000,
         };
         ApplyAuth(producerConfig);
         var pb = new ProducerBuilder<string, string>(producerConfig);
@@ -77,9 +80,13 @@ public sealed class DashboardService : BackgroundService
             _options.SkillEventsTopic,
             _options.SkillRunsTopic,
             _options.SkillRejectedTopic,
+            // Observed for the bus event log only — MediaCoordinatorService is the delivery
+            // consumer that acts; the dashboard just shows the traffic.
+            _options.DeliveryTopic,
+            _options.AuditTopic,
         });
 
-        _logger.LogInformation("Dashboard subscribed to 5 topics");
+        _logger.LogInformation("Dashboard subscribed to 7 topics");
 
         await Task.Yield();
 
@@ -104,8 +111,21 @@ public sealed class DashboardService : BackgroundService
                 // can republish it without round-tripping through Kafka or the seed files.
                 if (result.Topic == _options.StoryContextTopic)
                 {
-                    var sid = (node["payload"]?["story_id"] ?? node["story_id"])?.GetValue<string>();
-                    if (sid is not null) _stories[sid] = node;
+                    var sidNode = node["payload"]?["story_id"] ?? node["story_id"];
+                    var sid = sidNode is JsonValue sv && sv.TryGetValue<string>(out var s) ? s : null;
+                    if (sid is not null)
+                    {
+                        _stories[sid] = node;
+                        // Warn ONCE, at ingest, when a story can never appear in the
+                        // /api/stories directory — the read path skips silently (it runs
+                        // per poll), so this line is the only log evidence explaining why.
+                        var st = (node["payload"] ?? node) is JsonObject po
+                            && po["story_type"] is JsonValue stv && stv.TryGetValue<string>(out var stVal) ? stVal : null;
+                        if (st is not ("ACTIVE" or "PLANNED" or "KILLED" or "SPIKED" or "ARCHIVED" or "ORPHAN"))
+                            _logger.LogWarning(
+                                "Story {StoryId} cached with missing/unknown story_type ({StoryType}) — it will not appear in the /api/stories directory",
+                                sid, st ?? "∅");
+                    }
                 }
 
                 // For staged outputs, hold them in the pending queue so the UI can approve/reject.
@@ -114,11 +134,20 @@ public sealed class DashboardService : BackgroundService
                     var id = ExtractOutputId(node);
                     if (id is not null)
                     {
+                        // Capture the story as it was WHEN THE WARNING WAS STAGED, for audit
+                        // target resolution. The cache replaces nodes (never mutates them in
+                        // place), so holding the reference IS a point-in-time snapshot — no
+                        // clone. Resolving against the live cache at decision time could
+                        // target an asset the warning never fired on (N→1 asset drift).
+                        var warnedStory = ((node["payload"] ?? node) as JsonObject)?["story_id"]
+                            is JsonValue wv && wv.TryGetValue<string>(out var ws) ? ws : null;
+                        var snapshot = warnedStory is not null && _stories.TryGetValue(warnedStory, out var snap) ? snap : null;
                         _pending[id] = new PendingOutput(
                             id,
                             result.Message.Key,
                             node,
-                            DateTimeOffset.UtcNow);
+                            DateTimeOffset.UtcNow,
+                            snapshot);
                     }
                 }
 
@@ -226,20 +255,44 @@ public sealed class DashboardService : BackgroundService
 
     public async Task<DecisionResult> DecideAsync(string outputId, string decision, string? reviewer, CancellationToken ct)
     {
+        // Validate the decision BEFORE removing the pending item. A malformed body
+        // (e.g. {"approved":true}) binds decision=null and, if we removed first, the
+        // staged warning would be destroyed by a downstream NRE before either branch
+        // could restore it. Reject up front so nothing is ever taken from the queue
+        // on a decision we cannot honour.
+        var verb = decision?.Trim().ToLowerInvariant();
+        if (verb is not ("approve" or "reject"))
+            return new DecisionResult(false,
+                "invalid_decision — body must be {\"decision\":\"approve\"|\"reject\"}", null);
+
         if (!_pending.TryRemove(outputId, out var pending))
             return new DecisionResult(false, "not_found", null);
 
         var key = pending.StoryKey ?? "";
 
-        if (decision.Equals("approve", StringComparison.OrdinalIgnoreCase))
+        if (verb == "approve")
         {
-            // Annotate and republish to the production bus.
-            var enriched = pending.Output.DeepClone();
-            enriched["approved_by"] = reviewer ?? "dashboard-user";
-            enriched["approved_at"] = DateTimeOffset.UtcNow.ToString("o");
-
-            await _producer.ProduceAsync(_options.SkillEventsTopic,
-                new Message<string, string> { Key = key, Value = enriched.ToJsonString() }, ct);
+            // Republish to the production bus in a FRESH dashboard-attributed envelope —
+            // envelope-level approved_by/at writes were schema-invalid (envelope is
+            // additionalProperties:false). The build happens INSIDE the try: constructing
+            // the envelope materializes vendor JSON (payload.extensions) for the first
+            // time and can throw (e.g. duplicate keys) — any failure here must put the
+            // pending item BACK, never silently discard a staged warning.
+            try
+            {
+                var enriched = BuildDecisionEnvelope(pending, _options.SkillEventsTopic,
+                    ("approved_by", reviewer ?? "dashboard-user"),
+                    ("approved_at", DateTimeOffset.UtcNow.ToString("o")));
+                await _producer.ProduceAsync(_options.SkillEventsTopic,
+                    new Message<string, string> { Key = key, Value = enriched.ToJsonString() }, ct);
+            }
+            catch (Exception ex)
+            {
+                _pending[outputId] = pending;
+                _logger.LogError(ex,
+                    "Approve of {OutputId} failed before/at produce — pending item restored for retry", outputId);
+                throw;
+            }
 
             await BroadcastAsync(new
             {
@@ -250,17 +303,33 @@ public sealed class DashboardService : BackgroundService
                 at = DateTimeOffset.UtcNow,
             }, ct);
 
+            // Post-commit, post-broadcast: the audit rides neither the request token nor
+            // the UI's critical path — on a degraded broker the operator's confirmation
+            // must not wait up to 10s behind the audit produce. Failure inside is logged,
+            // never thrown.
+            await EmitDecisionAuditAsync(pending, "CLEARED", reviewer ?? "dashboard-user");
+
             return new DecisionResult(true, "approved", _options.SkillEventsTopic);
         }
 
-        if (decision.Equals("reject", StringComparison.OrdinalIgnoreCase))
+        if (verb == "reject")
         {
-            var enriched = pending.Output.DeepClone();
-            enriched["rejected_by"] = reviewer ?? "dashboard-user";
-            enriched["rejected_at"] = DateTimeOffset.UtcNow.ToString("o");
-
-            await _producer.ProduceAsync(_options.SkillRejectedTopic,
-                new Message<string, string> { Key = key, Value = enriched.ToJsonString() }, ct);
+            // Build inside the try — same restore guarantee as the approve branch.
+            try
+            {
+                var enriched = BuildDecisionEnvelope(pending, _options.SkillRejectedTopic,
+                    ("rejected_by", reviewer ?? "dashboard-user"),
+                    ("rejected_at", DateTimeOffset.UtcNow.ToString("o")));
+                await _producer.ProduceAsync(_options.SkillRejectedTopic,
+                    new Message<string, string> { Key = key, Value = enriched.ToJsonString() }, ct);
+            }
+            catch (Exception ex)
+            {
+                _pending[outputId] = pending;
+                _logger.LogError(ex,
+                    "Reject of {OutputId} failed before/at produce — pending item restored for retry", outputId);
+                throw;
+            }
 
             await BroadcastAsync(new
             {
@@ -271,10 +340,13 @@ public sealed class DashboardService : BackgroundService
                 at = DateTimeOffset.UtcNow,
             }, ct);
 
+            // Post-commit, post-broadcast (see the approve branch).
+            await EmitDecisionAuditAsync(pending, "WITHHELD", reviewer ?? "dashboard-user");
+
             return new DecisionResult(true, "rejected", _options.SkillRejectedTopic);
         }
 
-        // Unknown decision — put back the pending entry so the UI can retry.
+        // Unreachable: verb was validated to approve|reject before the item was removed.
         _pending[outputId] = pending;
         return new DecisionResult(false, "invalid_decision", null);
     }
@@ -294,11 +366,17 @@ public sealed class DashboardService : BackgroundService
     // mutation triggers a fresh story.context publish, so the skill re-runs
     // and any pending warnings get cleared as stale.
 
-    private static readonly string[] PhaseOrder = { "PLANNED", "GATHERING", "DEVELOPING", "READY_TO_AIR", "ON_AIR", "PUBLISHED" };
+    // SOM v0.3 lifecycle phases (decision #19): nested under story_type ACTIVE,
+    // traversed in this order. LIVE/AIRED are NOT phases — they are derived from
+    // the Telling (decision #16). PLANNED is a story_type, not a phase.
+    private static readonly string[] PhaseOrder = { "DEVELOPING", "READY_TO_AIR", "BREAKING", "PUBLISHED" };
+    // Tolerate legacy/v0.2 phase values on inbound seeds by mapping them onto the v0.3 set.
     private static readonly Dictionary<string, string> PhaseAlias = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["BREAKING"] = "DEVELOPING",
-        ["COMPLETE"] = "PUBLISHED",
+        ["PLANNED"]   = "DEVELOPING",   // PLANNED is a story_type in v0.3; treat as the first active phase here
+        ["GATHERING"] = "DEVELOPING",
+        ["ON_AIR"]    = "BREAKING",     // on-air is derived from the Telling; nearest editorial phase is BREAKING
+        ["COMPLETE"]  = "PUBLISHED",
     };
 
     public Task<RerunResult> AdvancePhaseAsync(string storyId, CancellationToken ct) =>
@@ -341,13 +419,15 @@ public sealed class DashboardService : BackgroundService
     /// and broadcasts a dashboard refresh.
     /// </summary>
     private async Task<RerunResult> RepublishAsync(
-        string storyId, Action<JsonNode> mutate, CancellationToken ct)
+        string storyId, Action<JsonNode> mutate, CancellationToken ct,
+        string? causationId = null, JsonObject? identity = null)
     {
         if (!_stories.TryGetValue(storyId, out var cached))
             return new RerunResult(false, "story_not_seen", 0);
 
         var clone = cached.DeepClone();
-        // TestProducer publishes the payload directly; a real producer would publish a SOM v0.2 envelope wrapping it.
+        // Messages are SOM envelopes (payload-wrapped); tolerate bare payloads from
+        // external producers still on the v0.2 shortcut.
         var payload = clone["payload"] ?? clone;
 
         mutate(payload);
@@ -356,14 +436,41 @@ public sealed class DashboardService : BackgroundService
         payload["sequence_number"] = seq + 1;
         payload["updated_at"] = DateTimeOffset.UtcNow.ToString("o");
 
+        // A republish is a NEW message: fresh message_id + timestamp on the envelope,
+        // same correlation_id so the story lifecycle stays threaded, and the DASHBOARD
+        // as originating_system — the envelope records the act (this mutation), not the
+        // original publisher's statement. Any stale causation_id from the cached copy's
+        // own history is removed first: a fresh message must not claim an old cause.
+        if (clone["payload"] is not null)
+        {
+            clone["message_id"] = Guid.NewGuid().ToString();
+            clone["timestamp"] = DateTimeOffset.UtcNow.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'");
+            // The envelope records the ACT's actor: a delegating caller (the media
+            // coordinator) passes its own identity so the republish and its audit agree.
+            clone["originating_system"] = identity ?? DashboardIdentity();
+            ((JsonObject)clone).Remove("causation_id");
+            if (causationId is not null) clone["causation_id"] = causationId;
+        }
+        else
+        {
+            // Bare-payload cached story (v0.2 shortcut): there is no envelope to stamp,
+            // so identity/causation degrade — loudly, not silently.
+            _logger.LogWarning(
+                "Republish of {StoryId} is a bare payload: no envelope to stamp dashboard identity on{CausationNote}",
+                storyId, causationId is null ? "" : $" (causation {causationId} dropped)");
+        }
+
         var clearedIds = _pending.Where(kv =>
-                kv.Value.Output["story_id"]?.GetValue<string>() == storyId)
+                ((kv.Value.Output["payload"] ?? kv.Value.Output)?["story_id"]?.GetValue<string>()) == storyId)
             .Select(kv => kv.Key)
             .ToList();
-        foreach (var id in clearedIds) _pending.TryRemove(id, out _);
 
+        // Produce FIRST, clear after: if the publish fails, the pending warnings must
+        // survive — otherwise a failed republish silently loses them with no new version.
         await _producer.ProduceAsync(_options.StoryContextTopic,
             new Message<string, string> { Key = storyId, Value = clone.ToJsonString() }, ct);
+
+        foreach (var id in clearedIds) _pending.TryRemove(id, out _);
 
         await BroadcastAsync(new
         {
@@ -378,6 +485,37 @@ public sealed class DashboardService : BackgroundService
     }
 
     public sealed record RerunResult(bool Ok, string Status, int ClearedPending);
+
+    /// <summary>
+    /// Resolve the story that references {assetId} in its assets[] — the upward half of the
+    /// SOM↔TAMS join (delivery event → asset_id → Asset → Story). Returns null if no cached
+    /// story references the asset.
+    /// </summary>
+    public string? FindStoryIdByAssetId(string assetId)
+    {
+        foreach (var (storyId, node) in _stories)
+        {
+            // Tolerant reads throughout: one malformed story (e.g. a vendor publishing a
+            // non-string asset_id) must not poison the lookup for every other arrival.
+            var assets = (node["payload"] ?? node) is JsonObject p ? p["assets"] as JsonArray : null;
+            if (assets is null) continue;
+            foreach (var asset in assets)
+            {
+                if (asset?["asset_id"] is JsonValue v && v.TryGetValue<string>(out var id) && id == assetId)
+                    return storyId;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Public republish-with-mutation for other in-process participants (the media
+    /// coordinator). Same semantics as the lifecycle-simulator endpoints: bump
+    /// sequence_number, stamp updated_at, clear stale pending, republish.
+    /// </summary>
+    public Task<RerunResult> MutateStoryAsync(string storyId, Action<JsonNode> mutate, CancellationToken ct,
+        string? causationId = null, JsonObject? identity = null) =>
+        RepublishAsync(storyId, mutate, ct, causationId, identity);
 
     /// <summary>
     /// Reset the dashboard view: clear the pending queue and tell every connected dashboard
@@ -397,6 +535,8 @@ public sealed class DashboardService : BackgroundService
             _options.SkillEventsTopic,
             _options.SkillRejectedTopic,
             _options.SkillRunsTopic,
+            _options.DeliveryTopic,
+            _options.AuditTopic,
         };
 
         _resetMarker = DateTimeOffset.UtcNow;
@@ -432,12 +572,68 @@ public sealed class DashboardService : BackgroundService
         })
         .ToArray();
 
+    /// <summary>
+    /// The story-directory projection: a thin, SOM-shaped listing of the live story set
+    /// materialised from the bus. This is a read-only CACHE of the bus, never a second
+    /// home for the truth — and serving it is a role any participant could fill, not a
+    /// privilege of this process. Live set = story_type ACTIVE/PLANNED only: closed
+    /// types (KILLED/SPIKED/ARCHIVED) are over, and ORPHAN shells are excluded the same
+    /// way (v0.3.2 rule: one story_type predicate covers KILLED/SPIKED/ORPHAN alike).
+    /// </summary>
+    public IReadOnlyCollection<JsonObject> SnapshotStories()
+    {
+        var rows = new List<(DateTimeOffset UpdatedAt, JsonObject Row)>();
+        foreach (var (storyId, node) in _stories)
+        {
+            // Tolerant reads: one malformed story must not poison the directory. The
+            // typed guards cover wrong-typed fields; the try covers what guards cannot —
+            // JsonObject materializes nested objects lazily and THROWS on duplicate JSON
+            // keys, and nothing touches a cached story's lifecycle internals before here,
+            // so without it one hand-crafted envelope 500s the endpoint for everyone.
+            try
+            {
+                if ((node["payload"] ?? node) is not JsonObject p) continue;
+                if (p["story_type"] is not JsonValue tv || !tv.TryGetValue<string>(out var storyType)) continue;
+                if (storyType is not ("ACTIVE" or "PLANNED")) continue;
+
+                var updated = p["updated_at"] is JsonValue uv && uv.TryGetValue<string>(out var u) ? u : null;
+                var row = new JsonObject
+                {
+                    ["story_id"] = storyId,
+                    ["slug"] = p["slug"] is JsonValue sv && sv.TryGetValue<string>(out var slug) ? slug : null,
+                    ["headline"] = p["headline"] is JsonValue hv && hv.TryGetValue<string>(out var headline) ? headline : null,
+                    ["story_type"] = storyType,
+                    ["updated_at"] = updated,
+                };
+                // lifecycle iff the story carries one (ACTIVE-only, decision #19) — the
+                // projection mirrors the schema rule rather than flattening it away.
+                if (p["lifecycle"] is JsonObject lc && lc["phase"] is JsonValue pv && pv.TryGetValue<string>(out var phase))
+                    row["lifecycle"] = new JsonObject { ["phase"] = phase };
+
+                // The bus carries mixed timestamp shapes ("…Z" seeds vs "o"-format
+                // republishes), so ordinal string order can invert near-ties — parse.
+                rows.Add((DateTimeOffset.TryParse(updated, out var ts) ? ts : DateTimeOffset.MinValue, row));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Story directory: cached story {StoryId} is unreadable — omitted from /api/stories", storyId);
+            }
+        }
+        return rows.OrderByDescending(r => r.UpdatedAt).Select(r => r.Row).ToArray();
+    }
+
     // ─── Helpers ────────────────────────────────────────────────────────────
 
-    private static string? ExtractOutputId(JsonNode node) =>
-        node["warning_id"]?.GetValue<string>()
-        ?? node["suggestion_id"]?.GetValue<string>()
-        ?? node["enrichment_id"]?.GetValue<string>();
+    private static string? ExtractOutputId(JsonNode node)
+    {
+        // Skill outputs are now wrapped in a SOM envelope (the typed fields live under
+        // "payload"); tolerate both enveloped and legacy bare-payload messages.
+        var p = node["payload"] ?? node;
+        return p["warning_id"]?.GetValue<string>()
+            ?? p["suggestion_id"]?.GetValue<string>()
+            ?? p["enrichment_id"]?.GetValue<string>();
+    }
 
     private void ApplyAuth(ClientConfig config)
     {
@@ -450,11 +646,195 @@ public sealed class DashboardService : BackgroundService
         base.Dispose();
     }
 
+    /// <summary>The dashboard's originating_system block — one definition so the decision
+    /// envelopes and the audit records agree about who acted.</summary>
+    private static JsonObject DashboardIdentity() => new()
+    {
+        ["system_id"] = "ibc-poc-dashboard",
+        ["system_type"] = "editorial_dashboard",
+        ["system_name"] = "Staging Dashboard (human approval gate)",
+        ["vendor"] = "ibc-poc",
+        ["version"] = "0.1",
+    };
+
+    /// <summary>
+    /// A decision republish is a NEW message: fresh message_id/timestamp, topic = the
+    /// actual destination, the dashboard as originating_system (the envelope records the
+    /// act), correlation threaded from the staged envelope, causation_id = the staged
+    /// message_id. The payload rides unchanged except the decision facts, which live
+    /// under payload.extensions (com.ibc-poc.*) — both the envelope and the warning
+    /// payload are additionalProperties:false, so extensions are the only open surface;
+    /// the governance-grade record is the som.system.audit entry.
+    /// </summary>
+    private JsonObject BuildDecisionEnvelope(
+        PendingOutput pending, string topic, params (string Key, string Value)[] annotations)
+    {
+        var staged = pending.Output as JsonObject;
+        var payload = (staged?["payload"] as JsonObject ?? staged)?.DeepClone() as JsonObject ?? new JsonObject();
+        if (payload["extensions"] is not JsonObject ext)
+        {
+            // Present-but-non-object is a vendor malformation worth a trace — replacing it
+            // silently would be indistinguishable from the ordinary missing case.
+            if (payload["extensions"] is not null)
+                _logger.LogWarning(
+                    "Staged output {OutputId}: payload.extensions was not an object — replaced to carry decision stamps (original value survives on the staging topic)",
+                    pending.OutputId);
+            payload["extensions"] = ext = new JsonObject();
+        }
+        foreach (var (k, v) in annotations) ext[$"com.ibc-poc.{k}"] = v;
+
+        var now = DateTimeOffset.UtcNow;
+        var messageType =
+            staged?["message_type"] is JsonValue mtv && mtv.TryGetValue<string>(out var mt) ? mt
+            : payload["message_type"] is JsonValue pmv && pmv.TryGetValue<string>(out var pmt) ? pmt
+            // No message_type anywhere (legacy bare payload): derive from the id field so a
+            // suggestion/enrichment is not mislabeled as a warning.
+            : payload["suggestion_id"] is not null ? "skill.suggestion.created"
+            : payload["enrichment_id"] is not null ? "story.enrichment"
+            : "skill.warning.raised";
+        var envelope = new JsonObject
+        {
+            ["som_version"] = SomEnvelope.Version,
+            ["message_id"] = Guid.NewGuid().ToString(),
+            ["correlation_id"] = staged?["correlation_id"] is JsonValue cv && cv.TryGetValue<string>(out var corr) ? corr : Guid.NewGuid().ToString(),
+            ["message_type"] = messageType,
+            ["timestamp"] = now.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'"),
+            ["originating_system"] = DashboardIdentity(),
+            ["topic"] = topic,
+            ["payload"] = payload,
+        };
+        if (staged?["message_id"] is JsonValue mv && mv.TryGetValue<string>(out var causation))
+            envelope["causation_id"] = causation;
+        return envelope;
+    }
+
+    /// <summary>
+    /// Record a human gate decision on som.system.audit — the governance-grade act.
+    /// approve → CLEARED; reject → WITHHELD (terminal for this output instance; a
+    /// re-run creates a new output). Mirrors MediaCoordinatorService's audit envelope:
+    /// same correlation_id as the staged output, causation_id = the staged message_id.
+    /// Audit failure is logged loudly but never undoes the decision — the republish
+    /// has already happened; the record must not be able to veto the act.
+    /// </summary>
+    private async Task EmitDecisionAuditAsync(PendingOutput pending, string action, string reviewer)
+    {
+        try
+        {
+            var envelope = pending.Output as JsonObject;
+            var payload = envelope?["payload"] as JsonObject ?? envelope;
+            var (targetKind, targetId, storyFallback) = ResolveAuditTarget(payload, pending.StorySnapshot);
+            var skillId = payload?["skill_id"] is JsonValue skv && skv.TryGetValue<string>(out var sk) ? sk : "unknown-skill";
+            var storyId = payload?["story_id"] is JsonValue sidv && sidv.TryGetValue<string>(out var sid) ? sid : null;
+            var now = DateTimeOffset.UtcNow;
+
+            var auditPayload = new JsonObject
+            {
+                ["message_type"] = "system.audit",
+                ["audit_id"] = Guid.NewGuid().ToString(),
+                ["action"] = action,
+                ["target"] = new JsonObject { ["kind"] = targetKind, ["id"] = targetId },
+                ["actor"] = new JsonObject { ["actor_id"] = reviewer, ["actor_type"] = "user" },
+                // [story-scoped] is a DETERMINISTIC leading token — consumers match on it,
+                // not on prose (the audit schema is closed, so reason is the only carrier).
+                ["reason"] = (storyFallback ? "[story-scoped] " : "")
+                    + $"Dashboard gate decision '{action}' on staged output '{pending.OutputId}' from skill '{skillId}'"
+                    + (storyId is null ? "" : $" (story '{storyId}')")
+                    + (storyFallback
+                        ? " — target.id is the STORY key, not an asset id (the audit schema has no STORY target kind)"
+                        : ""),
+                ["recorded_at"] = now.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'"),
+            };
+
+            var auditEnvelope = new JsonObject
+            {
+                ["som_version"] = SomEnvelope.Version,
+                ["message_id"] = Guid.NewGuid().ToString(),
+                // Thread the staged output's lifecycle: same correlation, caused by the staged message.
+                ["correlation_id"] = envelope?["correlation_id"] is JsonValue cv && cv.TryGetValue<string>(out var corr) ? corr : Guid.NewGuid().ToString(),
+                ["message_type"] = "system.audit",
+                ["timestamp"] = now.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'"),
+                ["originating_system"] = DashboardIdentity(),
+                ["topic"] = _options.AuditTopic,
+                ["payload"] = auditPayload,
+            };
+            if (envelope?["message_id"] is JsonValue mv && mv.TryGetValue<string>(out var causation))
+                auditEnvelope["causation_id"] = causation;
+
+            // Deliberately no cancellation token: this is post-commit work and must not be
+            // abandonable; the producer's 10s MessageTimeoutMs bounds it.
+            await _producer.ProduceAsync(_options.AuditTopic,
+                new Message<string, string> { Key = pending.StoryKey ?? pending.OutputId, Value = auditEnvelope.ToJsonString() });
+            _logger.LogInformation(
+                "Dashboard: decision audit {Action} for output {OutputId} recorded on {Topic} (reviewer {Reviewer})",
+                action, pending.OutputId, _options.AuditTopic, reviewer);
+        }
+        catch (Exception ex)
+        {
+            // Same posture as MediaCoordinator's WITHHELD path: if the audit can't be
+            // recorded, say exactly that — the decision stands but is unrecorded. No OCE
+            // carve-out: with no token in play, cancellation isn't a legitimate signal
+            // here, and letting one escape would skip this log and the caller's broadcast.
+            _logger.LogError(ex,
+                "Dashboard: decision audit {Action} for output {OutputId} could NOT be confirmed on {Topic} — the clearance may exist only in topic annotations",
+                action, pending.OutputId, _options.AuditTopic);
+        }
+    }
+
+    /// <summary>
+    /// Map a staged output onto the locked audit target set (LINK | ASSET | TELLING), most
+    /// specific tier first: an explicit link:/asset: scope wins; else any affected_fields
+    /// path "assets.{id}.…" names the asset; else a bare "assets"/"assets[]…" field
+    /// resolves through the STAGING-TIME story snapshot when that story had exactly ONE
+    /// asset (point-in-time correct: the live cache can move between staging and decision;
+    /// multi-asset stories stay story-scoped — per-asset anchors arrive with the
+    /// firing-anchor upgrade). Story-scoped remainder returns StoryFallback=true: the audit
+    /// schema has no STORY target kind (not adopted at v0.3.2 — assertions got STORY, audit
+    /// did not; tracks to v0.4). The caller labels the id as a story key.
+    /// </summary>
+    private static (string Kind, string Id, bool StoryFallback) ResolveAuditTarget(JsonObject? payload, JsonNode? storySnapshot)
+    {
+        var scope = payload?["scope"] is JsonValue scv && scv.TryGetValue<string>(out var sc) ? sc : null;
+        if (scope is not null && scope.StartsWith("link:", StringComparison.Ordinal))
+            return ("LINK", scope["link:".Length..], false);
+        if (scope is not null && scope.StartsWith("asset:", StringComparison.Ordinal))
+            return ("ASSET", scope["asset:".Length..], false);
+
+        var storyId = payload?["story_id"] is JsonValue sv2 && sv2.TryGetValue<string>(out var s2) ? s2 : null;
+
+        if (payload?["affected_fields"] is JsonArray fields)
+        {
+            var sawBareAssets = false;
+            foreach (var field in fields)
+            {
+                if (field is not JsonValue fv || !fv.TryGetValue<string>(out var f)) continue;
+                var parts = f.Split('.');
+                if (parts[0] == "assets" && parts.Length >= 2 && parts[1].Length > 0)
+                    return ("ASSET", parts[1], false);
+                if (parts[0] is "assets" or "assets[]") sawBareAssets = true;
+            }
+            if (sawBareAssets && SingleAssetIdFor(storySnapshot) is { } onlyAsset)
+                return ("ASSET", onlyAsset, false);
+        }
+
+        return ("ASSET", storyId ?? "unknown", true);
+    }
+
+    /// <summary>The story's asset_id iff the staging-time snapshot has exactly one asset —
+    /// the only case where a bare "assets" affected-field pins to an asset without guessing.</summary>
+    private static string? SingleAssetIdFor(JsonNode? story)
+    {
+        if (story is null) return null;
+        var payload = (story as JsonObject)?["payload"] as JsonObject ?? story as JsonObject;
+        if (payload?["assets"] is not JsonArray { Count: 1 } assets) return null;
+        return assets[0] is JsonObject a && a["asset_id"] is JsonValue v && v.TryGetValue<string>(out var id) ? id : null;
+    }
+
     private sealed record PendingOutput(
         string OutputId,
         string? StoryKey,
         JsonNode Output,
-        DateTimeOffset StagedAt);
+        DateTimeOffset StagedAt,
+        JsonNode? StorySnapshot = null);
 
     public sealed record DecisionResult(bool Ok, string Status, string? PublishedTopic);
 }

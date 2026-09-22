@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://som.spec/schema/v0.3.1-proposed/telling-event",
+  "title": "SOM v0.3.1 PROPOSED — som.telling.* event payloads",
+  "description": "Payloads for telling.started / telling.ended / telling.exposed (v0.3.1 Proposal §3.2), implementing the ratified event-pair semantics (§5): exposure_start/exposure_end immutable and event-stamped; scheduled_start mutable; instantaneous exposures carry both with exposure_start = exposure_end. Stuck-LIVE guard and clock discipline are normative in §5.",
+  "type": "object",
+  "required": ["message_type", "telling_id", "link_id"],
+  "properties": {
+    "message_type": { "type": "string", "enum": ["telling.started", "telling.ended", "telling.exposed"] },
+    "telling_id": { "type": "string", "format": "uuid" },
+    "link_id": { "type": "string", "format": "uuid", "description": "The link this Telling followed from — referenced, not duplicated" },
+    "exposure_start": { "type": "string", "format": "date-time" },
+    "exposure_end": { "type": "string", "format": "date-time" },
+    "scheduled_start": { "type": "string", "format": "date-time", "description": "Mutable intended-air; never used to derive on-air state" },
+    "extensions": { "type": "object", "patternProperties": { "^com\\.[a-z0-9-]+\\.": {} }, "additionalProperties": false }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "message_type": { "const": "telling.started" } } },
+      "then": { "required": ["exposure_start"], "not": { "required": ["exposure_end"] } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "telling.ended" } } },
+      "then": { "required": ["exposure_end"] }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "telling.exposed" } } },
+      "then": { "required": ["exposure_start", "exposure_end"] }
+    }
+  ]
+}

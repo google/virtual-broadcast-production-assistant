@@ -60,13 +60,13 @@ This starter does **not** include a dashboard — use the shared .NET dashboard 
 4. **Test** with seed stories:
 
    ```bash
-   python test_producer.py                          # all 5 scenarios
+   python test_producer.py                          # all 6 scenarios
    python test_producer.py --story informal         # single scenario
    ```
 
 ## Seed stories
 
-Five SOM v0.2 envelopes in `../../seed-stories/` (shared with all starters):
+Six SOM envelopes in `../../seed-stories/` (shared with all starters):
 
 | Scenario | Tests |
 |----------|-------|
@@ -75,6 +75,7 @@ Five SOM v0.2 envelopes in `../../seed-stories/` (shared with all starters):
 | `informal` | Informal headline language — fires term_match rules |
 | `clean` | Clean copy — no warnings expected |
 | `election` | Developing story — no warnings expected |
+| `hurricane` | BREAKING with live-capture media (`media_refs[]`, `acquisition_state`) — no warnings expected |
 
 ### Fetching story body text (content_refs)
 

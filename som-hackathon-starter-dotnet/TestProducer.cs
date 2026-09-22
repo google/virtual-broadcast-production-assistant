@@ -16,7 +16,7 @@ namespace SomSkillWorker;
 ///   dotnet run -- --test-producer --story clean
 ///   dotnet run -- --test-producer --story breaking-no-compliance
 ///
-/// Seed stories live in ./seed-stories/*.json — full SOM v0.2 story.context payloads.
+/// Seed stories live in ./seed-stories/*.json — full SOM envelopes with v0.3.2-shaped story.context payloads.
 /// </summary>
 public static class TestProducer
 {
@@ -27,13 +27,17 @@ public static class TestProducer
         ["informal"]                = "seed-stories/03-informal-headline.json",
         ["clean"]                   = "seed-stories/04-clean-transit.json",
         ["breaking-no-compliance"]  = "seed-stories/05-breaking-no-compliance.json",
+        ["hurricane"]               = "seed-stories/06-breaking-hurricane.json",
     };
 
     /// <summary>Available scenarios in the order they should appear in the UI.</summary>
     public static IReadOnlyList<string> Scenarios => ScenarioFiles.Keys.ToArray();
 
+    /// <summary>True if {scenario} names a known seed scenario (case-insensitive).</summary>
+    public static bool HasScenario(string scenario) => ScenarioFiles.ContainsKey(scenario);
+
     /// <summary>
-    /// Returns the raw SOM v0.2 envelope JSON for a given scenario, or null if unknown.
+    /// Returns the raw SOM envelope JSON for a given scenario, or null if unknown.
     /// </summary>
     public static async Task<string?> LoadScenarioJsonAsync(string scenario)
     {
@@ -66,16 +70,19 @@ public static class TestProducer
     /// CLI entry point. Builds a minimal IConfiguration since no host exists when invoked
     /// with `dotnet run -- --test-producer`.
     /// </summary>
-    public static Task RunAsync(string? scenario = null)
+    public static Task<int> RunAsync(string? scenario = null)
         => RunAsync(LoadOptionsFromConfiguration(), scenario);
 
     /// <summary>
     /// In-process entry point. Caller supplies the same KafkaOptions used by SkillWorker
     /// and DashboardService so a single config source drives every Kafka client.
     /// </summary>
-    public static async Task RunAsync(KafkaOptions options, string? scenario = null)
+    /// <summary>Publishes the requested scenario(s); returns the count actually published so
+    /// a caller can tell a valid-name-but-missing-seed miss from a real publish.</summary>
+    public static async Task<int> RunAsync(KafkaOptions options, string? scenario = null)
     {
         var topic = options.StoryContextTopic;
+        var published = 0;
 
         var config = new ProducerConfig
         {
@@ -126,8 +133,6 @@ public static class TestProducer
             // Extract story_id from payload for the Kafka key
             var storyId = envelope["payload"]?["story_id"]?.GetValue<string>() ?? "unknown";
 
-            // The skill worker consumes the payload (story context), not the full envelope.
-            // Publish just the payload to match what the worker expects.
             var payload = envelope["payload"];
             if (payload is null)
             {
@@ -135,7 +140,12 @@ public static class TestProducer
                 continue;
             }
 
-            var payloadJson = payload.ToJsonString();
+            // Publish the FULL SOM envelope — the wire shape every other producer here uses
+            // and what partners are told to send. message_id and timestamp are refreshed per
+            // publish (each publish is a new message); correlation_id stays the seed's value
+            // so every message about one story lifecycle threads together (decision #18).
+            envelope["message_id"] = Guid.NewGuid().ToString();
+            envelope["timestamp"] = DateTimeOffset.UtcNow.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'");
 
             Console.WriteLine($"─── {name.ToUpperInvariant()} ───");
             Console.WriteLine($"  Story:    {storyId}");
@@ -146,13 +156,15 @@ public static class TestProducer
             var result = await producer.ProduceAsync(topic, new Message<string, string>
             {
                 Key = storyId,
-                Value = payloadJson,
+                Value = envelope.ToJsonString(),
             });
 
             Console.WriteLine($"  → Partition {result.Partition.Value}, Offset {result.Offset.Value}");
             Console.WriteLine();
+            published++;
         }
 
         Console.WriteLine("Done. Your skill worker should pick these up.");
+        return published;
     }
 }

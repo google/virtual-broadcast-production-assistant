@@ -1,11 +1,11 @@
 # SOM Message Contracts — Skill Outputs
 
-Companion to [`som-v02-envelope.md`](./som-v02-envelope.md). That doc covers the inbound `story.context` shape; this one covers the **outbound** messages skills produce, and two cross-cutting v0.2.1 conventions:
+Companion to [`som-v02-envelope.md`](./som-v02-envelope.md). That doc covers the envelope and rule field-paths (payload shapes live in the vendored schemas); this one covers the **outbound** messages skills produce, and two cross-cutting conventions:
 
 1. **`instance_ref`** — how a skill output binds to a specific story instance.
 2. **`extensions.com.{vendor}.{...}`** — how vendors add fields without changing the spec.
 
-Wire baseline: SOM v0.2 plus Amendments A1–A5 (the "v0.2.1-hackathon" label). v0.3 ratifies post-event.
+Wire baseline: the **v0.3.2 pack** (`som_version: "0.3.2"` — the SOM-048 `0.2.0` freeze was retired 12 Aug 2026). Historical: the May hackathon ran SOM v0.2 plus Amendments A1–A5 (the "v0.2.1-hackathon" label).
 
 ---
 
@@ -19,13 +19,15 @@ Wire baseline: SOM v0.2 plus Amendments A1–A5 (the "v0.2.1-hackathon" label). 
 | `som.skills.rejected` | Dashboard (reject) | Audit | rejected skill outputs |
 | `som.skills.runs` | SkillWorker | Dashboard (audit) | `skill.run.completed` |
 
+> This doc covers the **core skill loop** only. The v0.3.1 **distribution layer** — `som.delivery.media_available`, `som.link.*`, `som.telling.*`, `som.system.audit` — is documented in [`SOM-v0.3.1-distribution-contracts.md`](./SOM-v0.3.1-distribution-contracts.md).
+
 Use the **suffixed** message type names on the wire. The unsuffixed forms in the v0.2 spec body are tracked as **SOM-049** for cleanup; the dashboard parses suffixed only.
 
 ---
 
-## `asset_type` enum — v0.2.1-hackathon canonical set
+## `asset_type` enum
 
-The v0.2 spec (Table 12) defines a broader canonical enum; for the hackathon, seeds and skills use a narrowed subset. Vendor-specific values use an `x-` prefix per SOM-039.
+The authoritative enum is the v0.3.2 story-context schema (`VIDEO` … `TRANSCRIPT` | `SUMMARY` | `SOCIAL_POST` | `ARTICLE` | `ANALYSIS` | `CUSTOM`); the narrowed v0.2.1-hackathon subset below is what the original seeds exercised. Vendor-specific values use an `x-` prefix per SOM-039.
 
 **Case convention:**
 
@@ -162,7 +164,7 @@ Two reference points apply:
 | `blocks` | string[] | MUST | ✓ | ✓ |
 | `skill_warning_ref` | string | MUST | — | **gap** |
 
-`scope` and `skill_warning_ref` are not yet emitted by the .NET starter — tracked as follow-ups against SOM-048 / SOM-049, **out of scope for the hackathon day**.
+`scope` and `skill_warning_ref` **are now emitted** by the .NET starter (landed with the v0.3.1 skill-warning contract fix on `som-v031-ibc-readiness`; see `SkillWorker.BuildWarning`).
 
 ### Severity semantics (normative per §4.4.2)
 

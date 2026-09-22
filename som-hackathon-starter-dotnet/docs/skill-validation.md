@@ -82,7 +82,7 @@ field_regex              → field, pattern
 
 ## Layer 2 — Dry-run
 
-**What it does:** Loads all 5 seed stories from `seed-stories/`, evaluates the skill's rules against each via the production `RuleEngine`, returns `{scenario → matched_rules[]}` without publishing anything to Kafka.
+**What it does:** Loads all seed stories from `seed-stories/`, evaluates the skill's rules against each via the production `RuleEngine`, returns `{scenario → matched_rules[]}` without publishing anything to Kafka.
 
 **Why it matters:** The deterministic equivalent of "click every scenario button in the dashboard and observe what fires." Vendors get exact, reproducible feedback on a skill change without polluting the bus.
 
@@ -142,7 +142,7 @@ curl -s -X POST http://localhost:5050/api/skills/nbcu%2Feditorial-standards/dry-
 
 ## Layer 3 — AI review
 
-**What it does:** Sends the skill definition + all 5 seed stories + the dry-run result to a large language model. Asks the model to evaluate the skill across five editorial axes (naming, rule logic, edge cases, descriptions, detail templates) and return structured findings.
+**What it does:** Sends the skill definition + all seed stories + the dry-run result to a large language model. Asks the model to evaluate the skill across five editorial axes (naming, rule logic, edge cases, descriptions, detail templates) and return structured findings.
 
 **Architecture:**
 

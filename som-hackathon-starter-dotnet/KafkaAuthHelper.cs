@@ -17,26 +17,31 @@ internal static class KafkaAuthHelper
             config.SaslMechanism = sm;
         }
 
-        if (options.SecurityProtocol.Equals("SaslSsl", StringComparison.OrdinalIgnoreCase))
+        // Only SASL protocols need credentials.
+        var isSasl = options.SecurityProtocol.StartsWith("Sasl", StringComparison.OrdinalIgnoreCase);
+        if (!isSasl) return;
+
+        // SaslSsl + Plain is the GCP Managed Kafka path: username is the SA email,
+        // password is a short-lived ADC access token.
+        var isGcpManagedKafka = options.SecurityProtocol.Equals("SaslSsl", StringComparison.OrdinalIgnoreCase)
+                             && options.SaslMechanism.Equals("Plain", StringComparison.OrdinalIgnoreCase);
+
+        if (isGcpManagedKafka)
         {
-            if (options.SaslMechanism.Equals("Plain", StringComparison.OrdinalIgnoreCase))
+            config.SaslUsername = Environment.GetEnvironmentVariable("WorkerSaEmail") ?? options.SaslUsername;
+            var credential = Google.Apis.Auth.OAuth2.GoogleCredential.GetApplicationDefaultAsync().GetAwaiter().GetResult();
+            if (credential.IsCreateScopedRequired)
             {
-                config.SaslUsername = Environment.GetEnvironmentVariable("WorkerSaEmail") ?? options.SaslUsername;
-                
-                // Fetch short-lived access token as password
-                var credential = Google.Apis.Auth.OAuth2.GoogleCredential.GetApplicationDefaultAsync().GetAwaiter().GetResult();
-                if (credential.IsCreateScopedRequired)
-                {
-                    credential = credential.CreateScoped(new[] { "https://www.googleapis.com/auth/cloud-platform" });
-                }
-                var tokenAccess = (Google.Apis.Auth.OAuth2.ITokenAccess)credential;
-                config.SaslPassword = tokenAccess.GetAccessTokenForRequestAsync().GetAwaiter().GetResult();
+                credential = credential.CreateScoped(new[] { "https://www.googleapis.com/auth/cloud-platform" });
             }
-            else
-            {
-                config.SaslUsername = options.SaslUsername;
-                config.SaslPassword = options.SaslPassword;
-            }
+            var tokenAccess = (Google.Apis.Auth.OAuth2.ITokenAccess)credential;
+            config.SaslPassword = tokenAccess.GetAccessTokenForRequestAsync().GetAwaiter().GetResult();
+        }
+        else
+        {
+            // Static SCRAM / Plain creds (e.g. local dev server with SASL_PLAINTEXT + SCRAM-SHA-256).
+            config.SaslUsername = options.SaslUsername;
+            config.SaslPassword = options.SaslPassword;
         }
     }
 

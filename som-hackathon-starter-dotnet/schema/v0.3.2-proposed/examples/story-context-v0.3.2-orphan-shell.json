@@ -1,0 +1,73 @@
+{
+  "story_id": "orphan-2026-0911-01",
+  "slug": "ORPHAN-UGC-CLIP",
+  "headline": "Unmatched UGC clip — flood water at overpass",
+  "story_type": "ORPHAN",
+  "sequence_number": 1,
+  "updated_at": "2026-09-11T11:05:00Z",
+  "newsroom_id": "nbcu-nyc",
+  "editorial_source": [
+    {
+      "source_id": "src-whatsapp-tip",
+      "source_type": "USER_GENERATED",
+      "provider": "WhatsApp tip line",
+      "credibility": "UNVERIFIED",
+      "received_at": "2026-09-11T11:00:00Z"
+    }
+  ],
+  "assets": [
+    {
+      "asset_id": "asset-ugc-flood-clip",
+      "asset_type": "VIDEO",
+      "status": "IN_PRODUCTION",
+      "evidential_position": "PRIMARY",
+      "acquisition_state": "CAPTURED",
+      "media_refs": [
+        {
+          "source": "tams://tams-gcp-store/77aa41b0",
+          "label": "UGC flood clip (WhatsApp)",
+          "time_range": "[0:0_42:0)"
+        }
+      ],
+      "provenance": {
+        "author": "HUMAN"
+      }
+    }
+  ],
+  "assertions": [
+    {
+      "assertion_id": "assn-match-01",
+      "assertion_type": "MATCH",
+      "target": {
+        "kind": "ASSET",
+        "id": "asset-ugc-flood-clip"
+      },
+      "claim": {
+        "story_id": "hurricane-2026-0911"
+      },
+      "asserted_at": "2026-09-11T11:03:00Z",
+      "confidence": 0.91,
+      "review": {
+        "state": "PENDING"
+      },
+      "provenance": {
+        "author": "MODEL",
+        "model": "story-matcher",
+        "model_version": "0.4"
+      }
+    }
+  ],
+  "editorial_gates": [
+    {
+      "gate_id": "gate-ugc-verify",
+      "gate_type": "VERIFICATION",
+      "status": "PENDING",
+      "blocks": [
+        {
+          "kind": "ASSET",
+          "ref": "asset-ugc-flood-clip"
+        }
+      ]
+    }
+  ]
+}

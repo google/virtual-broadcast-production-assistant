@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://som.spec/schema/v0.3.1-proposed/system-audit",
+  "title": "SOM v0.3.1 PROPOSED \u2014 som.system.audit payload",
+  "description": "Governance audit trail (clearances/suppressions). Distinct from som.skills.runs. A suppression targets the held ASSET (the non-airing branch never gets a link).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "audit_id",
+    "action",
+    "target",
+    "actor",
+    "recorded_at"
+  ],
+  "properties": {
+    "message_type": {
+      "const": "system.audit"
+    },
+    "audit_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "CLEARED",
+        "SUPPRESSED",
+        "WITHHELD",
+        "OVERRIDDEN"
+      ]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "LINK",
+            "ASSET",
+            "TELLING"
+          ]
+        },
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor_id",
+        "actor_type"
+      ],
+      "properties": {
+        "actor_id": {
+          "type": "string"
+        },
+        "actor_type": {
+          "type": "string"
+        }
+      }
+    },
+    "reason": {
+      "type": "string"
+    },
+    "recorded_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

@@ -20,9 +20,12 @@ Thumbs.db
 .env.local
 
 ## Local Claude settings + workflow scratchpads
+## (broad *CLAUDE*/*claude* patterns so AI-context docs like docs/CODING-WITH-CLAUDE.md stay local)
 .claude/
 CLAUDE.md
 claude*.md
+*CLAUDE*.md
+*claude*.md
 
 ## Don't ignore content directories
 !seed-stories/

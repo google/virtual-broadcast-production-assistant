@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://som.spec/schema/v0.3.1-proposed/link-event",
+  "title": "SOM v0.3.1 PROPOSED — som.link.* event payloads",
+  "description": "Payloads for link.committed, link.gate_changed, link.withdrawn (v0.3.1 Proposal §3.1). The link is the Asset↔Destination connection (decision #3); usage[] is maintained from exactly these events under the §5 idempotent-upsert rules.",
+  "type": "object",
+  "required": ["message_type", "link_id", "asset_id", "destination_id", "compliance_gate_status"],
+  "properties": {
+    "message_type": { "type": "string", "enum": ["link.committed", "link.gate_changed", "link.withdrawn"] },
+    "link_id": { "type": "string", "format": "uuid" },
+    "asset_id": { "type": "string" },
+    "destination_id": { "type": "string" },
+    "committed_by": { "type": "string" },
+    "committed_at": { "type": "string", "format": "date-time" },
+    "compliance_gate_status": { "type": "string", "enum": ["PENDING", "CLEARED", "BLOCKED"] },
+    "withdrawn": {
+      "type": "object",
+      "required": ["withdrawn_by", "withdrawn_at"],
+      "properties": {
+        "withdrawn_by": { "type": "string" },
+        "withdrawn_at": { "type": "string", "format": "date-time" },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "extensions": { "type": "object", "patternProperties": { "^com\\.[a-z0-9-]+\\.": {} }, "additionalProperties": false }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "message_type": { "const": "link.committed" } } },
+      "then": { "required": ["committed_by", "committed_at"] }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "link.withdrawn" } } },
+      "then": { "required": ["withdrawn"] },
+      "else": { "not": { "required": ["withdrawn"] } }
+    }
+  ]
+}
