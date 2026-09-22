@@ -1,10 +1,10 @@
 # SOM v0.3.1 — Distribution-Layer Message Contracts
 
-_Service: `som-hackathon-starter-dotnet` · schema pack: [`schema/v0.3.1-proposed/`](../schema/v0.3.1-proposed/) · companion to [`message-contracts.md`](./message-contracts.md) (skill outputs) and [`som-v02-envelope.md`](./som-v02-envelope.md) (envelope)._
+_Service: `som-hackathon-starter-dotnet` · schema pack: [`schema/v0.3.2-proposed/`](../schema/v0.3.2-proposed/) (story.context / telling / delivery) + [`schema/v0.3.1-proposed/`](../schema/v0.3.1-proposed/) (link, audit) · companion to [`message-contracts.md`](./message-contracts.md) (skill outputs) and [`som-v02-envelope.md`](./som-v02-envelope.md) (envelope)._
 
 This is the partner-facing reference for the **v0.3.1 distribution layer** — the message families that sit under `som.link.*`, `som.telling.*`, `som.delivery.*`, and `som.system.*`. For each family: the topic, the JSON Schema, one canonical example, and which IBC demo beat it proves. Every payload here validates against the vendored schemas via [`schema/validate.py`](../schema/validate.py).
 
-> **Schema vs producer status.** All the schemas below are **ratified v0.3.1** and safe to build against. The reference implementation covers them unevenly — `som.delivery.media_available` has a mock producer (`MockMamService`) **and a reference consumer** (`MediaCoordinatorService`, which flips `acquisition_state` on capture-complete and records `WITHHELD` audits for unmatched arrivals); `som.system.audit` has **two** live producers (the coordinator's `WITHHELD` non-actions and the dashboard's human gate decisions — approve → `CLEARED`, reject → `WITHHELD`); `som.link.*` and `som.telling.*` are the 6 Aug hackathon build (WS1). "Producer" columns say which is which. The contract is stable regardless of implementation status — integrate against the schema.
+> **Schema vs producer status.** The schemas below are the **v0.3.2 IBC pack** — telling and delivery changed at v0.3.2 (`transforms[]`, locator-on-arrival); link and audit are unchanged from ratified v0.3.1 — and safe to build against. The reference implementation covers them unevenly — `som.delivery.media_available` has a mock producer (`MockMamService`) **and a reference consumer** (`MediaCoordinatorService`, which flips `acquisition_state` on capture-complete and records `WITHHELD` audits for unmatched arrivals); `som.system.audit` has **two** live producers (the coordinator's `WITHHELD` non-actions and the dashboard's human gate decisions — approve → `CLEARED`, reject → `WITHHELD`); `som.link.*` and `som.telling.*` are the 6 Aug hackathon build (WS1). "Producer" columns say which is which. The contract is stable regardless of implementation status — integrate against the schema.
 
 ---
 
@@ -14,7 +14,7 @@ Every message on every topic is a JSON **envelope** wrapping a typed `payload`. 
 
 ```json
 {
-  "som_version": "0.2.0",
+  "som_version": "0.3.2",
   "message_id": "<uuid>",
   "correlation_id": "<uuid>",
   "message_type": "delivery.media_available",
@@ -32,7 +32,7 @@ Every message on every topic is a JSON **envelope** wrapping a typed `payload`. 
 ```
 
 Envelope rules that bite integrators:
-- **`som_version` stays `"0.2.0"`** even though payloads are v0.3.1-shaped. The wire version does not bump until v0.3 ratifies on the wire (tracked as SOM-048). This is deliberate — don't gate on it.
+- **`som_version` carries the schema pack version** — `"0.3.2"` on the current pack. The SOM-048 `0.2.0` wire freeze was retired 12 Aug 2026 (readers took the frozen value for the payload shape and concluded they were on the wrong schema); traffic recorded before then reads `0.2.0`. Informative only — don't gate on it; `message_type` identifies the payload family.
 - **`correlation_id` is required** and MUST be threaded end-to-end so a downstream event can be traced to the story/action that caused it.
 - **`timestamp` lives on the envelope, never in the payload** (decision #18). There is no `signature` field (removed, #18).
 - `originating_system` replaces the old `source` envelope field (#4.1). `system_type` is from the v0.3 enum (`ncs`, `archive`, `automation`, `skill_worker`, …) — note the newsroom system value is **`ncs`**, there is no `newsroom` value.
@@ -59,7 +59,7 @@ Message-type names are the **suffixed** forms on the wire (e.g. `skill.warning.r
 
 ## `som.delivery.media_available` — the TAMS junction
 
-**Topic:** `som.delivery.media_available` · **Schema:** [`som-v0.3.1-delivery-media-available.schema.json`](../schema/v0.3.1-proposed/som-v0.3.1-delivery-media-available.schema.json)
+**Topic:** `som.delivery.media_available` · **Schema:** [`som-v0.3.2-delivery-media-available.schema.json`](../schema/v0.3.2-proposed/som-v0.3.2-delivery-media-available.schema.json)
 
 Announces that media has **arrived in (or is growing inside) a TAMS/MAM store**. This is the MAM→bus junction and nothing more — SOM never queries the MAM. `source` **MUST** be a fully-qualified TAMS Source URI (`tams://store/id`), re-keyed 29 Jun from the old `flow_id`. A recording that is still being captured is addressable: emit repeatedly with a **growing** `time_range`.
 
@@ -79,7 +79,7 @@ Announces that media has **arrived in (or is growing inside) a TAMS/MAM store**.
 - `time_range` is a TAMS timerange (or list): bracketed `seconds:nanoseconds` bounds, e.g. `[0:0_134:0)`. Open-ended start/end permitted.
 - **Proves:** D1·B5 — media-arrival without a MAM participant. Drive it locally with the `media-arrival` simulator scenario, the Mock MAM panel in the dashboard's Simulator modal, or `POST /api/mam/emit/{sourceId}`.
 
-**What consumers do with it.** The event is an availability handshake — pub/sub, no orchestration. The reference consumer (`MediaCoordinatorService`) demonstrates the canonical reactions: a known asset's story is republished with `acquisition_state: CAPTURING → CAPTURED` when the arrival carries the capture-complete extension (below), rolling arrivals are noted without a state change, and an arrival matching **no** story yields a `WITHHELD` record on `som.system.audit` — never a new story (story-from-media is the v0.3.2 ORPHAN direction). "Capture finished" is not a first-class v0.3.1 delivery field, so the reference implementation carries it exactly the way partners are told to carry their own pre-ratification concepts:
+**What consumers do with it.** The event is an availability handshake — pub/sub, no orchestration. The reference consumer (`MediaCoordinatorService`) demonstrates the canonical reactions: a known asset's story is republished with `acquisition_state: CAPTURING → CAPTURED` when the arrival carries the capture-complete extension (below), rolling arrivals are noted without a state change, and an arrival matching **no** story yields a `WITHHELD` record on `som.system.audit` — never a new story by default (story-from-media is the v0.3.2 ORPHAN lane, enabled via `Coordinator:OrphanPreview`). "Capture finished" is not a first-class delivery field (v0.3.2 included), so the reference implementation carries it exactly the way partners are told to carry their own not-yet-ratified concepts:
 
 ```json
 "extensions": { "com.ibc-poc.capture_complete": true }
@@ -120,7 +120,7 @@ A **link** is the connection between an Asset and a Destination (decision #3). `
 
 ## `som.telling.*` — on-air state (derived, never stored)
 
-**Topics:** `som.telling.started` · `som.telling.ended` · `som.telling.exposed` · **Schema:** [`som-v0.3.1-telling-event.schema.json`](../schema/v0.3.1-proposed/som-v0.3.1-telling-event.schema.json)
+**Topics:** `som.telling.started` · `som.telling.ended` · `som.telling.exposed` · **Schema:** [`som-v0.3.2-telling-event.schema.json`](../schema/v0.3.2-proposed/som-v0.3.2-telling-event.schema.json)
 
 On-air state is **derived from the Telling stream**, never stored on the asset — this is why `asset.status` has no `LIVE`/`AIRED` value (#16). `exposure_start`/`exposure_end` are immutable and event-stamped; `scheduled_start` is mutable intended-air and is **never** used to derive on-air state.
 
@@ -161,7 +161,7 @@ The clearance/suppression audit trail. Distinct from `som.skills.runs` (which re
 
 **Live producers today.** The media coordinator (`WITHHELD` on unmatched arrivals — the system safe-state stop) and the dashboard's human gate (**approve → `CLEARED`**, **reject → `WITHHELD`**, `actor_type: "user"`, `causation_id` = the staged output's `message_id`). A human reject is `WITHHELD`, not `SUPPRESSED`, by decision: rejection is **terminal for that output instance** (a re-run mints a new output) — "no outstanding decision changes this" — whereas `SUPPRESSED` is about held *content* never linked to air. WS1 (Aug) adds the remaining producers.
 
-**Target mapping for gate decisions.** A staged output maps onto the locked `LINK | ASSET | TELLING` set most-specific-first: an explicit `link:{id}`/`asset:{id}` scope wins; else an `assets.{id}.…` affected-field names the asset; else a bare `assets` affected-field resolves through the **staging-time story snapshot** when that story had exactly **one** asset. Point-in-time means *as the dashboard knew the story when the warning staged* — that closes staging→decision drift, and cross-topic ordering can also put the snapshot ahead of (or behind) the exact version the skill evaluated; every drift direction degrades to the labeled story fallback, never a wrong asset. A **story-scoped** decision has no honest home in the locked set — the record ships `kind: ASSET` carrying the **story** key, and its `reason` begins with the deterministic token **`[story-scoped]`**: match on that token, not the prose. Consumers MUST NOT join such an id against assets; a `STORY` target kind is a v0.3.2 candidate. One latency note: gate-decision audits are awaited on the API response path (bounded by the producer's 10s timeout) — off the operator's UI path, but a scripted caller can wait up to that bound on a degraded broker.
+**Target mapping for gate decisions.** A staged output maps onto the locked `LINK | ASSET | TELLING` set most-specific-first: an explicit `link:{id}`/`asset:{id}` scope wins; else an `assets.{id}.…` affected-field names the asset; else a bare `assets` affected-field resolves through the **staging-time story snapshot** when that story had exactly **one** asset. Point-in-time means *as the dashboard knew the story when the warning staged* — that closes staging→decision drift, and cross-topic ordering can also put the snapshot ahead of (or behind) the exact version the skill evaluated; every drift direction degrades to the labeled story fallback, never a wrong asset. A **story-scoped** decision has no honest home in the locked set — the record ships `kind: ASSET` carrying the **story** key, and its `reason` begins with the deterministic token **`[story-scoped]`**: match on that token, not the prose. Consumers MUST NOT join such an id against assets; a `STORY` target kind was not adopted at v0.3.2 (audit targets stay `LINK | ASSET | TELLING`) and tracks to v0.4. One latency note: gate-decision audits are awaited on the API response path (bounded by the producer's 10s timeout) — off the operator's UI path, but a scripted caller can wait up to that bound on a degraded broker.
 
 Partition keys are mixed on this topic by design — the coordinator keys audits by **asset id**, the dashboard by **story key**. Do not rely on per-key ordering across producers.
 
@@ -175,7 +175,7 @@ Two current partner patterns and their recommended homes:
 
 | Need | Today (spec-legal) | Target-state direction |
 |---|---|---|
-| **Livestream URL to transcribe** (a live ingest source, not arrived stored media) | `extensions.com.{vendor}.livestream_url` on `story.context` | To be **proposed** as a first-class "live ingest source" field in the v0.3.2 window — not yet in the v0.3.2 scaffold. Its natural companion IS already drafted there: locator-on-arrival generalises `delivery.media_available` beyond TAMS (`anyOf(source \| locator)`, mirroring `media_refs[]`). |
+| **Livestream URL to transcribe** (a live ingest source, not arrived stored media) | `extensions.com.{vendor}.livestream_url` on `story.context` | **Deferred to v0.4** (12 Aug 2026 disposition — no shape was drafted before the pack); rides `extensions` until then. Its natural companion DID land in v0.3.2: locator-on-arrival generalises `delivery.media_available` beyond TAMS (`anyOf(source \| locator)`, mirroring `media_refs[]`). |
 | **"Monitor for X" directive** (e.g. "casualty figures") — a skill/task parameter | `extensions.com.{vendor}.monitor_prompt` on `story.context` | First-class **skill directive / task parameter** — part of the skills-model alignment work (declared skill conditions + parameters). |
 | **"Capture finished" signal** on a delivery event | `extensions.com.ibc-poc.capture_complete` on `delivery.media_available` — **live in this repo**: the mock MAM emits it, the media coordinator acts on it | Candidate first-class delivery field alongside locator-on-arrival; until then it's the working example of the extension mechanism |
 

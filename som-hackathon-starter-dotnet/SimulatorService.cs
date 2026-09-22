@@ -323,7 +323,7 @@ internal static class SimScenarios
         ["media-unmatched"] = new(
             Id: "media-unmatched",
             Name: "Unmatched media (safe-state / orphan preview)",
-            Description: "The mock MAM announces a UGC clip (ugc-flood-77aa41b0) that NO story references. The media coordinator resolves nothing, declines to act, and records a WITHHELD audit on som.system.audit — the skills-model safe-state stop made observable. With Coordinator:OrphanPreview=true it instead authors a clearly-labeled v0.3.2-preview ORPHAN story wrapping the clip, which then flows through skills like any other story.",
+            Description: "The mock MAM announces a UGC clip (ugc-flood-77aa41b0) that NO story references. The media coordinator resolves nothing, declines to act, and records a WITHHELD audit on som.system.audit — the skills-model safe-state stop made observable. With Coordinator:OrphanPreview=true it instead authors a clearly-labeled story_type ORPHAN shell (the v0.3.2 orphan lane) wrapping the clip, which then flows through skills like any other story.",
             DurationSeconds: 5,
             Actions: new[]
             {

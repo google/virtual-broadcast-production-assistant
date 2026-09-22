@@ -10,10 +10,10 @@ Companion spec: **"SOM ↔ MOS Bridge — Compatibility & Migration (v0.3.1)"** 
 |---|---|
 | `MosToSomBridge.cs` | Pure translator: `Translate(XElement mos, string correlationId)` → the SOM message(s) to publish. No transport wiring. |
 | `samples/roCreate.xml` | A sample MOS v4.0 running-order create. |
-| `samples/story.context.expected.json` | SOM `story.context` the bridge emits (validated against the v0.3.1 schema). |
+| `samples/story.context.expected.json` | SOM `story.context` the bridge emits (validated against the current pack). |
 | `samples/link.committed.expected.json` | SOM `som.link.committed` the bridge emits (validated). |
 
-The two `expected` fixtures are **validated against the v0.3.1 JSON Schemas** (`schema/v0.3.1-proposed`) and serve as golden outputs.
+The two `expected` fixtures are **validated against the current pack** by `schema/validate.py` (story.context routes to the v0.3.2 schema; link stays v0.3.1) and serve as golden outputs.
 
 ## Object-model mapping (the key idea)
 

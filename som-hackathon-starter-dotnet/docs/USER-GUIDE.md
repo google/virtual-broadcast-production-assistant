@@ -80,7 +80,7 @@ The starter models the v0.3.1 media story end to end (this is demo beat D1·B5):
 |---|---|
 | Known asset, rolling range | Noted; no story change (consumers take what exists so far) |
 | Known asset + capture-complete extension | Story republished: asset flips `CAPTURING → CAPTURED`, range bounded — skills re-run, and `nbcu-capture-001` files an inform ("run the final compliance pass") |
-| Matches no story | Safe-state stop: `WITHHELD` audit recorded on `som.system.audit` — a story is **never** created (that's the v0.3.2 ORPHAN direction, previewable via `Coordinator:OrphanPreview=true`) |
+| Matches no story | Safe-state stop: `WITHHELD` audit recorded on `som.system.audit` — a story is **never** created by default (the v0.3.2 ORPHAN lane, enabled via `Coordinator:OrphanPreview=true`, authors a shell story instead) |
 
 Run the whole thing with the **media-arrival** scenario (matched path) and **media-unmatched** (safe-state path). Message shapes: [`SOM-v0.3.1-distribution-contracts.md`](./SOM-v0.3.1-distribution-contracts.md).
 
@@ -153,7 +153,7 @@ You don't have to run inside this process — anything that speaks Kafka + JSON 
 
 **Envelope rules that bite** (the five-item checklist — full detail in the contracts doc):
 
-1. `som_version` stays `"0.2.0"` on the wire even though payloads are v0.3.1-shaped (SOM-048). Don't gate on it.
+1. `som_version` carries the **schema pack version** — `"0.3.2"` on this pack. (The SOM-048 `0.2.0` wire freeze was retired 12 Aug 2026; traffic recorded before then reads `0.2.0`.) Informative only — don't gate on it; `message_type` identifies the payload family.
 2. `correlation_id` is **required** — thread it end-to-end.
 3. `timestamp` lives on the **envelope**, never in the payload.
 4. `originating_system` (not `source`) identifies you: `system_id`, `system_type` from the v0.3 enum, `vendor`, `version`.
@@ -161,7 +161,7 @@ You don't have to run inside this process — anything that speaks Kafka + JSON 
 
 **Anything the spec doesn't cover yet** goes under `payload.extensions["com.{yourvendor}.{field}"]` — the *designed* escape hatch, not a workaround. Consumers must silently ignore keys they don't recognise. Two live examples in this repo: `com.ibc-poc.capture_complete` on delivery events, `com.nbcu.citations` on warnings.
 
-**Validate before you publish**: drop your candidate payload next to the examples in `schema/v0.3.1-proposed/examples/` and run `python3 schema/validate.py` — same harness the repo's own fixtures use.
+**Validate before you publish**: drop your candidate payload next to the examples in `schema/v0.3.2-proposed/examples/` (story.context / telling / delivery; link and audit payloads live in `schema/v0.3.1-proposed/examples/`) and run `python3 schema/validate.py` — same harness the repo's own fixtures use.
 
 ## 8. Curl cookbook — the whole loop from a shell
 

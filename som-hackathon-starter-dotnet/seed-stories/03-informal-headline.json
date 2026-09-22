@@ -1,5 +1,5 @@
 {
-  "som_version": "0.2.0",
+  "som_version": "0.3.2",
   "message_id": "019536a2-7c3f-7d8e-a1b2-000000000003",
   "correlation_id": "019536a0-3333-7000-8000-000000000003",
   "message_type": "story.context",
@@ -89,28 +89,25 @@
         "asset_type": "FULL_FRAME",
         "status": "READY",
         "evidential_position": "TERTIARY"
-      }
-    ],
-    "ai_enrichments": [
+      },
       {
-        "enrichment_id": "ai-summary-003",
-        "model": "claude-sonnet-4-20250514",
-        "enrichment_type": "SUMMARY",
-        "confidence": 0.9,
-        "content": "LAPD officers arrested multiple individuals in connection with a counterfeit sneaker operation in the downtown Fashion District. Some suspects are minors.",
+        "asset_id": "ai-summary-003",
+        "asset_type": "SUMMARY",
+        "status": "IN_PRODUCTION",
         "provenance": {
+          "author": "MODEL",
+          "model": "claude-sonnet-4",
+          "model_version": "20250514",
+          "confidence": 0.9,
+          "generated_at": "2026-05-10T16:15:00Z",
           "input_sources": [
             "src-lapd-pio"
           ],
           "prompt_hash": "sha256:d4e5f6a7...",
-          "guardrails_applied": [
-            "minor_protection",
-            "factual_grounding",
-            "presumption_of_innocence"
-          ]
-        },
-        "human_reviewed": false,
-        "generated_at": "2026-05-10T16:15:00Z"
+          "review": {
+            "state": "PENDING"
+          }
+        }
       }
     ],
     "skills_config": {

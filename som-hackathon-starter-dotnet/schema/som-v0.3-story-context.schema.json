@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://som.spec/schema/v0.3/story-context",
   "title": "SOM v0.3 story.context payload (DRAFT 2, 2026-06-10)",
-  "description": "Payload schema per v0.3 Technical §4.2–§4.8. TARGET shape — current 0.2.0 wire payloads will NOT validate (by design; see SOM-048 migration). instances[] and broadcaster_id are hard-rejected. verification_status/provider_type intentionally absent pending the 10 Jun WG fork decision (§4.3).",
+  "description": "Payload schema per v0.3 Technical §4.2–§4.8. TARGET shape — legacy v0.2-shaped payloads will NOT validate (by design; see SOM-048 migration \u2014 the 0.2.0 wire-version freeze was retired 12 Aug 2026, som_version now carries the pack version). instances[] and broadcaster_id are hard-rejected. verification_status/provider_type intentionally absent pending the 10 Jun WG fork decision (§4.3).",
   "type": "object",
   "required": ["story_id", "slug", "headline", "story_type", "sequence_number", "updated_at"],
   "properties": {

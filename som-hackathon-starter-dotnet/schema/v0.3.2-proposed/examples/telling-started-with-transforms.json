@@ -1,0 +1,41 @@
+{
+  "message_type": "telling.started",
+  "telling_id": "0190a000-0000-7000-8000-00000000bbb1",
+  "link_id": "0190a000-0000-7000-8000-00000000aaa1",
+  "exposure_start": "2026-07-08T18:00:00Z",
+  "transforms": [
+    {
+      "transform_type": "TRIM",
+      "params": {
+        "time_range": "[4:0_34:0)"
+      },
+      "applied_by": {
+        "actor_id": "social-desk-tool",
+        "actor_type": "system"
+      },
+      "applied_at": "2026-07-08T17:50:00Z"
+    },
+    {
+      "transform_type": "CROP",
+      "params": {
+        "aspect_ratio": "9:16"
+      },
+      "applied_by": {
+        "actor_id": "social-desk-tool",
+        "actor_type": "system"
+      },
+      "applied_at": "2026-07-08T17:51:00Z"
+    },
+    {
+      "transform_type": "CAPTION_BURN",
+      "params": {
+        "caption_ref": "cap-en-01"
+      },
+      "applied_by": {
+        "actor_id": "prod-asmith",
+        "actor_type": "user"
+      },
+      "applied_at": "2026-07-08T17:55:00Z"
+    }
+  ]
+}
