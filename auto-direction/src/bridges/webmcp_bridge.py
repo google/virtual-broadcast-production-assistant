@@ -56,24 +56,29 @@ async def get_browser_frame():
 # --- CLIENT PYTHON FUNCTIONS FOR AGENT ---
 # These functions will be imported by our Director Agent as tools.
 import os
+from src.config import get_service_auth_headers
 BASE_URL = os.getenv("SHURE_API_URL", "http://localhost:8001")
+
+def _get_headers():
+    h = get_service_auth_headers(BASE_URL)
+    return {"headers": h} if h else {}
 
 async def shure_get_audio_levels() -> dict:
     """Queries Shure's live audio level monitors and returns DB values and the current loudest speaker."""
     async with httpx.AsyncClient() as client:
-        r = await client.get(f"{BASE_URL}/audio")
+        r = await client.get(f"{BASE_URL}/audio", **_get_headers())
         return r.json()
 
 async def shure_set_speaker_focus(speaker_id: str) -> dict:
     """Tells the Shure WebMCP app to focus audio mixing on host or guest."""
     async with httpx.AsyncClient() as client:
-        r = await client.post(f"{BASE_URL}/set-active-speaker", params={"speaker_id": speaker_id})
+        r = await client.post(f"{BASE_URL}/set-active-speaker", params={"speaker_id": speaker_id}, **_get_headers())
         return r.json()
 
 async def shure_get_web_frame() -> dict:
     """Captures the shared web page frame (screenshot simulation) and page metadata from Shure WebMCP tab."""
     async with httpx.AsyncClient() as client:
-        r = await client.get(f"{BASE_URL}/browser-frame")
+        r = await client.get(f"{BASE_URL}/browser-frame", **_get_headers())
         return r.json()
 
 if __name__ == "__main__":

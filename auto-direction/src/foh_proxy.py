@@ -13,7 +13,7 @@ from google.genai import types
 # Add current folder to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.config import GEMINI_API_KEY, GEMINI_MODEL, has_adc
+from src.config import GEMINI_API_KEY, GEMINI_MODEL, has_adc, get_service_auth_headers
 from src.bridges.cuez_automator_mcp import (
     cuez_get_rundown,
     cuez_set_segment,
@@ -23,6 +23,10 @@ from src.bridges.cuez_automator_mcp import (
 CUEZ_API_URL = os.getenv("CUEZ_API_URL", "http://127.0.0.1:8000")
 SHURE_API_URL = os.getenv("SHURE_API_URL", "http://127.0.0.1:8001")
 DIRECTOR_API_URL = os.getenv("DIRECTOR_API_URL", "http://127.0.0.1:8003")
+
+def _auth(url: str) -> dict:
+    h = get_service_auth_headers(url)
+    return {"headers": h} if h else {}
 
 app = FastAPI(title="FOH WebSocket Proxy & Frontend")
 
@@ -42,7 +46,7 @@ async def foh_get_director_decision_log() -> list:
     """Returns the history of camera cuts and PTZ adjustments made by the Director Agent."""
     async with httpx.AsyncClient() as client:
         try:
-            r = await client.get(f"{DIRECTOR_API_URL}/api/director-log")
+            r = await client.get(f"{DIRECTOR_API_URL}/api/director-log", **_auth(DIRECTOR_API_URL))
             if r.status_code == 200:
                 return r.json().get("director_decision_log", [])
         except Exception as e:
@@ -62,10 +66,10 @@ async def get_combined_status():
     async with httpx.AsyncClient() as client:
         try:
             # Gather states from bridges and director proxy
-            cuez_task = client.get(f"{CUEZ_API_URL}/state")
-            shure_audio_task = client.get(f"{SHURE_API_URL}/audio")
-            shure_frame_task = client.get(f"{SHURE_API_URL}/browser-frame")
-            director_task = client.get(f"{DIRECTOR_API_URL}/api/director-log")
+            cuez_task = client.get(f"{CUEZ_API_URL}/state", **_auth(CUEZ_API_URL))
+            shure_audio_task = client.get(f"{SHURE_API_URL}/audio", **_auth(SHURE_API_URL))
+            shure_frame_task = client.get(f"{SHURE_API_URL}/browser-frame", **_auth(SHURE_API_URL))
+            director_task = client.get(f"{DIRECTOR_API_URL}/api/director-log", **_auth(DIRECTOR_API_URL))
             
             res_cuez, res_shure_audio, res_shure_frame, res_director = await asyncio.gather(
                 cuez_task, shure_audio_task, shure_frame_task, director_task,
@@ -107,12 +111,12 @@ async def control_show_dashboard(cmd: ControlAction):
     async with httpx.AsyncClient() as client:
         try:
             if cmd.action == "start":
-                await client.post(f"{DIRECTOR_API_URL}/api/control", json={"action": "start"})
-                await client.post(f"{CUEZ_API_URL}/set-segment", params={"segment_title": "Welcome and Chat"})
+                await client.post(f"{DIRECTOR_API_URL}/api/control", json={"action": "start"}, **_auth(DIRECTOR_API_URL))
+                await client.post(f"{CUEZ_API_URL}/set-segment", params={"segment_title": "Welcome and Chat"}, **_auth(CUEZ_API_URL))
                 print("[FOH Proxy] >>> BROADCAST STARTED. <<<")
                 return {"status": "success"}
             elif cmd.action == "stop":
-                await client.post(f"{DIRECTOR_API_URL}/api/control", json={"action": "stop"})
+                await client.post(f"{DIRECTOR_API_URL}/api/control", json={"action": "stop"}, **_auth(DIRECTOR_API_URL))
                 print("[FOH Proxy] >>> BROADCAST STOPPED. <<<")
                 return {"status": "success"}
         except Exception as e:

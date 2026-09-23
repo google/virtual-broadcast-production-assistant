@@ -5,6 +5,7 @@
 
 // Global state variables
 let state = 'IDLE'; // 'IDLE' | 'LISTENING' | 'THINKING' | 'SPEAKING'
+let isBroadcastLive = false;
 let ws = null;
 let directorWs = null;
 let audioCtx = null;
@@ -12,6 +13,10 @@ let micStream = null;
 let micProcessor = null;
 let pcmPlayQueueNextTime = 0;
 let isMuted = false;
+
+function shouldMicBeActive() {
+    return isBroadcastLive || state === 'LISTENING';
+}
 
 // Audio analyser nodes for visualizer
 let inputAnalyser = null;
@@ -119,7 +124,7 @@ async function startMicrophone() {
             }
             
             // 2. Send continuous binary PCM chunk to Director websocket if broadcast is live
-            if (directorWs && directorWs.readyState === WebSocket.OPEN) {
+            if (isBroadcastLive && directorWs && directorWs.readyState === WebSocket.OPEN) {
                 directorWs.send(pcmInt16.buffer);
             }
         };
@@ -183,7 +188,8 @@ function playPCMChunk(arrayBuffer) {
 
 // --- 4. WEBSOCKET PROXY CONNECTORS (DUAL SYSTEM) ---
 function connectFOHWebSocket() {
-    const wsUrl = `ws://${window.location.host}/api/ws`;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/api/ws`;
     console.log(`Connecting FOH WebSocket: ${wsUrl}`);
     
     ws = new WebSocket(wsUrl);
@@ -229,7 +235,18 @@ function connectFOHWebSocket() {
 let videoFrameInterval = null;
 
 function connectDirectorWebSocket(directorWsUrl) {
-    const wsUrl = directorWsUrl.replace(/^http/, 'ws') + '/api/ws/director';
+    let wsUrl = directorWsUrl || "http://127.0.0.1:8003";
+    if (wsUrl.startsWith('https://')) {
+        wsUrl = 'wss://' + wsUrl.slice('https://'.length);
+    } else if (wsUrl.startsWith('http://')) {
+        wsUrl = 'ws://' + wsUrl.slice('http://'.length);
+    } else if (!wsUrl.startsWith('ws://') && !wsUrl.startsWith('wss://')) {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${protocol}//${wsUrl.replace(/^\/+/, '')}`;
+    }
+    if (!wsUrl.includes('/api/ws/director')) {
+        wsUrl = wsUrl.replace(/\/+$/, '') + '/api/ws/director';
+    }
     console.log(`Connecting Director WebSocket: ${wsUrl}`);
     
     directorWs = new WebSocket(wsUrl);
@@ -383,20 +400,29 @@ function updateVoiceState(newState) {
     if (state === 'IDLE') {
         document.getElementById('badge-idle').classList.add('active');
         visualizerAnalyser = outputAnalyser; // Animate breathing wave
-        stopMicrophone();
+        if (!shouldMicBeActive()) {
+            stopMicrophone();
+        }
     } else if (state === 'LISTENING') {
         document.getElementById('badge-listening').classList.add('active');
         subtitlesText.textContent = "Listening to your voice... Speak now!";
         visualizerAnalyser = inputAnalyser; // Animate microphone waves
+        if (!micStream) {
+            startMicrophone().catch(err => console.error("Mic start failed:", err));
+        }
     } else if (state === 'THINKING') {
         document.getElementById('badge-thinking').classList.add('active');
         subtitlesText.textContent = "Front of House is thinking...";
         visualizerAnalyser = outputAnalyser;
-        stopMicrophone();
+        if (!shouldMicBeActive()) {
+            stopMicrophone();
+        }
     } else if (state === 'SPEAKING') {
         document.getElementById('badge-speaking').classList.add('active');
         visualizerAnalyser = outputAnalyser; // Animate based on playing audio
-        stopMicrophone();
+        if (!shouldMicBeActive()) {
+            stopMicrophone();
+        }
     }
 }
 
@@ -592,7 +618,9 @@ toggleMuteBtn.addEventListener('click', () => {
 micBtn.addEventListener('click', async () => {
     if (state === 'IDLE') {
         updateVoiceState('LISTENING');
-        await startMicrophone();
+        if (!micStream) {
+            await startMicrophone();
+        }
     } else {
         updateVoiceState('IDLE');
     }
@@ -611,11 +639,18 @@ async function pollSystemStatus() {
         window.lastActiveSegment = data.active_segment;
         window.lastActiveSpeaker = data.active_speaker;
         
-        // Auto microphone activation for continuous director ingestion when broadcast starts
-        if (data.live_production_active && !micStream) {
+        // Track broadcast live state transitions
+        const wasBroadcastLive = isBroadcastLive;
+        isBroadcastLive = Boolean(data.live_production_active);
+        
+        // Auto microphone management for continuous director ingestion when broadcast starts
+        if (isBroadcastLive && !micStream) {
             console.log("[Director Ingestion] Broadcast is active! Auto-enabling microphone stream...");
             initAudio();
             startMicrophone().catch(err => console.error("Auto mic activation failed:", err));
+        } else if (!isBroadcastLive && wasBroadcastLive && !shouldMicBeActive()) {
+            console.log("[Director Ingestion] Broadcast stopped. Releasing microphone stream...");
+            stopMicrophone();
         }
         
         // 1. On-Air feed metadata

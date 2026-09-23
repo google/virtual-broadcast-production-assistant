@@ -43,3 +43,21 @@ AVAILABLE_SOURCES = {
     "cam_2": {"id": "cam_2", "name": "PTZ Camera - Host Focus", "type": "ptz", "status": "active"},
     "pixel_11": {"id": "pixel_11", "name": "Pixel 11 - Guest Mobile Mount", "type": "mobile_mount", "status": "active"},
 }
+
+
+def get_service_auth_headers(target_url: str) -> dict:
+    """Returns an Authorization header with Google ID token if communicating with Cloud Run."""
+    if not target_url or not target_url.startswith("https://") or "127.0.0.1" in target_url or "localhost" in target_url:
+        return {}
+    try:
+        import google.auth.transport.requests
+        import google.oauth2.id_token
+        auth_req = google.auth.transport.requests.Request()
+        # Derive audience root URL from target URL
+        parts = target_url.split("/")
+        audience = parts[0] + "//" + parts[2]
+        token = google.oauth2.id_token.fetch_id_token(auth_req, audience)
+        return {"Authorization": f"Bearer {token}"}
+    except Exception:
+        return {}
+

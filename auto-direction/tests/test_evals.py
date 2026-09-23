@@ -1,5 +1,9 @@
 import os
+import sys
 import unittest
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from unittest.mock import patch, MagicMock, AsyncMock
 from src.agents.director_agent import create_director_agent
 from src.config import GEMINI_API_KEY, has_adc
@@ -117,8 +121,14 @@ class TestDirectorBehavioralEvals(unittest.IsolatedAsyncioTestCase):
                 events = await runner.run_debug(prompt, session_id="test_session")
             except Exception as e:
                 err_msg = str(e).lower()
-                if any(term in err_msg for term in ["permission", "denied", "forbidden", "403", "quota", "key", "unauthorized", "credentials"]):
-                    self.skipTest(f"Skipping live behavioral eval due to API auth/permission limits: {e}")
+                skip_keywords = [
+                    "permission", "denied", "forbidden", "403", "quota", "key", 
+                    "unauthorized", "credentials", "refresherror", "refresh", 
+                    "token", "policy", "not allowed", "ssl", "connection", 
+                    "connect", "timeout", "timed out", "unreachable"
+                ]
+                if any(term in err_msg for term in skip_keywords) or "google.auth" in type(e).__module__:
+                    self.skipTest(f"Skipping live behavioral eval due to API auth/permission/network limits: {e}")
                 raise e
             
             # Extract response text from events

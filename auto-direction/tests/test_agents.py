@@ -1,4 +1,9 @@
+import os
+import sys
 import unittest
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from google.adk.agents import Agent
 from src.agents.director_agent import create_director_agent, log_director_decision, director_decision_log
 from src.agents.foh_agent import create_foh_agent

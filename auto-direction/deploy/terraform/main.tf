@@ -179,3 +179,19 @@ resource "google_cloud_run_v2_service_iam_member" "director_public" {
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
+
+# 10. IAM Invoker Policies for Internal Bridges
+resource "google_cloud_run_v2_service_iam_member" "cuez_internal_invoker" {
+  name     = google_cloud_run_v2_service.cuez_bridge.name
+  location = google_cloud_run_v2_service.cuez_bridge.location
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.sa.email}"
+}
+
+resource "google_cloud_run_v2_service_iam_member" "shure_internal_invoker" {
+  name     = google_cloud_run_v2_service.shure_bridge.name
+  location = google_cloud_run_v2_service.shure_bridge.location
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.sa.email}"
+}
+

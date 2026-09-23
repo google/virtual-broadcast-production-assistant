@@ -100,18 +100,23 @@ async def ptz_camera(cmd: PTZCommand):
 # --- CLIENT PYTHON FUNCTIONS FOR AGENT ---
 # These functions will be imported by our ADK Agent as tools.
 import os
+from src.config import get_service_auth_headers
 BASE_URL = os.getenv("CUEZ_API_URL", "http://localhost:8000")
+
+def _get_headers():
+    h = get_service_auth_headers(BASE_URL)
+    return {"headers": h} if h else {}
 
 async def cuez_get_rundown() -> List[dict]:
     """Retrieves the full script rundown of segments from Cuez Automator."""
     async with httpx.AsyncClient() as client:
-        r = await client.get(f"{BASE_URL}/rundown")
+        r = await client.get(f"{BASE_URL}/rundown", **_get_headers())
         return r.json()
 
 async def cuez_set_segment(segment_title: str) -> dict:
     """Sets the active segment in the Cuez show flow."""
     async with httpx.AsyncClient() as client:
-        r = await client.post(f"{BASE_URL}/set-segment", params={"segment_title": segment_title})
+        r = await client.post(f"{BASE_URL}/set-segment", params={"segment_title": segment_title}, **_get_headers())
         return r.json()
 
 async def cuez_trigger_graphics(overlay_id: str, title: str, subtitle: str) -> dict:
@@ -121,13 +126,13 @@ async def cuez_trigger_graphics(overlay_id: str, title: str, subtitle: str) -> d
             "overlay_id": overlay_id,
             "text_title": title,
             "text_subtitle": subtitle
-        })
+        }, **_get_headers())
         return r.json()
 
 async def cuez_cut_to_source(source_id: str) -> dict:
     """Cuts the live broadcast stream to the specified camera source (cam_1, cam_2, or pixel_11)."""
     async with httpx.AsyncClient() as client:
-        r = await client.post(f"{BASE_URL}/cut-to-source", params={"source_id": source_id})
+        r = await client.post(f"{BASE_URL}/cut-to-source", params={"source_id": source_id}, **_get_headers())
         return r.json()
 
 async def cuez_adjust_camera(camera_id: str, pan: float, tilt: float, zoom: float) -> dict:
@@ -138,7 +143,7 @@ async def cuez_adjust_camera(camera_id: str, pan: float, tilt: float, zoom: floa
             "pan": pan,
             "tilt": tilt,
             "zoom": zoom
-        })
+        }, **_get_headers())
         return r.json()
 
 if __name__ == "__main__":
