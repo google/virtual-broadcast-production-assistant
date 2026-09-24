@@ -12,7 +12,7 @@
     "dev": "node --watch server.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.6.0",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "dotenv": "^16.4.5",
     "node-fetch": "^3.3.2"
   },
